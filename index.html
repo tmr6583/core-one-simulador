@@ -1,0 +1,1093 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Core One — Simulador</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="Logo.webp">
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --surface-2:#f1f0ea; --text:#12263f; --muted:#5b6676;
+  --border:#dedcd3; --brand:#0b2636; --accent:#3f7f66; --accent-weak:#e4efe9; --gold:#a08a5a;
+  --ok:#2e7d4f; --ok-weak:#e6f3eb; --warn:#9a6a00; --warn-weak:#fdf4dc; --bad:#b3261e; --bad-weak:#fbeae8;
+  --chart-line:#3f7f66; --chart-fill:rgba(63,127,102,.12); --grid:#e7e5dd;
+  --s-in:#2f8c64; --s-res:#3f6fb5; --s-out:#c0832a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1726; --surface:#12223a; --surface-2:#192c47; --text:#e8eef5; --muted:#9fb0c4;
+    --border:#243a57; --accent:#7fbfa3; --accent-weak:#173a33; --gold:#c9a96e;
+    --ok:#5cc08a; --ok-weak:#123326; --warn:#e0ae3c; --warn-weak:#33290f; --bad:#f2786d; --bad-weak:#3a1a1a;
+    --chart-line:#7fbfa3; --chart-fill:rgba(127,191,163,.14); --grid:#22364f;
+    --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1726; --surface:#12223a; --surface-2:#192c47; --text:#e8eef5; --muted:#9fb0c4;
+  --border:#243a57; --accent:#7fbfa3; --accent-weak:#173a33; --gold:#c9a96e;
+  --ok:#5cc08a; --ok-weak:#123326; --warn:#e0ae3c; --warn-weak:#33290f; --bad:#f2786d; --bad-weak:#3a1a1a;
+  --chart-line:#7fbfa3; --chart-fill:rgba(127,191,163,.14); --grid:#22364f;
+  --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,select,input{font:inherit;color:inherit}
+.wrap{max-width:1872px;margin:0 auto;padding:0 16px}
+
+/* Cabeçalho da marca */
+.brandbar{background:var(--brand);color:#fff}
+.brandbar .wrap{display:flex;align-items:center;gap:16px;padding-top:14px;padding-bottom:14px;flex-wrap:wrap}
+.logo{height:64px;width:auto;flex:0 0 auto;border-radius:10px;display:block}
+.brandbar h1{margin:0;font-size:22px;letter-spacing:.2px}
+.brandbar p{margin:2px 0 0;color:#c8d3e0;font-size:13px}
+.brandbar .actions{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:7px 12px;cursor:pointer}
+.brandbar .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+.brandbar .btn:hover{background:rgba(255,255,255,.1)}
+.brandbar .btn.primary{background:#7fbfa3;color:#10223a;border-color:#7fbfa3;font-weight:600}
+
+/* Herói */
+.hero{margin:16px auto 0}
+.verdict{border-radius:14px;padding:14px 18px;border:1px solid;display:flex;gap:12px;align-items:flex-start}
+.verdict .ic{font-size:22px;line-height:1}
+.verdict b{display:block;font-size:17px}
+.verdict span{color:var(--muted);font-size:14px}
+.bigs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:900px){.bigs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.bigs{grid-template-columns:1fr}}
+.big{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.big .q{font-size:13px;color:var(--muted)}
+.big .a{font-size:26px;font-weight:700;margin:2px 0;letter-spacing:-.3px}
+.big .d{font-size:12.5px;color:var(--muted)}
+.meter{height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden;margin-top:8px}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.meter.warn i{background:var(--warn)} .meter.bad i{background:var(--bad)}
+
+/* Layout principal */
+main.wrap{display:grid;grid-template-columns:minmax(320px,440px) minmax(0,1fr);gap:16px;align-items:start;margin-top:16px;padding-bottom:48px}
+@media (max-width:1000px){main.wrap{grid-template-columns:1fr}}
+#inputs{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;padding-right:4px}
+@media (max-width:1000px){#inputs{position:static;max-height:none;overflow:visible}}
+.side-head{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.side-head h2{margin:0 0 4px;font-size:16px}
+.side-head p{margin:0 0 10px;color:var(--muted);font-size:13px}
+.seg{display:flex;background:var(--surface-2);border-radius:9px;padding:3px;gap:3px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:transparent;border-radius:7px;padding:6px 8px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.search{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:8px 10px}
+.changed-note{font-size:12px;color:var(--muted);margin-top:8px}
+
+details.grp{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden}
+details.grp>summary{cursor:pointer;list-style:none;padding:12px 14px;display:flex;align-items:center;gap:10px}
+details.grp>summary::-webkit-details-marker{display:none}
+details.grp>summary .t{font-weight:650}
+details.grp>summary .s{display:block;font-size:12px;color:var(--accent);font-weight:500}
+details.grp>summary::after{content:"＋";margin-left:auto;color:var(--muted)}
+details.grp[open]>summary::after{content:"－"}
+.gintro{margin:0 14px 6px;font-size:13px;color:var(--muted)}
+.field{padding:10px 14px;border-top:1px solid var(--border)}
+.field .row{display:flex;align-items:center;gap:10px}
+.field label{flex:1;font-weight:550;font-size:14px}
+.field .inp{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.field input,.field select{width:118px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;text-align:right}
+.field select{width:190px;text-align:left}
+.field .u{font-size:12px;color:var(--muted);min-width:44px}
+.field .help{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+.field.changed input,.field.changed select{border-color:var(--warn);background:var(--warn-weak)}
+.field .reset{border:0;background:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0;margin-top:3px;display:none}
+.field.changed .reset{display:inline}
+.field.hidden,.field.adv-hidden{display:none}
+
+/* Abas */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:7px 14px;cursor:pointer;color:var(--muted)}
+.tabs button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+:root[data-theme="dark"] .tabs button.on{background:var(--accent);color:#0b1726}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tabs button.on{background:var(--accent);border-color:var(--accent);color:#0b1726}}
+.tab{display:none}.tab.on{display:block}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.card h3{margin:0 0 2px;font-size:16px}
+.card .sub{margin:0 0 10px;color:var(--muted);font-size:13px}
+.alert{border-radius:10px;padding:9px 12px;margin:7px 0;font-size:14px;border:1px solid;display:flex;gap:8px}
+.bad{background:var(--bad-weak);border-color:var(--bad)}
+.warn{background:var(--warn-weak);border-color:var(--warn)}
+.ok{background:var(--ok-weak);border-color:var(--ok)}
+.neg{color:var(--bad)} .pos{color:var(--ok)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{color:var(--muted);font-weight:600;font-size:12.5px}
+tr.total td{font-weight:700;border-top:2px solid var(--border)}
+tr.hl td{background:var(--accent-weak)}
+tr.sub td{color:var(--muted);font-size:13px}
+.scroll{overflow-x:auto}
+.note{color:var(--muted);font-size:12.5px;margin:8px 0 0}
+
+.indgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.indbox h4{margin:0 0 6px;font-size:14px;color:var(--accent)}
+.ind{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--border)}
+.ind .l{font-size:13.5px}
+.ind .l small{display:block;color:var(--muted);font-size:12px}
+.ind .v{font-weight:650;text-align:right;white-space:nowrap}
+
+.hbar{display:grid;grid-template-columns:minmax(120px,220px) 1fr 110px;gap:10px;align-items:center;padding:4px 0;font-size:13.5px}
+.hbar .track{height:14px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.hbar .track i{display:block;height:100%;background:var(--chart-line);border-radius:0 4px 4px 0}
+.hbar .val{text-align:right;color:var(--muted)}
+
+.chartbox{position:relative}
+.chartbox svg{width:100%;height:auto;display:block}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 9px;font-size:12.5px;box-shadow:0 4px 12px rgba(0,0,0,.12);display:none;white-space:nowrap}
+.legend-inline{font-size:12.5px;color:var(--muted)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--text);margin:4px 0 6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.gloss dt{font-weight:650;margin-top:8px}
+.gloss dd{margin:2px 0 0;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="brandbar">
+  <div class="wrap">
+    <img class="logo" src="data:image/jpeg;base64,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" alt="Core One — studio de movimento">
+    <div>
+      <h1>Core One · Simulador de viabilidade</h1>
+      <p>Studio de movimento + salas de atendimento · Rua Real Grandeza, 190 — Botafogo</p>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="btnPdf" title="Baixa um PDF com todas as premissas, resultados e gráficos desta simulação">Exportar Simulação</button>
+      <button class="btn" id="btnReset" title="Volta todos os campos para os valores padrão do projeto">Restaurar Valores Padrão</button>
+      <button class="btn" id="btnExport" title="Baixa um arquivo com todas as premissas para enviar ao sócio">Salvar premissas</button>
+      <button class="btn" id="btnImport" title="Carrega um arquivo de premissas salvo antes">Abrir premissas</button>
+      <input type="file" id="fileImport" accept="application/json" hidden>
+    </div>
+  </div>
+</div>
+
+<section class="wrap hero">
+  <div id="verdict"></div>
+  <div class="bigs" id="bigs"></div>
+</section>
+
+<main class="wrap">
+  <aside id="inputs"></aside>
+  <section>
+    <div class="tabs" id="tabs">
+      <button data-tab="resumo">Resumo</button>
+      <button data-tab="lucro">Lucro do mês</button>
+      <button data-tab="riscos">Riscos e cenários</button>
+      <button data-tab="comparar">Comparar opções</button>
+      <button data-tab="caixa">Caixa ao longo do tempo</button>
+      <button data-tab="como">Como calculamos</button>
+    </div>
+    <div id="results"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const STORE_KEY = "coreone-simulador-v3";
+
+// Campo: [id, rótulo, unidade, padrão, passo, explicação para leigos, essencial?]
+const GROUPS = [
+  {id:"imovel", g:"O imóvel", intro:"Dados do ponto comercial e do contrato de aluguel.", f:[
+    ["areaBrutaTerreo","Tamanho do térreo","m²",70,1,"Área total do andar de baixo, contando recepção, banheiros e escada. Estimativa até chegar a planta.",1],
+    ["areaBruta2","Tamanho do 2º andar","m²",40,1,"Área total do andar de cima, onde ficam as salas de atendimento.",1],
+    ["aluguel","Aluguel","R$/mês",8900,100,"Valor pago todo mês ao proprietário.",1],
+    ["condIptu","Condomínio + IPTU","R$/mês",3200,100,"Taxa de condomínio mais o IPTU dividido por 12.",1],
+    ["taxasPrediais","Outras taxas do imóvel","R$/mês",0,50,"Taxas da prefeitura ou dos bombeiros, como a taxa de lixo. Deixe 0 se não souber.",0],
+    ["garantia","Custo da garantia do aluguel","R$/mês",0,50,"Seguro-fiança ou título de capitalização exigido pelo proprietário, dividido por mês.",0],
+    ["reajAluguel","Reajuste do aluguel por ano","% ao ano",0,0.5,"Quanto o aluguel sobe a cada 12 meses, pelo índice do contrato (ex.: IPCA). 0 = sem reajuste.",0],
+    ["mesesObra","Meses de obra antes de abrir","meses",2,1,"Tempo de reforma em que vocês já pagam aluguel e condomínio, mas ainda não têm alunos.",1],
+    ["carencia","Meses sem pagar aluguel (carência)","meses",0,1,"Meses iniciais sem aluguel, se o proprietário aceitar. Contam a partir da assinatura do contrato.",1],
+    ["luvas","Luvas (valor pago pelo ponto)","R$",0,1000,"Pagamento único para ficar com o ponto, se houver.",0],
+    ["caucao","Caução (depósito de garantia)","meses de aluguel",0,1,"Depósito em meses de aluguel. O dinheiro fica parado e volta no fim do contrato.",0],
+  ]},
+  {id:"capex", g:"Investimento para abrir", intro:"Quanto custa deixar o espaço pronto. Os aparelhos de musculação ficam no grupo \"Aparelhos\".", f:[
+    ["capexNaoDet","Obra e instalações (valor global)","R$",60000,1000,"Estimativa total da reforma enquanto não há orçamento. Quando tiver, zere este campo e preencha as linhas abaixo.",1],
+    ["capObraCivil","Obra civil e acabamentos","R$",0,1000,"Paredes, pisos e pinturas laváveis exigidos pela Vigilância Sanitária.",0],
+    ["capEletrica","Parte elétrica","R$",0,1000,"Energia trifásica, quadros e tomadas, necessários para ar-condicionado e esteiras.",0],
+    ["capHidraulica","Parte hidráulica","R$",0,1000,"Pia dentro de cada sala (obrigatória), banheiros e banheiro acessível.",0],
+    ["capClima","Ar-condicionado","R$",0,1000,"Aparelhos de ar e renovação do ar nos dois andares.",0],
+    ["capPiso","Piso emborrachado","R$",0,500,"Amortece o impacto dos pesos e reduz o barulho para as salas de cima.",0],
+    ["capAcess","Acessibilidade","R$",0,1000,"Plataforma elevatória ou outra solução para quem não pode subir escada.",0],
+    ["capProjeto","Projetos e aprovações","R$",0,500,"Arquiteto, engenheiro e documentos de responsabilidade técnica.",0],
+    ["capLicencas","Licenças de abertura","R$",0,500,"Alvará, Vigilância Sanitária, Corpo de Bombeiros e registro no CREF.",0],
+    ["capMobiliario","Móveis e macas","R$",0,500,"Recepção, macas das salas, armários e decoração.",0],
+    ["capTI","Tecnologia","R$",0,500,"Computador, fechaduras eletrônicas, câmeras e som.",0],
+    ["capMktPre","Divulgação antes de abrir","R$",0,500,"Campanha de pré-inauguração e pré-venda de planos.",0],
+    ["contingencia","Reserva para imprevistos na obra","%",0,1,"Margem de segurança sobre o custo da obra. Obras costumam estourar entre 10% e 20%.",1],
+    ["vidaUtil","Durabilidade do investimento","anos",10,1,"Em quantos anos obra e aparelhos se desgastam. Só afeta o lucro contábil.",0],
+  ]},
+  {id:"horario", g:"Horário do studio", intro:"Quando o studio fica aberto. Define as horas disponíveis para treino e o custo dos instrutores.", f:[
+    ["abreSemana","Abre de segunda a sexta às","h",7,0.5,"Hora de abertura (0 a 24).",1],
+    ["fechaSemana","Fecha de segunda a sexta às","h",20,0.5,"Hora de fechamento (0 a 24).",1],
+    ["diasUteis","Dias de semana abertos no mês","dias",21,1,"Média de segundas a sextas no mês, já sem os feriados.",0],
+    ["abreSab","Abre aos sábados às","h",7,0.5,"Deixe abertura e fechamento iguais para não abrir.",1],
+    ["fechaSab","Fecha aos sábados às","h",12,0.5,"",1],
+    ["sabados","Sábados abertos no mês","dias",4,1,"Média de sábados no mês.",0],
+    ["abreDom","Abre aos domingos/feriados às","h",0,0.5,"Deixe abertura e fechamento iguais para não abrir.",0],
+    ["fechaDom","Fecha aos domingos/feriados às","h",0,0.5,"",0],
+    ["domingos","Domingos/feriados abertos no mês","dias",0,1,"",0],
+  ]},
+  {id:"capac", g:"Quantos alunos cabem", intro:"Espaço de treino e frequência dos alunos.", f:[
+    ["capSim","Alunos treinando ao mesmo tempo","alunos",9,1,"Limite de alunos no salão em cada horário. Recomendado: 9 alunos, com 7 m² para cada um.",1],
+    ["m2Aluno","Espaço por aluno","m² por aluno",7,0.5,"Espaço recomendado para cada aluno treinar com conforto. Serve para conferir se a área comporta a turma.",1],
+    ["areaUtilTerreo","Área livre para treinar (planta)","m²",50,1,"Espaço só de treino que o térreo oferece, sem recepção, banheiros e escada. Estimativa até chegar a planta. Se for menor que alunos × espaço por aluno, aparece um alerta.",1],
+    ["aulasMes","Treinos por aluno no mês","treinos",10,0.5,"Quantas vezes, em média, cada aluno realmente vem no mês (faltas já descontadas).",1],
+    ["fatorOcup","Aproveitamento dos horários","%",58,1,"Horários de pico lotam e os do meio do dia ficam vazios. 58% = em média 58% das vagas são usadas.",0],
+  ]},
+  {id:"planos", g:"Planos e receitas do studio", intro:"Quanto cada aluno paga e o que mais entra de dinheiro no térreo.", f:[
+    ["p2","Preço do plano 2x por semana","R$/mês",359,1,"Mensalidade de quem treina duas vezes por semana.",1],
+    ["m2","Alunos no plano 2x","% dos alunos",45,1,"Que parte dos alunos escolhe este plano. Os três planos devem somar 100%.",1],
+    ["p3","Preço do plano 3x por semana","R$/mês",429,1,"",1],
+    ["m3","Alunos no plano 3x","% dos alunos",40,1,"",1],
+    ["p45","Preço do plano 4 a 5x por semana","R$/mês",529,1,"",1],
+    ["m45","Alunos no plano 4 a 5x","% dos alunos",15,1,"",1],
+    ["churn","Alunos que cancelam por mês","% ao mês",0,0.5,"De cada 100 alunos, quantos saem por mês. Quem sai precisa ser substituído para manter a turma cheia.",1],
+    ["pctLongo","Alunos em plano semestral ou anual","% dos alunos",0,1,"Parte dos alunos que paga um plano longo com desconto.",0],
+    ["descLongo","Desconto do plano longo","%",0,1,"",0],
+    ["inadimpl","Mensalidades não pagas","% da receita",0,0.5,"Parte do faturamento que não é recebida (atrasos e calotes).",0],
+    ["matricula","Taxa de matrícula","R$ por aluno novo",0,10,"Valor cobrado uma única vez de cada aluno novo.",0],
+    ["cac","Custo para conquistar cada aluno novo","R$",0,10,"Gasto extra por aluno novo (comissão, aula experimental, brinde), além do marketing do mês.",0],
+    ["cvAluno","Custo por aluno ativo","R$/mês",0,1,"Gastos que crescem com o número de alunos: app, toalhas, materiais.",0],
+    ["recExtra","Outras receitas do studio","R$/mês",0,100,"Avaliação física, personal individual, venda de produtos.",0],
+    ["reajPreco","Reajuste anual dos preços","% ao ano",0,0.5,"Quanto os preços dos planos e das salas sobem a cada 12 meses.",0],
+  ]},
+  {id:"cow", g:"Salas de atendimento (2º andar)", intro:"Salas alugadas por hora para fisioterapeutas, massoterapeutas, osteopatas e afins.", f:[
+    ["salas","Número de salas","salas",4,1,"Quantas salas serão alugadas.",1],
+    ["salaLarg","Largura de cada sala","m",2,0.1,"A Vigilância Sanitária pode exigir no mínimo 2,2 m.",0],
+    ["salaComp","Comprimento de cada sala","m",3,0.1,"",0],
+    ["horasSala","Horas disponíveis por sala no mês","h/mês",288,1,"Total de horas em que cada sala pode ser alugada.",0],
+    ["precoHora","Preço da hora (pacote)","R$/hora",40,1,"Valor da hora para quem compra pacote. Em Botafogo, salas parecidas custam de R$ 33 a R$ 65 por hora.",1],
+    ["ocupCow","Ocupação das salas","% das horas",20,1,"Parte das horas disponíveis que é alugada. 20% ≈ 13 horas por semana em cada sala.",1],
+    ["rampaCow","Meses até as salas encherem","meses",12,1,"Tempo para chegar à ocupação acima, crescendo aos poucos.",0],
+    ["pctAvulsa","Parte das horas vendida avulsa","% das horas",0,1,"Horas compradas uma a uma, sem pacote (costumam ser mais caras).",0],
+    ["precoAvulsa","Preço da hora avulsa","R$/hora",50,1,"Só conta se houver horas avulsas.",0],
+    ["pctTurno","Parte das horas em turno fixo","% das horas",0,1,"Horário fixo semanal reservado pelo mesmo profissional (costuma ter desconto).",0],
+    ["precoTurno","Preço da hora em turno fixo","R$/hora",35,1,"Só conta se houver turnos fixos.",0],
+    ["salasFixas","Salas alugadas por mês inteiro","salas",0,1,"Salas com contrato mensal fixo, que saem da venda por hora.",0],
+    ["aluguelFixoSala","Valor do contrato mensal por sala","R$/mês",2200,100,"Só conta se houver salas em contrato mensal. R$ 2.200 era a referência antiga do projeto.",0],
+    ["custoVarHora","Custo por hora alugada","R$/hora",0,0.5,"Limpeza entre atendimentos, lençol descartável, energia do ar-condicionado.",0],
+    ["comissaoPlat","Taxa do aplicativo de reservas","% da receita",0,0.5,"Se usar uma plataforma que cobra por reserva.",0],
+    ["tCow","Impostos sobre o aluguel das salas","% da receita",10,0.5,"Estimativa até o parecer do contador.",0],
+  ]},
+  {id:"equipe", g:"Equipe", intro:"Instrutores, recepção, limpeza e sócios.", f:[
+    ["custoHoraInstr","Custo da hora do instrutor","R$/hora",37.0283,0.5,"Quanto custa uma hora de instrutor, com encargos. Base do projeto: R$ 15.700 ÷ 424 horas ≈ R$ 37,03.",1],
+    ["instrBase","Instrutores em todos os horários","pessoas",1,1,"Quantos instrutores ficam no studio o tempo todo.",0],
+    ["horasPico2","Horas com instrutor extra no pico","h/mês",100,5,"Horas no mês em que um 2º instrutor reforça os horários cheios (ex.: 7h–9h e 17h–20h).",1],
+    ["adicRT","Adicional do responsável técnico","R$/mês",0,50,"Valor extra para o instrutor que assina como responsável técnico no CREF1.",0],
+    ["apoio","Recepção e limpeza","R$/mês",7500,100,"Salários com encargos da recepção (no pico) e da limpeza.",1],
+    ["proLabore","Retirada fixa dos sócios","R$/mês",0,100,"Salário mensal dos sócios. Pela regra atual, os sócios ganham só com o lucro.",0],
+  ]},
+  {id:"opex", g:"Outros custos mensais", intro:"Despesas que existem com qualquer número de alunos.", f:[
+    ["utilidades","Energia, água e internet","R$/mês",4500,100,"Contas de consumo dos dois andares. O ar-condicionado pesa bastante.",1],
+    ["marketing","Divulgação mensal","R$/mês",3500,100,"Anúncios e ações para atrair alunos da região.",1],
+    ["software","Sistema de gestão e fechaduras","R$/mês",1200,50,"Agenda, cobrança, controle de acesso.",0],
+    ["contador","Contador","R$/mês",1200,50,"Estimativa.",0],
+    ["seguro","Seguro","R$/mês",350,50,"Responsabilidade civil e patrimonial. Estimativa.",0],
+    ["residuos","Coleta de lixo hospitalar","R$/mês",0,50,"Só é obrigatória se houver agulhas ou material contaminado (hoje proibidos nas salas).",0],
+    ["outros","Outros gastos / reserva","R$/mês",0,100,"Folga para despesas não listadas.",0],
+    ["inflCustos","Aumento anual dos custos","% ao ano",0,0.5,"Quanto os custos (fora o aluguel) sobem a cada 12 meses.",0],
+  ]},
+  {id:"impostos", g:"Impostos e taxas", intro:"Descontos sobre o faturamento do studio.", f:[
+    ["tSimples","Imposto (Simples Nacional)","% do faturamento",10.5,0.1,"Parte do faturamento paga em impostos. A confirmar com o contador.",1],
+    ["tCartao","Taxa de cartão e maquininha","% do faturamento",2.5,0.1,"Parte cobrada pela operadora em cada pagamento.",1],
+  ]},
+  {id:"equip", g:"Aparelhos de musculação", intro:"Quatro formas de equipar o studio. Compare na aba \"Comparar opções\".", f:[
+    ["modelo","Como conseguir os aparelhos","","seminovos",null,"Escolha a forma usada nos resultados.",1],
+    ["seminovosValor","Preço dos aparelhos seminovos","R$",60000,1000,"Usados e revisados pelo fornecedor.",1],
+    ["seminovosManut","Manutenção dos seminovos","R$/mês",600,50,"",0],
+    ["novosValor","Preço dos aparelhos novos","R$",88000,1000,"Pagamento à vista. Também é a base do financiamento e do leasing.",1],
+    ["novosManut","Manutenção dos aparelhos novos","R$/mês",400,50,"No leasing, vale depois que vocês ficam com os aparelhos.",0],
+    ["leasingAluguel","Aluguel mensal dos aparelhos (leasing)","R$/mês",3800,50,"Mensalidade paga ao fornecedor; manutenção inclusa.",0],
+    ["leasingPrazo","Duração do leasing","meses",0,1,"Depois desse prazo vocês podem comprar os aparelhos. 0 = aluguel sem fim.",0],
+    ["leasingVRG","Valor para ficar com os aparelhos no fim","% do preço novo",0,1,"Valor pago no fim do leasing para virar dono (costuma ser 10% a 15%).",0],
+    ["cdcEntrada","Entrada do financiamento","R$",20000,1000,"",0],
+    ["cdcTaxa","Juros do financiamento","% ao mês",3.3813,0.01,"Juros embutidos na parcela de R$ 4.181,93 (estimado).",0],
+    ["cdcPrazo","Parcelas do financiamento","meses",24,1,"",0],
+  ]},
+  {id:"fin", g:"Dinheiro dos sócios e empréstimo", intro:"De onde vem o dinheiro para abrir e aguentar os primeiros meses.", f:[
+    ["capital","Dinheiro que os sócios têm para investir","R$",0,5000,"Comparado com o dinheiro necessário. 0 = ainda não definido.",1],
+    ["empValor","Empréstimo","R$",0,5000,"Valor emprestado no banco para reforçar o caixa.",1],
+    ["empTaxa","Juros do empréstimo","% ao mês",2,0.1,"Só conta se houver empréstimo.",0],
+    ["empPrazo","Parcelas do empréstimo","meses",36,1,"",0],
+    ["empCarencia","Meses pagando só juros","meses",0,1,"Período inicial sem pagar o valor principal.",0],
+  ]},
+  {id:"metas", g:"Metas e análise", intro:"O que vocês esperam alcançar e como comparar com outras aplicações.", f:[
+    ["alunosAlvo","Meta de alunos","alunos",120,1,"Alunos ativos quando o studio estiver maduro.",1],
+    ["alunosIniciais","Alunos já na inauguração","alunos",0,1,"Quem comprou na pré-venda.",0],
+    ["rampa","Meses até atingir a meta","meses",12,1,"Os alunos chegam aos poucos, em ritmo constante, até a meta.",1],
+    ["horizonte","Período analisado","meses",72,12,"Quantos meses, a partir da assinatura do contrato, entram na conta.",0],
+    ["tma","Rendimento mínimo desejado","% ao ano",15,0.5,"Quanto o dinheiro renderia em outra aplicação (ex.: CDI). O negócio só compensa se render mais que isso.",1],
+    ["lucroAlvo","Lucro mensal desejado","R$/mês",10000,500,"Calcula quantos alunos seriam necessários para chegar a esse lucro.",1],
+    ["multSaida","Valor de venda do negócio no fim","× lucro anual",0,0.5,"Se venderem o negócio no fim do período, por quantas vezes o lucro de um ano. 0 = não considerar venda.",0],
+  ]},
+  {id:"cenarios", g:"Cenários bom e ruim", intro:"Quanto cada premissa piora no cenário ruim e melhora no cenário bom.", f:[
+    ["varAlunos","Alunos","± %",15,1,"",0],
+    ["varOcup","Ocupação das salas","± %",25,1,"",0],
+    ["varPrecos","Preços","± %",5,1,"Planos e salas.",0],
+    ["varCustos","Custos mensais","± %",10,1,"No cenário ruim os custos sobem.",0],
+    ["varRampa","Tempo para encher","± %",50,5,"No cenário ruim demora mais.",0],
+  ]},
+];
+const MODELS = {seminovos:"Comprar seminovos", novos:"Comprar novos à vista", leasing:"Alugar (leasing)", cdc:"Financiar novos (CDC)"};
+const FIELDS = {}; GROUPS.forEach(g => g.f.forEach(f => FIELDS[f[0]] = {l:f[1], u:f[2], v:f[3], st:f[4], h:f[5], e:f[6], g:g.id}));
+const DEFAULTS = {}; Object.keys(FIELDS).forEach(k => DEFAULTS[k] = FIELDS[k].v);
+
+const UI = loadUI();
+let P = load();
+function load(){ try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s) return sanitize(s); }catch(e){} return {...DEFAULTS}; }
+function sanitize(o){ const r = {...DEFAULTS}; for(const k in DEFAULTS) if(k in o) r[k] = (k==="modelo") ? (MODELS[o[k]]?o[k]:DEFAULTS[k]) : (Number.isFinite(+o[k]) ? +o[k] : DEFAULTS[k]); return r; }
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(P)); }catch(e){} }
+function loadUI(){ try{ return {tab:"resumo", modo:"essencial", ...JSON.parse(localStorage.getItem(STORE_KEY+"-ui")||"{}")}; }catch(e){ return {tab:"resumo", modo:"essencial"}; } }
+function saveUI(){ try{ localStorage.setItem(STORE_KEY+"-ui", JSON.stringify(UI)); }catch(e){} }
+
+const fin = v => Number.isFinite(v) ? v : 0;
+const brl = v => fin(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+const brl2 = v => fin(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:2});
+const num = (v,d=0) => fin(v).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct = (v,d=1) => Number.isFinite(v) ? num(v*100,d)+"%" : "—";
+const sgn = v => `<span class="${v<0?'neg':'pos'}">${brl(v)}</span>`;
+const pmt = (pv,i,n) => n<=0 ? 0 : (!i ? pv/n : pv*i/(1-Math.pow(1+i,-n)));
+const tempo = m => m===null ? "não se paga" : (m===1 ? "1 mês" : m<12 ? `${m} meses` : `${m} meses (${num(m/12,1)} anos)`);
+
+// ================= Motor de cálculo =================
+function deriv(p){
+  const h = (a,b) => Math.max(0, b-a);
+  const horasOp = h(p.abreSemana,p.fechaSemana)*p.diasUteis + h(p.abreSab,p.fechaSab)*p.sabados + h(p.abreDom,p.fechaDom)*p.domingos;
+  const capSim = Math.max(0, Math.round(p.capSim));
+  const areaNec = capSim*p.m2Aluno; // área de treino necessária para a turma
+  const vagas = horasOp*capSim;
+  const lotacao = p.aulasMes>0 ? Math.floor(vagas/p.aulasMes*p.fatorOcup/100) : 0;
+  const mixSum = p.m2+p.m3+p.m45;
+  const ticketBruto = (p.m2*p.p2+p.m3*p.p3+p.m45*p.p45)/100;
+  const ticket = ticketBruto*(1-p.pctLongo/100*p.descLongo/100)*(1-p.inadimpl/100);
+  const tecnica = (horasOp*p.instrBase + p.horasPico2)*p.custoHoraInstr + p.adicRT;
+  const capLinhas = p.capObraCivil+p.capEletrica+p.capHidraulica+p.capClima+p.capPiso+p.capAcess+p.capProjeto+p.capLicencas+p.capMobiliario+p.capTI+p.capMktPre;
+  const capexObra = (p.capexNaoDet + capLinhas)*(1+p.contingencia/100);
+  const tT = (p.tSimples+p.tCartao)/100;
+  const folha = tecnica + p.apoio + p.proLabore;
+  const outrosFixos = p.condIptu+p.taxasPrediais+p.garantia+folha+p.utilidades+p.marketing+p.software+p.contador+p.seguro+p.residuos+p.outros;
+  return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, ticketBruto, ticket, tecnica, folha, capexObra, tT, outrosFixos};
+}
+function equip(p, m){
+  switch(m){
+    case "novos": return {capex:p.novosValor, opex:()=>p.novosManut, oneoff:()=>0, label:"manutenção dos aparelhos"};
+    case "leasing": return {capex:0,
+      opex:k => (p.leasingPrazo>0 && k>p.leasingPrazo) ? p.novosManut : p.leasingAluguel,
+      oneoff:k => (p.leasingPrazo>0 && k===p.leasingPrazo+1) ? p.novosValor*p.leasingVRG/100 : 0, label:"aluguel dos aparelhos"};
+    case "cdc": { const parc = pmt(p.novosValor-p.cdcEntrada, p.cdcTaxa/100, p.cdcPrazo);
+      return {capex:p.cdcEntrada, opex:k => (k<=p.cdcPrazo ? parc : 0) + p.novosManut, oneoff:()=>0, parcela:parc, label:"parcela + manutenção dos aparelhos"}; }
+    default: return {capex:p.seminovosValor, opex:()=>p.seminovosManut, oneoff:()=>0, label:"manutenção dos aparelhos"};
+  }
+}
+function cow(p, ocup, priceF=1){
+  const sf = Math.min(Math.max(p.salasFixas,0), p.salas), sh = Math.max(0, p.salas - sf);
+  const horas = Math.round(p.horasSala*ocup/100);
+  const pa = p.pctAvulsa/100, pt = p.pctTurno/100, pp = Math.max(0, 1-pa-pt);
+  const precoMed = (p.precoHora*pp + p.precoAvulsa*pa + p.precoTurno*pt)*priceF;
+  const recHora = sh*horas*precoMed, recFixo = sf*p.aluguelFixoSala*priceF, rec = recHora+recFixo;
+  const imp = rec*p.tCow/100, plat = recHora*p.comissaoPlat/100, vari = sh*horas*p.custoVarHora;
+  return {sh, horas, precoMed, recSala:horas*precoMed, recHora, recFixo, rec, imp, plat, vari, liq:rec-imp-plat-vari};
+}
+function loanPay(p, m){
+  if(p.empValor<=0) return 0;
+  const i = p.empTaxa/100;
+  if(m<=p.empCarencia) return p.empValor*i;
+  if(m<=p.empCarencia+p.empPrazo) return pmt(p.empValor, i, p.empPrazo);
+  return 0;
+}
+function regime(p, modelo){
+  const d = deriv(p), c = cow(p, p.ocupCow), eq = equip(p, modelo);
+  const eqOp = eq.opex(1), opex = p.aluguel + d.outrosFixos + eqOp;
+  const A = p.alunosAlvo, ch = p.churn/100, novos = A*ch;
+  const recPlanos = A*d.ticket, recMat = novos*p.matricula, recT = recPlanos+recMat+p.recExtra;
+  const impT = recT*d.tT, cvar = A*p.cvAluno + novos*p.cac;
+  const resultado = recT - impT - cvar + c.liq - opex;
+  const margAluno = d.ticket*(1-d.tT) - p.cvAluno + ch*(p.matricula*(1-d.tT) - p.cac);
+  const fixoLiq = opex - c.liq - p.recExtra*(1-d.tT);
+  const be = margAluno>0 ? Math.max(0, Math.ceil(fixoLiq/margAluno - 1e-9)) : Infinity;
+  return {d, c, eq, eqOp, opex, A, novos, recPlanos, recMat, recT, impT, cvar, resultado, margAluno, fixoLiq, be, receitaTotal: recT + c.rec};
+}
+const MONTH_FIELDS = ["mesesObra","carencia","leasingPrazo","cdcPrazo","empPrazo","empCarencia","horizonte"];
+function intMonths(p){ const q = {...p}; MONTH_FIELDS.forEach(k => q[k] = Math.max(0, Math.round(q[k]))); return q; }
+function simulate(p0, modelo){
+  const p = intMonths(p0);
+  const r = regime(p, modelo), d = r.d, eq = r.eq;
+  const capexTotal = d.capexObra + eq.capex;
+  const upfront = capexTotal + p.luvas + p.caucao*p.aluguel;
+  const im = Math.pow(1+p.tma/100, 1/12) - 1;
+  const H = Math.max(12, p.horizonte);
+  const flows = [-upfront];
+  let cumProj = -upfront, cumSoc = -upfront + p.empValor, minSoc = cumSoc, minMes = 0, dcum = -upfront;
+  let payback = null, paybackDesc = null, prevA = 0, mesLucro = null, mesesNeg = 0;
+  const rows = [];
+  for(let m=1; m<=H; m++){
+    const yA = Math.floor((m-1)/12);
+    const alug = m<=p.carencia ? 0 : p.aluguel*Math.pow(1+p.reajAluguel/100, yA);
+    let proj, row;
+    if(m<=p.mesesObra){
+      proj = -(alug + p.condIptu + p.taxasPrediais + p.garantia);
+      row = {m, fase:"Obra", alunos:null, receita:0};
+    } else {
+      const k = m - p.mesesObra, y = Math.floor((k-1)/12);
+      const fP = Math.pow(1+p.reajPreco/100, y), fC = Math.pow(1+p.inflCustos/100, y);
+      const A = p.rampa>0 ? Math.min(p.alunosAlvo, p.alunosIniciais + (p.alunosAlvo-p.alunosIniciais)*k/p.rampa) : p.alunosAlvo;
+      const novos = Math.max(0, A-prevA) + prevA*p.churn/100; prevA = A;
+      const fCow = p.rampaCow>0 ? Math.min(1, k/p.rampaCow) : 1;
+      const c = cow(p, p.ocupCow*fCow, fP);
+      const recT = A*d.ticket*fP + novos*p.matricula*fP + p.recExtra*fP;
+      const custos = alug + d.outrosFixos*fC + eq.opex(k) + eq.oneoff(k) + (A*p.cvAluno + novos*p.cac)*fC;
+      proj = recT*(1-d.tT) + c.liq - custos;
+      row = {m, k, fase:"Funcionando", alunos:A, receita:recT + c.rec};
+      if(proj<0) mesesNeg++;
+      if(mesLucro===null && proj>=0) mesLucro = k;
+    }
+    const soc = proj - loanPay(p, m);
+    cumProj += proj; cumSoc += soc;
+    if(cumSoc < minSoc){ minSoc = cumSoc; minMes = m; }
+    dcum += proj/Math.pow(1+im, m);
+    flows.push(proj);
+    if(row.k && payback===null && cumProj>=0) payback = row.k;
+    if(row.k && paybackDesc===null && dcum>=0) paybackDesc = row.k;
+    rows.push({...row, proj, soc, cumProj, cumSoc});
+  }
+  const last12 = flows.slice(-12).reduce((a,b)=>a+b,0);
+  const residual = p.multSaida>0 ? Math.max(0, last12)*p.multSaida : 0;
+  const caucaoVal = p.caucao*p.aluguel;
+  const flowsR = flows.slice(); flowsR[flowsR.length-1] += residual + caucaoVal;
+  const vpl = flowsR.reduce((s,f,i)=> s + f/Math.pow(1+im,i), 0);
+  const pvFut = flowsR.slice(1).reduce((s,f,i)=> s + f/Math.pow(1+im,i+1), 0);
+  return {...r, p, capexTotal, upfront, payback, paybackDesc, exposicao: Math.max(0,-minSoc), minMes, vpl, tir: irr(flowsR),
+          il: upfront>0 ? pvFut/upfront : null, rows, H, mesLucro, mesesNeg, residual, caucaoVal, cumFinal: cumProj + residual + caucaoVal};
+}
+function irr(flows){
+  const npv = rate => flows.reduce((s,f,i)=> s + f/Math.pow(1+rate,i), 0);
+  let lo = -0.9, hi = 1, flo = npv(lo), fhi = npv(hi);
+  if(!(flo*fhi < 0)) return null;
+  for(let i=0;i<200;i++){ const mid=(lo+hi)/2, fm=npv(mid); if(flo*fm<=0){hi=mid;fhi=fm;} else {lo=mid;flo=fm;} }
+  return Math.pow(1+(lo+hi)/2, 12) - 1;
+}
+function scenario(p, sign){
+  const q = {...p}, a = p.varAlunos/100*sign, o = p.varOcup/100*sign, pr = p.varPrecos/100*sign, c = -p.varCustos/100*sign, r = -p.varRampa/100*sign;
+  q.alunosAlvo = Math.round(p.alunosAlvo*(1+a)); q.alunosIniciais = Math.min(q.alunosAlvo, p.alunosIniciais);
+  q.ocupCow = p.ocupCow*(1+o);
+  ["p2","p3","p45","precoHora","precoAvulsa","precoTurno","aluguelFixoSala","matricula"].forEach(k => q[k] = p[k]*(1+pr));
+  ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = p[k]*(1+c));
+  q.rampa = p.rampa>0 ? Math.max(1, Math.round(p.rampa*(1+r))) : 0;
+  q.rampaCow = p.rampaCow>0 ? Math.max(1, Math.round(p.rampaCow*(1+r))) : 0;
+  return q;
+}
+function sensitivity(p){
+  const base = regime(p, p.modelo), lot = q => deriv(q).lotacao;
+  const items = [
+    ["Preço dos planos", (q,f)=>{q.p2*=f;q.p3*=f;q.p45*=f;}],
+    ["Número de alunos", (q,f)=>{q.alunosAlvo=Math.round(q.alunosAlvo*f);}],
+    ["Alunos ao mesmo tempo", (q,f)=>{q.capSim=Math.round(q.capSim*f);}],
+    ["Treinos por aluno no mês", (q,f)=>{q.aulasMes*=f;}],
+    ["Ocupação das salas", (q,f)=>{q.ocupCow*=f;}],
+    ["Preço da hora das salas", (q,f)=>{q.precoHora*=f;q.precoAvulsa*=f;q.precoTurno*=f;}],
+    ["Aluguel", (q,f)=>{q.aluguel*=f;}],
+    ["Condomínio + IPTU", (q,f)=>{q.condIptu*=f;}],
+    ["Custo da hora do instrutor", (q,f)=>{q.custoHoraInstr*=f;}],
+    ["Recepção e limpeza", (q,f)=>{q.apoio*=f;}],
+    ["Energia, água e internet", (q,f)=>{q.utilidades*=f;}],
+    ["Divulgação mensal", (q,f)=>{q.marketing*=f;}],
+    ["Imposto (Simples)", (q,f)=>{q.tSimples*=f;}],
+  ];
+  return {base, lotBase: lot(p), rows: items.map(([l,fn]) => {
+    const out = [0.9,1.1].map(f => { const q = {...p}; fn(q,f); const r = regime(q, q.modelo); return {res:r.resultado, be:r.be, lot:lot(q)}; });
+    return {l, lo:out[0], hi:out[1], swing:Math.abs(out[1].res-out[0].res)};
+  }).sort((a,b)=>b.swing-a.swing)};
+}
+
+// ================= Interface: premissas =================
+function renderInputs(){
+  const el = document.getElementById("inputs");
+  let h = `<div class="side-head"><h2>Premissas</h2><p>Altere qualquer valor e veja o resultado na hora. Campos alterados ficam em amarelo.</p>
+    <div class="seg"><button data-modo="essencial">Só o essencial</button><button data-modo="todas">Todas as premissas</button></div>
+    <input class="search" id="search" type="search" placeholder="Procurar (ex.: aluguel, sala, imposto)">
+    <div class="changed-note" id="changedCount"></div></div>`;
+  GROUPS.forEach(g => {
+    h += `<details class="grp" data-g="${g.id}" ${["imovel","planos","metas"].includes(g.id)?"open":""}><summary><span><span class="t">${g.g}</span><span class="s" id="gi_${g.id}"></span></span></summary><p class="gintro">${g.intro}</p>`;
+    g.f.forEach(([id,l,u,,st,hint,ess]) => {
+      const ch = P[id]!==DEFAULTS[id] ? " changed" : "";
+      const ctl = id==="modelo"
+        ? `<select id="f_${id}">${Object.entries(MODELS).map(([k,v])=>`<option value="${k}" ${P.modelo===k?"selected":""}>${v}</option>`).join("")}</select>`
+        : `<input id="f_${id}" type="number" inputmode="decimal" min="0"${u==="h"?' max="24"':""} step="${st}" value="${P[id]}">`;
+      h += `<div class="field${ch}" data-id="${id}" data-ess="${ess?1:0}" data-label="${(g.g+" "+l+" "+hint).toLowerCase()}">
+        <div class="row"><label for="f_${id}">${l}</label><div class="inp">${ctl}<span class="u">${u}</span></div></div>
+        ${hint?`<div class="help">${hint}</div>`:""}
+        <button class="reset" data-id="${id}">Voltar ao valor padrão (${id==="modelo"?MODELS[DEFAULTS[id]]:num(DEFAULTS[id], DEFAULTS[id]%1?2:0)})</button></div>`;
+    });
+    h += `</details>`;
+  });
+  el.innerHTML = h;
+  el.querySelectorAll(".field input").forEach(inp => inp.addEventListener("input", e => {
+    const id = e.target.id.slice(2), v = parseFloat(e.target.value);
+    if(!isNaN(v)){ P[id]=v; e.target.closest(".field").classList.toggle("changed", v!==DEFAULTS[id]); save(); renderResults(); if(FIELDS[id].g==="equip") applyFilter(); }
+  }));
+  document.getElementById("f_modelo").addEventListener("change", e => {
+    P.modelo = e.target.value; e.target.closest(".field").classList.toggle("changed", P.modelo!==DEFAULTS.modelo); save(); renderResults(); applyFilter();
+  });
+  el.querySelectorAll(".reset").forEach(b => b.addEventListener("click", () => { P[b.dataset.id] = DEFAULTS[b.dataset.id]; save(); renderInputs(); renderResults(); }));
+  el.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { UI.modo = b.dataset.modo; saveUI(); applyFilter(); }));
+  document.getElementById("search").addEventListener("input", applyFilter);
+  applyFilter();
+}
+// Campos de "Aparelhos" que fazem sentido para cada forma de aquisição
+function equipFields(p){
+  switch(p.modelo){
+    case "novos": return ["novosValor","novosManut"];
+    case "leasing": return ["leasingAluguel","leasingPrazo"].concat(p.leasingPrazo>0 ? ["leasingVRG","novosValor","novosManut"] : []);
+    case "cdc": return ["novosValor","cdcEntrada","cdcTaxa","cdcPrazo","novosManut"];
+    default: return ["seminovosValor","seminovosManut"];
+  }
+}
+function applyFilter(){
+  const el = document.getElementById("inputs"), q = (document.getElementById("search").value||"").trim().toLowerCase();
+  el.querySelectorAll(".seg button").forEach(b => b.classList.toggle("on", b.dataset.modo===UI.modo));
+  el.querySelectorAll("details.grp").forEach(d => {
+    let any = false;
+    const eqList = equipFields(P);
+    d.querySelectorAll(".field").forEach(f => {
+      const id = f.dataset.id, isEq = FIELDS[id].g==="equip" && id!=="modelo";
+      // Aparelhos: só os campos da forma escolhida, sempre visíveis (são poucos)
+      const vis = isEq
+        ? eqList.includes(id) && (!q || f.dataset.label.includes(q))
+        : (q ? f.dataset.label.includes(q) : true) && (q || UI.modo==="todas" || f.dataset.ess==="1" || f.classList.contains("changed"));
+      f.classList.toggle("hidden", !vis); any = any || vis;
+    });
+    d.style.display = any ? "" : "none"; if(q && any) d.open = true;
+  });
+}
+function groupInfo(p, s){
+  const d = s.d;
+  const info = {
+    imovel:`${num(p.areaBrutaTerreo+p.areaBruta2)} m² · imóvel custa ${brl(p.aluguel+p.condIptu+p.taxasPrediais+p.garantia)}/mês`,
+    capex:`Obra: ${brl(d.capexObra)} · total com aparelhos: ${brl(s.capexTotal)}`,
+    horario:`${num(d.horasOp)} horas abertas por mês`,
+    capac:`${d.capSim} alunos ao mesmo tempo · precisam de ${num(d.areaNec)} m² · cabem até ${d.lotacao} alunos`,
+    planos:`Mensalidade média: ${brl2(d.ticket)}`,
+    cow:`Receita das salas: ${brl(s.c.rec)}/mês`,
+    equipe:`Folha: ${brl(d.folha)}/mês`,
+    opex:`Custos fixos totais: ${brl(s.opex)}/mês`,
+    impostos:`${num(d.tT*100,1)}% do faturamento do studio`,
+    equip:`${MODELS[p.modelo]} · ${brl(s.eq.capex)} agora + ${brl(s.eqOp)}/mês`,
+    fin:p.capital>0 ? `Capital: ${brl(p.capital)}` : `Capital ainda não informado`,
+    metas:`${p.alunosAlvo} alunos = ${pct(p.alunosAlvo/Math.max(1,d.lotacao),0)} das vagas`,
+    cenarios:`Veja em "Riscos e cenários"`,
+  };
+  for(const k in info){ const e = document.getElementById("gi_"+k); if(e) e.textContent = info[k]; }
+  const n = Object.keys(DEFAULTS).filter(k => P[k]!==DEFAULTS[k]).length;
+  document.getElementById("changedCount").textContent = n ? `${n} premissa(s) diferente(s) dos valores padrão.` : "Usando os valores padrão.";
+}
+
+// ================= Interface: resultados =================
+function verdict(p, s){
+  const d = s.d, beOk = Number.isFinite(s.be) && s.be <= d.lotacao;
+  if(!beOk || s.resultado<=0) return ["bad","✕","Com estas premissas, o negócio não se sustenta.", Number.isFinite(s.be) ? `Precisaria de ${s.be} alunos para empatar, mas só cabem ${d.lotacao}.` : "Cada aluno custa mais do que paga."];
+  if(s.payback===null) return ["bad","✕","Dá lucro quando estiver cheio, mas o investimento não volta.", `Com lucro de ${brl(s.resultado)}/mês e ${p.alunosAlvo} alunos, os ${brl(s.exposicao)} que precisam ser colocados não voltam em ${num(s.H/12,0)} anos.`];
+  if(s.vpl<0) return ["warn","!","O investimento volta, mas rende menos do que outra aplicação.", `Recupera em ${tempo(s.payback)}, porém rende abaixo dos ${num(p.tma,1)}% ao ano desejados.`];
+  if(s.be/d.lotacao>0.7 || (p.capital>0 && p.capital<s.exposicao)) return ["warn","!","Viável, mas com risco alto.", `Precisa de ${pct(s.be/d.lotacao,0)} das vagas ocupadas para empatar${p.capital>0 && p.capital<s.exposicao?` e faltam ${brl(s.exposicao-p.capital)} de capital`:""}.`];
+  return ["ok","✓","Viável com estas premissas.", `Recupera o investimento em ${tempo(s.payback)} e rende ${s.tir===null?"—":pct(s.tir,0)} ao ano.`];
+}
+function alerts(p, s){
+  const a = [], d = s.d;
+  if(Math.abs(d.mixSum-100)>0.01) a.push(["bad",`Os três planos somam ${num(d.mixSum,1)}% dos alunos. Ajuste para somar 100%.`]);
+  if(p.pctAvulsa+p.pctTurno>100) a.push(["bad","Horas avulsas + turno fixo passam de 100% das horas alugadas."]);
+  if(p.salasFixas>p.salas) a.push(["bad","Há mais salas em contrato mensal do que salas existentes."]);
+  if(d.areaNec > p.areaUtilTerreo + 0.01) a.push(["warn",`${d.capSim} alunos × ${num(p.m2Aluno,1)} m² = ${num(d.areaNec)} m² de área livre para treinar, mas a estimativa do térreo é de ${num(p.areaUtilTerreo)} m². Confirmar com a planta.`]);
+  const areaTreino = Math.max(p.areaUtilTerreo, d.areaNec);
+  if(areaTreino > p.areaBrutaTerreo) a.push(["bad",`A área de treino (${num(areaTreino)} m²) é maior que o térreo inteiro (${p.areaBrutaTerreo} m²).`]);
+  else if(areaTreino > p.areaBrutaTerreo*0.8) a.push(["warn",`A área de treino (${num(areaTreino)} m²) ocupa ${pct(areaTreino/p.areaBrutaTerreo,0)} do térreo. Sobra pouco para recepção, escada e banheiros.`]);
+  const area = p.salaLarg*p.salaComp, menor = Math.min(p.salaLarg,p.salaComp);
+  if(area < 7.5 || menor < 2.2) a.push(["warn",`Cada sala tem ${num(area,2)} m². A norma da Anvisa (RDC 50) pede 7,5 m² e lado mínimo de 2,2 m para consultório. O projeto prevê salas só de terapia; depende de aceite da Vigilância Sanitária.`]);
+  if(p.salas*area > p.areaBruta2*0.7) a.push(["warn",`As salas ocupam ${pct(p.salas*area/p.areaBruta2,0)} do 2º andar. Sobra pouco para escada, corredor e espera.`]);
+  if(p.alunosAlvo > d.lotacao) a.push(["bad",`A meta de ${p.alunosAlvo} alunos é maior do que cabe no studio (${d.lotacao}). Reduza a meta ou aumente horário/área.`]);
+  if(Number.isFinite(s.be) && s.be <= d.lotacao && s.be/d.lotacao > 0.7) a.push(["warn",`Para empatar é preciso ocupar ${pct(s.be/d.lotacao,0)} das vagas. Pouca folga se os alunos demorarem a vir.`]);
+  if(p.capital>0 && p.capital < s.exposicao) a.push(["bad",`O capital dos sócios (${brl(p.capital)}) não cobre o dinheiro necessário (${brl(s.exposicao)}). Faltam ${brl(s.exposicao-p.capital)}.`]);
+  if(p.capital===0) a.push(["warn","O capital disponível dos sócios ainda não foi informado (grupo \"Dinheiro dos sócios\")."]);
+  if(Math.max(0,p.fechaSemana-p.abreSemana)===0 && Math.max(0,p.fechaSab-p.abreSab)===0) a.push(["bad","O studio está sem horário de funcionamento."]);
+  if([p.abreSemana,p.fechaSemana,p.abreSab,p.fechaSab,p.abreDom,p.fechaDom].some(v => v<0 || v>24)) a.push(["bad","Há horário de abertura ou fechamento fora do intervalo de 0 a 24 h."]);
+  if(p.horasPico2 > d.horasOp) a.push(["warn",`As horas com instrutor extra (${num(p.horasPico2)}) passam das horas abertas no mês (${num(d.horasOp)}).`]);
+  if(p.horasSala > d.horasOp + 0.01) a.push(["warn",`Cada sala está disponível ${num(p.horasSala)} h/mês, mais que as ${num(d.horasOp)} h em que o studio fica aberto. Recepção e limpeza estão dimensionadas para o horário do studio.`]);
+  if(p.fatorOcup>100 || p.ocupCow>100) a.push(["bad","Aproveitamento dos horários ou ocupação das salas acima de 100%."]);
+  if(p.alunosIniciais > p.alunosAlvo) a.push(["warn","Há mais alunos na inauguração do que na meta. A simulação usa a meta."]);
+  if(p.alunosAlvo>0 && Number.isFinite(s.be) && p.alunosAlvo >= s.be && s.be <= d.lotacao) a.push(["ok",`A meta de ${p.alunosAlvo} alunos fica ${p.alunosAlvo-s.be} acima do ponto de equilíbrio.`]);
+  return a;
+}
+const ICON = {bad:"✕", warn:"!", ok:"✓"};
+
+function cashChart(s){
+  const rows = s.rows, W = 800, Hh = 260, L = 64, R = 16, T = 16, B = 30;
+  const vals = [-s.upfront + s.p.empValor, ...rows.map(r=>r.cumSoc)];
+  let mn = Math.min(0, ...vals), mx = Math.max(0, ...vals); if(mx===mn) mx = mn+1;
+  // escala com valores "redondos" no eixo
+  const raw = (mx-mn)/5, mag = Math.pow(10, Math.floor(Math.log10(raw))), nrm = raw/mag;
+  const step = (nrm<=1?1:nrm<=2?2:nrm<=2.5?2.5:nrm<=5?5:10)*mag;
+  mn = Math.floor(mn/step)*step; mx = Math.ceil(mx/step)*step;
+  const x = i => L + i*(W-L-R)/(vals.length-1), y = v => T + (mx-v)*(Hh-T-B)/(mx-mn);
+  const pts = vals.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+  const tv = []; for(let v=mn; v<=mx+step/2; v+=step) tv.push(v);
+  const kfmt = v => (Math.abs(v)>=1000? num(v/1000,0)+" mil" : num(v,0));
+  let svg = `<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Caixa acumulado dos sócios mês a mês">`;
+  tv.forEach(v => { svg += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/><text x="${L-8}" y="${y(v)+4}" font-size="11" text-anchor="end" fill="var(--muted)">R$ ${kfmt(v)}</text>`; });
+  for(let i=0;i<vals.length;i+=12){ const anc = i===0?"start":(i>=vals.length-1?"end":"middle"); svg += `<text x="${x(i)}" y="${Hh-10}" font-size="11" text-anchor="${anc}" fill="var(--muted)">${i===0?"assinatura":"mês "+i}</text>`; }
+  svg += `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-width="1.2"/>`;
+  svg += `<polygon points="${x(0)},${y(0)} ${pts.join(" ")} ${x(vals.length-1)},${y(0)}" fill="var(--chart-fill)"/>`;
+  svg += `<polyline points="${pts.join(" ")}" fill="none" stroke="var(--chart-line)" stroke-width="2" stroke-linejoin="round"/>`;
+  // rótulos dos marcos: à direita do ponto, ou à esquerda quando o ponto está perto da borda direita
+  const lab = (i, dy, txt) => { const right = x(i) > W*0.65; return `<text x="${x(i)+(right?-8:8)}" y="${y(vals[i])+dy}" font-size="12" text-anchor="${right?"end":"start"}" fill="var(--text)">${txt}</text>`; };
+  const iMin = s.minMes; svg += `<circle cx="${x(iMin)}" cy="${y(vals[iMin])}" r="5" fill="var(--bad)" stroke="var(--surface)" stroke-width="2"/>` + lab(iMin, 18, `pior momento: ${brl(vals[iMin])}`);
+  const iZero = vals.findIndex((v,i)=> i>iMin && v>=0);
+  if(iZero>0) svg += `<circle cx="${x(iZero)}" cy="${y(vals[iZero])}" r="5" fill="var(--ok)" stroke="var(--surface)" stroke-width="2"/>` + lab(iZero, -10, `dinheiro de volta (mês ${iZero} após a assinatura)`);
+  svg += `<line id="cx" x1="0" x2="0" y1="${T}" y2="${Hh-B}" stroke="var(--muted)" stroke-dasharray="3 3" visibility="hidden"/><circle id="cdot" r="5" fill="var(--chart-line)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>`;
+  svg += `<rect id="hit" x="${L}" y="${T}" width="${W-L-R}" height="${Hh-T-B}" fill="transparent"/></svg>`;
+  return {svg, vals, x, y, W, L, R};
+}
+function bindChart(ch, s){
+  const box = document.getElementById("chartbox"); if(!box || !box.querySelector) return;
+  const svg = box.querySelector("svg"); if(!svg) return;
+  const hit = svg.getElementById("hit"), line = svg.getElementById("cx"), dot = svg.getElementById("cdot"), tip = box.querySelector(".tip");
+  hit.addEventListener("mousemove", e => {
+    const r = svg.getBoundingClientRect(), sx = (e.clientX - r.left) * ch.W / r.width;
+    const i = Math.max(0, Math.min(ch.vals.length-1, Math.round((sx - ch.L)/((ch.W-ch.L-ch.R)/(ch.vals.length-1)))));
+    const X = ch.x(i), Y = ch.y(ch.vals[i]);
+    line.setAttribute("x1",X); line.setAttribute("x2",X); line.setAttribute("visibility","visible");
+    dot.setAttribute("cx",X); dot.setAttribute("cy",Y); dot.setAttribute("visibility","visible");
+    const row = s.rows[i-1];
+    tip.innerHTML = i===0 ? `<b>Assinatura</b><br>Saída inicial: ${brl(-s.upfront)}${s.p.empValor>0?`<br>Empréstimo recebido: ${brl(s.p.empValor)}`:""}` : `<b>Mês ${i} após a assinatura</b> · ${row.fase}${row.alunos!=null?` · ${num(row.alunos)} alunos`:""}<br>Resultado do mês: ${brl(row.soc)}<br>Caixa acumulado: ${brl(ch.vals[i])}`;
+    tip.style.display = "block";
+    const px = X * r.width / ch.W, py = Y * r.height / 260;
+    tip.style.left = Math.min(px + 12, r.width - tip.offsetWidth - 4) + "px"; tip.style.top = Math.max(0, py - 60) + "px";
+  });
+  hit.addEventListener("mouseleave", () => { tip.style.display = "none"; line.setAttribute("visibility","hidden"); dot.setAttribute("visibility","hidden"); });
+}
+
+// Balanço mensal por unidade: custos comuns rateados pela área de cada andar
+function balanco(p, s){
+  const d = s.d, areaTot = p.areaBrutaTerreo + p.areaBruta2;
+  const share = areaTot>0 ? p.areaBruta2/areaTot : 0;
+  const comuns = p.aluguel+p.condIptu+p.taxasPrediais+p.garantia+p.apoio+p.proLabore+p.utilidades+p.software+p.contador+p.seguro+p.outros;
+  const studioDir = s.impT + s.cvar + d.tecnica + s.eqOp + p.marketing;
+  const cowDir = s.c.imp + s.c.vari + s.c.plat + p.residuos;
+  const st = {nome:"Studio (ginásio)", ent:s.recT, sai:studioDir + comuns*(1-share)};
+  const cw = {nome:"Salas (coworking)", ent:s.c.rec, sai:cowDir + comuns*share};
+  const tt = {nome:"Negócio total", ent:st.ent+cw.ent, sai:st.sai+cw.sai};
+  [st,cw,tt].forEach(u => u.res = u.ent - u.sai);
+  return {share, comuns, rows:[st,cw,tt]};
+}
+function balanceChart(b){
+  const W = 800, H = 290, L = 70, R = 16, T = 26, B = 40;
+  const series = [["ent","Entradas","var(--s-in)"],["sai","Saídas","var(--s-out)"],["res","Resultado","var(--s-res)"]];
+  const vals = b.rows.flatMap(u => series.map(([k]) => u[k]));
+  let mn = Math.min(0, ...vals), mx = Math.max(0, ...vals); if(mx===mn) mx = 1;
+  const raw = (mx-mn)/5, mag = Math.pow(10, Math.floor(Math.log10(raw))), nrm = raw/mag;
+  const step = (nrm<=1?1:nrm<=2?2:nrm<=2.5?2.5:nrm<=5?5:10)*mag;
+  mn = Math.floor(mn/step)*step; mx = Math.ceil(mx/step)*step;
+  const y = v => T + (mx-v)*(H-T-B)/(mx-mn), y0 = y(0);
+  const gw = (W-L-R)/b.rows.length, bw = Math.min(64, gw/4.2), gap = 2;
+  const k = v => Math.abs(v)<0.5 ? "R$ 0" : "R$ " + num(v/1000, Math.abs(v)<10000?1:0) + " mil";
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Balanço mensal: entradas, saídas e resultado do studio, das salas e do negócio total">`;
+  for(let v=mn; v<=mx+step/2; v+=step) svg += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L-8}" y="${y(v)+4}" font-size="11" text-anchor="end" fill="var(--muted)">${k(v)}</text>`;
+  svg += `<line x1="${L}" x2="${W-R}" y1="${y0}" y2="${y0}" stroke="var(--muted)" stroke-width="1.2"/>`;
+  b.rows.forEach((u,gi) => {
+    const gx = L + gi*gw + (gw - (3*bw + 2*gap))/2;
+    series.forEach(([key,name,col],si) => {
+      const v = u[key], x = gx + si*(bw+gap), yv = y(v), r = Math.min(4, bw/2, Math.abs(y0-yv));
+      const path = yv<y0
+        ? `M${x},${y0}V${yv+r}Q${x},${yv} ${x+r},${yv}H${x+bw-r}Q${x+bw},${yv} ${x+bw},${yv+r}V${y0}Z`
+        : `M${x},${y0}V${yv-r}Q${x},${yv} ${x+r},${yv}H${x+bw-r}Q${x+bw},${yv} ${x+bw},${yv-r}V${y0}Z`;
+      svg += `<path d="${path}" fill="${col}"><title>${u.nome} · ${name}: ${brl(v)}</title></path>`;
+      const ly = v>=0 ? yv-6 : yv+14;
+      svg += `<text x="${x+bw/2}" y="${ly}" font-size="11.5" text-anchor="middle" fill="var(--text)" font-weight="${key==="res"?700:500}">${k(v)}</text>`;
+    });
+    svg += `<text x="${L + gi*gw + gw/2}" y="${H-12}" font-size="13" text-anchor="middle" fill="var(--text)" font-weight="600">${u.nome}</text>`;
+  });
+  return svg + `</svg>`;
+}
+
+let LAST = null;
+
+function indBox(title, items){
+  return `<div class="indbox"><h4>${title}</h4>${items.map(([l,v,hint])=>`<div class="ind"><div class="l">${l}${hint?`<small>${hint}</small>`:""}</div><div class="v">${v}</div></div>`).join("")}</div>`;
+}
+
+function renderResults(){
+  const p = P, s = simulate(p, p.modelo), d = s.d;
+  groupInfo(p, s);
+  const tot = Math.max(1, s.receitaTotal);
+  const alunosLucro = s.margAluno>0 ? Math.ceil((s.fixoLiq + p.lucroAlvo)/s.margAluno - 1e-9) : Infinity;
+  const deprec = p.vidaUtil>0 ? s.capexTotal/(p.vidaUtil*12) : 0;
+  const parcEmp = p.empValor>0 ? pmt(p.empValor,p.empTaxa/100,p.empPrazo) : 0;
+  const beFrac = Number.isFinite(s.be) ? s.be/Math.max(1,d.lotacao) : Infinity;
+
+  // Veredito e números principais
+  const [vt, vi, vh, vd] = verdict(p, s);
+  document.getElementById("verdict").innerHTML = `<div class="verdict ${vt}"><div class="ic">${vi}</div><div><b>${vh}</b><span>${vd}</span></div></div>`;
+  const meterCls = beFrac>1 ? "bad" : beFrac>0.7 ? "warn" : "";
+  document.getElementById("bigs").innerHTML = `
+    <div class="big"><div class="q">Lucro por mês com ${p.alunosAlvo} alunos</div><div class="a">${sgn(s.resultado)}</div><div class="d">Depois de impostos e todos os custos, com o studio maduro.</div></div>
+    <div class="big"><div class="q">Alunos para empatar</div><div class="a">${Number.isFinite(s.be)?s.be:"—"} <span style="font-size:15px;color:var(--muted)">de ${d.lotacao} vagas</span></div>
+      <div class="meter ${meterCls}"><i style="width:${Math.min(100, fin(beFrac)*100).toFixed(0)}%"></i></div><div class="d">${Number.isFinite(beFrac)?pct(beFrac,0)+" do studio ocupado para não ter prejuízo.":""}</div></div>
+    <div class="big"><div class="q">Dinheiro que vocês precisam ter</div><div class="a">${brl(s.exposicao)}</div><div class="d">Obra, aparelhos e prejuízos até o negócio se pagar sozinho${p.capital>0?` · vocês têm ${brl(p.capital)}`:""}.</div></div>
+    <div class="big"><div class="q">Tempo para recuperar o investimento</div><div class="a">${s.payback?tempo(s.payback):"não volta"}</div><div class="d">${s.payback?"Contado a partir da inauguração.":`Não acontece em ${num(s.H/12,0)} anos.`}</div></div>`;
+
+  // ----- Aba Resumo -----
+  const ch = cashChart(s), bal = balanco(p, s);
+  const resumo = `
+    <div class="card"><h3>Balanço do mês: studio, salas e negócio total</h3><p class="sub">Quanto entra, quanto sai e o que sobra por mês com o negócio maduro (${p.alunosAlvo} alunos e ${num(p.ocupCow,0)}% de ocupação das salas).</p>
+      <div class="legend"><span><i style="background:var(--s-in)"></i>Entradas</span><span><i style="background:var(--s-out)"></i>Saídas</span><span><i style="background:var(--s-res)"></i>Resultado (entradas − saídas)</span></div>
+      <div class="chartbox">${balanceChart(bal)}</div>
+      <div class="scroll"><table>
+        <tr><th></th><th>Entradas</th><th>Saídas</th><th>Resultado</th><th>Margem</th></tr>
+        ${bal.rows.map((u,i)=>`<tr${i===2?' class="total"':''}><td>${u.nome}</td><td>${brl(u.ent)}</td><td>${brl(u.sai)}</td><td>${sgn(u.res)}</td><td>${u.ent>0?pct(u.res/u.ent,0):"—"}</td></tr>`).join("")}
+      </table></div>
+      <p class="note">Aluguel, condomínio e custos comuns (recepção, limpeza, contas, sistema, contador, seguro) são divididos pela área: ${pct(1-bal.share,0)} para o studio e ${pct(bal.share,0)} para as salas. Instrutores, aparelhos e divulgação ficam no studio.</p></div>`
+    + `
+    <div class="card"><h3>Caixa dos sócios ao longo do tempo</h3><p class="sub">Quanto dinheiro saiu (abaixo de zero) e quando volta (acima de zero). Passe o mouse para ver cada mês.</p>
+      <div class="chartbox" id="chartbox">${ch.svg}<div class="tip"></div></div>
+      <p class="note">Inclui a obra, os meses até os alunos chegarem${p.empValor>0?" e o empréstimo":""}.</p></div>
+    <div class="card"><h3>Pontos de atenção</h3>${alerts(p,s).map(([t,m])=>`<div class="alert ${t}"><b>${ICON[t]}</b><span>${m}</span></div>`).join("")}</div>
+    <div class="card"><h3>Indicadores</h3><p class="sub">Todos os números para o studio maduro (${p.alunosAlvo} alunos), salvo indicação.</p><div class="indgrid">
+      ${indBox("Receitas", [
+        ["Faturamento por mês", brl(s.receitaTotal), "Studio + salas"],
+        ["Faturamento por ano", brl(s.receitaTotal*12)],
+        ["Mensalidade média recebida", brl2(d.ticket), "Já com descontos e inadimplência"],
+        ["Faturamento por m²", brl2(s.receitaTotal/Math.max(1,p.areaBrutaTerreo+p.areaBruta2))+"/mês"],
+        ["Faturamento por hora aberta", brl2(s.recT/Math.max(1,d.horasOp)), "Só o studio"],
+      ])}
+      ${indBox("Lucro", [
+        ["Lucro por mês", sgn(s.resultado), "Sobra de caixa depois de tudo (≈ EBITDA)"],
+        ["Margem de lucro", pct(s.resultado/tot), "De cada R$ 100 faturados, quanto sobra"],
+        ["Lucro por ano", sgn(s.resultado*12)],
+        ["Lucro contábil por mês", sgn(s.resultado-deprec), `Descontando o desgaste do investimento (${brl(deprec)}/mês)`],
+        ...(parcEmp?[["Sobra depois da parcela do empréstimo", sgn(s.resultado-parcEmp)]]:[]),
+        ["Lucro com o studio lotado", sgn(regime({...p, alunosAlvo:d.lotacao}, p.modelo).resultado), `${d.lotacao} alunos`],
+        [`Alunos para lucrar ${brl(p.lucroAlvo)}/mês`, Number.isFinite(alunosLucro)?`${alunosLucro} (${pct(alunosLucro/Math.max(1,d.lotacao),0)} das vagas)`:"—"],
+      ])}
+      ${indBox("Ponto de equilíbrio e folga", [
+        ["Alunos para empatar", Number.isFinite(s.be)?s.be:"—", "Abaixo disso há prejuízo"],
+        ["Faturamento do studio para empatar", Number.isFinite(s.be)?brl(s.be*d.ticket)+"/mês":"—"],
+        ["Folga acima do equilíbrio", Number.isFinite(s.be)&&p.alunosAlvo>0?pct((p.alunosAlvo-s.be)/p.alunosAlvo):"—", "Quanto os alunos podem cair antes do prejuízo"],
+        ["Quanto cada aluno deixa por mês", brl2(s.margAluno), "Mensalidade menos impostos e custos do aluno"],
+        ["Ocupação das salas que paga o aluguel", (()=>{ const un=s.c.precoMed*(1-p.tCow/100-p.comissaoPlat/100)-p.custoVarHora, cap=s.c.sh*p.horasSala, falta=p.aluguel-s.c.recFixo*(1-p.tCow/100); return falta<=0?"0%":(un>0&&cap>0?pct(falta/(un*cap),0):"—"); })()],
+        ["Sensibilidade do lucro", s.resultado>0?num((s.A*s.margAluno+s.c.liq+p.recExtra*(1-d.tT))/s.resultado,1)+"×":"—", "Se o faturamento cai 1%, o lucro cai esse múltiplo"],
+      ])}
+      ${indBox("Retorno do investimento", [
+        ["Investimento inicial", brl(s.capexTotal), "Obra + aparelhos"],
+        ["Dinheiro necessário no pior momento", brl(s.exposicao), `No mês ${s.minMes} após a assinatura`],
+        ["Tempo para recuperar", s.payback?tempo(s.payback):"não volta", "A partir da inauguração"],
+        ["Tempo para recuperar, corrigido", s.paybackDesc?tempo(s.paybackDesc):"não volta", `Considerando ${num(p.tma,1)}% ao ano de rendimento alternativo`],
+        ["Valor do negócio hoje (VPL)", sgn(s.vpl), "Positivo = rende mais que a aplicação alternativa"],
+        ["Rentabilidade anual (TIR)", s.tir===null?"—":pct(s.tir), `Compare com os ${num(p.tma,1)}% desejados`],
+        ["Retorno por real investido", s.il===null?"—":num(s.il,2), "Acima de 1 = vale a pena"],
+        ["Retorno anual com o studio maduro", pct(s.resultado*12/Math.max(1,s.capexTotal)), "Lucro de um ano cheio ÷ investimento inicial (ignora obra e meses de prejuízo)"],
+        ["1º mês com lucro", s.mesLucro?`mês ${s.mesLucro} de funcionamento`:"não acontece"],
+        [`Caixa no fim de ${num(s.H/12,0)} anos`, sgn(s.cumFinal)],
+      ])}
+      ${indBox("Pesos dos custos", [
+        ["Imóvel ÷ faturamento", pct((p.aluguel+p.condIptu+p.taxasPrediais+p.garantia)/tot), "Aluguel, condomínio e taxas"],
+        ["Equipe ÷ faturamento", pct(d.folha/tot)],
+        ["Custo fixo por aluno", p.alunosAlvo>0?brl2(s.opex/p.alunosAlvo):"—"],
+        ["Custo da equipe técnica", brl(d.tecnica)+"/mês", `${num(d.horasOp*p.instrBase+p.horasPico2)} horas de instrutor`],
+      ])}
+      ${indBox("Alunos", [
+        ["Horas abertas por mês", num(d.horasOp)],
+        ["Alunos treinando ao mesmo tempo", d.capSim],
+        ["Vagas no studio", d.lotacao, "Alunos ativos que cabem"],
+        ["Tempo médio de permanência", p.churn>0?num(100/p.churn,1)+" meses":"sem cancelamentos"],
+        ["Valor de um aluno na vida toda", p.churn>0?brl((d.ticket*(1-d.tT)-p.cvAluno)/(p.churn/100)+p.matricula*(1-d.tT)):"—", "O que ele deixa enquanto fica"],
+        ["Valor do aluno ÷ custo para conquistá-lo", p.churn>0&&p.cac>0?num(((d.ticket*(1-d.tT)-p.cvAluno)/(p.churn/100)+p.matricula*(1-d.tT))/p.cac,1)+"×":"—", "Acima de 3× é saudável"],
+      ])}
+    </div></div>`;
+
+  // ----- Aba Lucro do mês -----
+  const custos = [["Impostos e taxas do studio",s.impT],["Impostos das salas",s.c.imp],["Aluguel",p.aluguel],["Condomínio + IPTU",p.condIptu],["Outras taxas do imóvel",p.taxasPrediais],["Garantia do aluguel",p.garantia],
+    ["Instrutores",d.tecnica],["Recepção e limpeza",p.apoio],["Retirada dos sócios",p.proLabore],["Energia, água, internet",p.utilidades],["Divulgação",p.marketing],["Sistema e fechaduras",p.software],
+    ["Contador",p.contador],["Seguro",p.seguro],["Lixo hospitalar",p.residuos],["Outros",p.outros],["Aparelhos ("+s.eq.label+")",s.eqOp],["Custos variáveis das salas",s.c.vari+s.c.plat],["Custos por aluno",s.cvar]].filter(x=>x[1]>0.5).sort((a,b)=>b[1]-a[1]);
+  const maxC = Math.max(1, ...custos.map(c=>c[1]));
+  const row = (l,v,cls="") => `<tr class="${cls}"><td>${l}</td><td>${sgn(v)}</td><td>${pct(v/tot)}</td></tr>`;
+  const lucro = `
+    <div class="card"><h3>Para onde vai o dinheiro</h3><p class="sub">Cada custo mensal comparado ao faturamento de ${brl(s.receitaTotal)}. O que sobra é o lucro: ${brl(s.resultado)} (${pct(s.resultado/tot)}).</p>
+      ${custos.map(([l,v])=>`<div class="hbar"><span>${l}</span><div class="track"><i style="width:${(v/maxC*100).toFixed(1)}%"></i></div><span class="val">${brl(v)} · ${pct(v/tot,0)}</span></div>`).join("")}</div>
+    <div class="card"><h3>Demonstrativo do mês (DRE)</h3><p class="sub">Studio maduro com ${p.alunosAlvo} alunos e preços do 1º ano.</p><div class="scroll"><table>
+      <tr><th>Linha</th><th>R$ por mês</th><th>% do faturamento</th></tr>
+      ${row("Mensalidades do studio", s.recPlanos)}${s.recMat?row("Matrículas", s.recMat):""}${p.recExtra?row("Outras receitas do studio", p.recExtra):""}
+      ${s.c.recHora?row("Aluguel das salas por hora", s.c.recHora):""}${s.c.recFixo?row("Salas em contrato mensal", s.c.recFixo):""}
+      <tr class="total"><td>Faturamento</td><td>${brl(s.receitaTotal)}</td><td>100%</td></tr>
+      ${custos.map(([l,v])=>row("(−) "+l, -v)).join("")}
+      <tr class="total"><td>Lucro do mês (caixa)</td><td>${sgn(s.resultado)}</td><td>${pct(s.resultado/tot)}</td></tr>
+      ${row("(−) Desgaste do investimento (depreciação)", -deprec, "sub")}
+      <tr class="total"><td>Lucro contábil</td><td>${sgn(s.resultado-deprec)}</td><td>${pct((s.resultado-deprec)/tot)}</td></tr>
+      ${parcEmp?`<tr class="sub"><td>(−) Parcela do empréstimo</td><td>${brl(-parcEmp)}</td><td></td></tr><tr class="total"><td>Sobra depois do empréstimo</td><td>${sgn(s.resultado-parcEmp)}</td><td></td></tr>`:""}
+    </table></div><p class="note">Imposto de renda fora do Simples não está incluído.</p></div>
+    <div class="card"><h3>Como chegamos ao ponto de equilíbrio</h3><div class="scroll"><table>
+      <tr><td>Custos fixos do mês</td><td>${brl2(s.opex)}</td></tr>
+      <tr><td>(−) O que as salas deixam, já sem impostos e custos</td><td>${brl2(s.c.liq)}</td></tr>
+      ${p.recExtra?`<tr><td>(−) Outras receitas do studio, sem impostos</td><td>${brl2(p.recExtra*(1-d.tT))}</td></tr>`:""}
+      <tr><td>= O que os alunos precisam cobrir</td><td>${brl2(s.fixoLiq)}</td></tr>
+      <tr><td>÷ Quanto cada aluno deixa por mês</td><td>${brl2(s.margAluno)}</td></tr>
+      <tr class="total"><td>= Alunos para empatar (arredondado para cima)</td><td>${Number.isFinite(s.be)?s.be:"—"}</td></tr>
+    </table></div></div>`;
+
+  // ----- Aba Riscos e cenários -----
+  const sc = [["Ruim", simulate(scenario(p,-1),p.modelo)], ["Esperado", s], ["Bom", simulate(scenario(p,1),p.modelo)]];
+  const scRow = (l, f) => `<tr><td>${l}</td>${sc.map(([,x])=>`<td>${f(x)}</td>`).join("")}</tr>`;
+  const sv = sensitivity(p), maxSw = Math.max(1, ...sv.rows.map(r=>r.swing));
+  const fmtBe = o => Number.isFinite(o.be) ? `${o.be} (${pct(o.be/Math.max(1,o.lot),0)})` : "—";
+  const precosF = [0.9,0.95,1,1.05,1.1,1.2], alunosF = [0.6,0.7,0.8,0.9,1,1.1].map(f=>Math.round(d.lotacao*f));
+  const pts = [...new Set([0.4,0.5,0.6,0.7,0.8,0.9,1].map(x=>Math.round(d.lotacao*x)).concat([s.be,p.alunosAlvo,alunosLucro]).filter(x=>Number.isFinite(x)&&x>=0))].sort((a,b)=>a-b);
+  const riscos = `
+    <div class="card"><h3>Cenários ruim, esperado e bom</h3><p class="sub">Ruim: ${p.varAlunos}% menos alunos, ${p.varOcup}% menos ocupação das salas, preços ${p.varPrecos}% menores, custos ${p.varCustos}% maiores e ${p.varRampa}% mais tempo para encher. Bom: o contrário.</p><div class="scroll"><table>
+      <tr><th></th>${sc.map(([n])=>`<th>${n}</th>`).join("")}</tr>
+      ${scRow("Alunos", x=>x.A)}
+      ${scRow("Faturamento por mês", x=>brl(x.receitaTotal))}
+      ${scRow("Lucro por mês", x=>sgn(x.resultado))}
+      ${scRow("Alunos para empatar", x=>Number.isFinite(x.be)?`${x.be} (${pct(x.be/Math.max(1,x.d.lotacao),0)})`:"—")}
+      ${scRow("Tempo para recuperar", x=>x.payback?tempo(x.payback):"não volta")}
+      ${scRow("Dinheiro necessário", x=>brl(x.exposicao))}
+      ${scRow("Valor do negócio hoje (VPL)", x=>sgn(x.vpl))}
+      ${scRow("Rentabilidade anual (TIR)", x=>x.tir===null?"—":pct(x.tir))}
+    </table></div></div>
+    <div class="card"><h3>O que mais mexe no lucro</h3><p class="sub">Cada premissa 10% menor e 10% maior, uma de cada vez. As do topo são as que mais merecem atenção.</p><div class="scroll"><table>
+      <tr><th>Premissa</th><th>Lucro com −10%</th><th>Lucro com +10%</th><th>Alunos p/ empatar (−10% / +10%)</th><th>Peso</th></tr>
+      ${sv.rows.map(r=>`<tr><td>${r.l}</td><td>${sgn(r.lo.res)}</td><td>${sgn(r.hi.res)}</td><td>${fmtBe(r.lo)} / ${fmtBe(r.hi)}</td><td style="min-width:90px"><div class="meter" style="margin:0"><i style="width:${(r.swing/maxSw*100).toFixed(0)}%"></i></div></td></tr>`).join("")}
+    </table></div><p class="note">Hoje: lucro de ${brl(sv.base.resultado)} e ${fmtBe({be:sv.base.be, lot:sv.lotBase})} alunos para empatar.</p></div>
+    <div class="card"><h3>Lucro por mês: alunos × preço dos planos</h3><p class="sub">Linhas: número de alunos (e % das vagas). Colunas: preços mais baixos ou mais altos que os atuais.</p><div class="scroll"><table>
+      <tr><th>Alunos</th>${precosF.map(f=>`<th>${f===1?"preço atual":(f>1?"+":"")+num((f-1)*100,0)+"%"}</th>`).join("")}</tr>
+      ${alunosF.map(n=>`<tr><td>${n} (${pct(n/Math.max(1,d.lotacao),0)})</td>${precosF.map(f=>`<td>${sgn(regime({...p, alunosAlvo:n, p2:p.p2*f, p3:p.p3*f, p45:p.p45*f},p.modelo).resultado)}</td>`).join("")}</tr>`).join("")}
+    </table></div></div>
+    <div class="card"><h3>Lucro por número de alunos</h3><div class="scroll"><table>
+      <tr><th>Alunos</th><th>% das vagas</th><th>Faturamento do studio</th><th>Lucro por mês</th><th>Lucro por ano</th></tr>
+      ${pts.map(n=>{ const r=regime({...p, alunosAlvo:n},p.modelo); const tag=[n===s.be?"empata":"",n===p.alunosAlvo?"meta":"",n===alunosLucro?"lucro desejado":""].filter(Boolean).join(", ");
+        return `<tr${tag?' class="hl"':''}><td>${n}${tag?" · "+tag:""}</td><td>${pct(n/Math.max(1,d.lotacao),0)}</td><td>${brl(r.recT)}</td><td>${sgn(r.resultado)}</td><td>${sgn(r.resultado*12)}</td></tr>`;}).join("")}
+    </table></div></div>`;
+
+  // ----- Aba Comparar -----
+  const comparar = `
+    <div class="card"><h3>Aparelhos: comprar, alugar ou financiar?</h3><p class="sub">Mesmas premissas para as quatro opções. A linha destacada é a escolhida.</p><div class="scroll"><table>
+      <tr><th>Opção</th><th>Paga agora</th><th>Investimento total</th><th>Custo por mês</th><th>Alunos p/ empatar</th><th>Lucro/mês</th><th>Recupera em</th><th>Dinheiro necessário</th><th>VPL</th></tr>
+      ${Object.keys(MODELS).map(m=>{ const x=simulate(p,m); return `<tr${m===p.modelo?' class="hl"':''}><td>${MODELS[m]}</td><td>${brl(x.eq.capex)}</td><td>${brl(x.capexTotal)}</td><td>${brl(x.eqOp)}</td><td>${Number.isFinite(x.be)?x.be:"—"}</td><td>${sgn(x.resultado)}</td><td>${x.payback?x.payback+" meses":"não volta"}</td><td>${brl(x.exposicao)}</td><td>${sgn(x.vpl)}</td></tr>`;}).join("")}
+    </table></div><p class="note">Financiamento: parcela de ${brl2(equip(p,"cdc").parcela)} por ${p.cdcPrazo} meses, mais manutenção. Leasing: ${p.leasingPrazo>0?`${p.leasingPrazo} meses e ${num(p.leasingVRG,0)}% do preço novo para ficar com os aparelhos`:"aluguel contínuo, com manutenção inclusa"}.</p></div>
+    <div class="card"><h3>Salas: quanto rende cada nível de ocupação</h3><p class="sub">${p.salas} salas a ${brl(s.c.precoMed)}/hora em média.</p><div class="scroll"><table>
+      <tr><th>Ocupação</th><th>Horas por sala</th><th>Receita por sala</th><th>Receita total</th><th>Sobra (sem impostos e custos)</th><th>Paga do aluguel</th><th>Lucro do negócio</th></tr>
+      ${[...new Set([10,15,20,25,30,45,60,p.ocupCow])].sort((a,b)=>a-b).map(o=>{ const c=cow(p,o); const r=regime({...p, ocupCow:o},p.modelo); return `<tr${o===p.ocupCow?' class="hl"':''}><td>${num(o,0)}%</td><td>${c.horas} h</td><td>${brl(c.recSala)}</td><td>${brl(c.rec)}</td><td>${brl(c.liq)}</td><td>${pct(c.liq/Math.max(1,p.aluguel),0)}</td><td>${sgn(r.resultado)}</td></tr>`;}).join("")}
+      <tr class="sub"><td>Todas em contrato mensal de ${brl(p.aluguelFixoSala)}</td><td>—</td><td>${brl(p.aluguelFixoSala)}</td><td>${brl(p.aluguelFixoSala*p.salas)}</td><td>${brl(p.aluguelFixoSala*p.salas*(1-p.tCow/100))}</td><td>${pct(p.aluguelFixoSala*p.salas*(1-p.tCow/100)/Math.max(1,p.aluguel),0)}</td><td>${sgn(regime({...p, salasFixas:p.salas},p.modelo).resultado)}</td></tr>
+    </table></div></div>`;
+
+  // ----- Aba Caixa -----
+  const years = {};
+  s.rows.forEach(r => { const key = r.k ? "Ano "+(Math.floor((r.k-1)/12)+1) : "Obra"; (years[key] ||= {rec:0,res:0,cumS:0,alunos:0,n:0}); const y=years[key]; y.rec+=r.receita; y.res+=r.soc; y.cumS=r.cumSoc; y.n++; if(r.alunos!=null) y.alunos=r.alunos; });
+  const caixa = `
+    <div class="card"><h3>Ano a ano</h3><p class="sub">Contando a partir da assinatura do contrato. "Ano 1" começa na inauguração.</p><div class="scroll"><table>
+      <tr><th>Período</th><th>Meses</th><th>Alunos no fim</th><th>Faturamento</th><th>Resultado</th><th>Caixa acumulado</th></tr>
+      <tr class="sub"><td>Assinatura</td><td>—</td><td>—</td><td>—</td><td>${sgn(-s.upfront+p.empValor)}</td><td>${sgn(-s.upfront+p.empValor)}</td></tr>
+      ${Object.entries(years).map(([k,y])=>`<tr><td>${k}</td><td>${y.n}</td><td>${k==="Obra"?"—":num(y.alunos)}</td><td>${brl(y.rec)}</td><td>${sgn(y.res)}</td><td>${sgn(y.cumS)}</td></tr>`).join("")}
+      ${s.residual||s.caucaoVal?`<tr class="sub"><td>No fim: venda do negócio + caução devolvida</td><td></td><td></td><td></td><td>${sgn(s.residual+s.caucaoVal)}</td><td></td></tr>`:""}
+    </table></div></div>
+    <div class="card"><details><summary style="cursor:pointer;font-weight:650">Ver mês a mês</summary><div class="scroll" style="margin-top:8px"><table>
+      <tr><th>Mês</th><th>Situação</th><th>Alunos</th><th>Faturamento</th><th>Resultado</th><th>Caixa acumulado</th></tr>
+      ${s.rows.map(r=>`<tr${r.k&&r.k===s.payback?' class="hl"':''}><td>${r.m}</td><td>${r.fase}${r.k?" (mês "+r.k+")":""}</td><td>${r.alunos!=null?num(r.alunos):"—"}</td><td>${brl(r.receita)}</td><td>${sgn(r.soc)}</td><td>${sgn(r.cumSoc)}</td></tr>`).join("")}
+    </table></div></details></div>`;
+
+  // ----- Aba Como calculamos -----
+  const como = `
+    <div class="card"><h3>Glossário</h3><dl class="gloss">
+      <dt>Ponto de equilíbrio (alunos para empatar)</dt><dd>Número de alunos em que o faturamento cobre exatamente todos os custos. Abaixo dele há prejuízo.</dd>
+      <dt>Vagas no studio (lotação)</dt><dd>Quantos alunos ativos cabem, considerando horário, espaço, quantas vezes cada um treina e o vazio fora do pico.</dd>
+      <dt>Dinheiro necessário</dt><dd>O pior saldo do caixa: obra, aparelhos e os prejuízos dos primeiros meses, antes de o negócio andar sozinho.</dd>
+      <dt>Tempo para recuperar (payback)</dt><dd>Meses, a partir da inauguração, até o lucro acumulado devolver tudo o que foi investido.</dd>
+      <dt>Valor do negócio hoje (VPL)</dt><dd>Todo o dinheiro que o negócio gera, trazido para valores de hoje usando o rendimento mínimo desejado. Positivo = rende mais que a aplicação alternativa.</dd>
+      <dt>Rentabilidade anual (TIR)</dt><dd>Quanto o dinheiro investido rende por ano, em média. Compare com o rendimento mínimo desejado.</dd>
+      <dt>Depreciação</dt><dd>Desgaste da obra e dos aparelhos ao longo dos anos. Não sai do caixa, mas reduz o lucro contábil.</dd>
+      <dt>Rampa</dt><dd>Período em que os alunos e os aluguéis de sala crescem aos poucos até a meta.</dd>
+    </dl></div>
+    <div class="card"><h3>Fórmulas</h3><ul class="note" style="font-size:13.5px">
+      <li>Horas abertas = (fecha − abre) × dias, somando semana, sábado e domingo.</li>
+      <li>Alunos ao mesmo tempo: informado (recomendado 9). Área de treino necessária = alunos ao mesmo tempo × espaço por aluno; comparada com a área livre da planta.</li>
+      <li>Balanço por área: custos do imóvel e custos comuns (recepção, limpeza, contas, sistema, contador, seguro, outros) divididos entre studio e salas pela área de cada andar; instrutores, aparelhos, divulgação e custos dos alunos ficam no studio; impostos, custos por hora e lixo hospitalar das salas ficam nas salas.</li>
+      <li>Vagas = horas abertas × alunos ao mesmo tempo ÷ treinos por aluno × aproveitamento.</li>
+      <li>Mensalidade média = soma de (preço × % dos alunos) × (1 − % plano longo × desconto) × (1 − não pagas).</li>
+      <li>Instrutores = (horas abertas × instrutores + horas extras de pico) × custo da hora + adicional do RT.</li>
+      <li>Salas: horas alugadas = horas disponíveis × ocupação; preço médio pondera pacote, avulsa e turno; sobra = receita − impostos − taxa do app − custo por hora.</li>
+      <li>Alunos para empatar = (custos fixos − sobra das salas − outras receitas) ÷ quanto cada aluno deixa.</li>
+      <li>Caixa mês a mês: alunos e ocupação crescem em linha reta até a meta; preços, custos e aluguel sobem a cada 12 meses; carência conta da assinatura.</li>
+      <li>VPL e TIR usam o caixa do negócio sem o empréstimo; "dinheiro necessário" inclui o empréstimo.</li>
+    </ul></div>
+    <div class="card"><h3>Limites da simulação</h3><ul class="note" style="font-size:13.5px">
+      <li>Durante a obra entram só aluguel (fora da carência), condomínio + IPTU, outras taxas do imóvel e garantia. Equipe, contas e sistema começam na inauguração.</li>
+      <li>A meta de alunos não é limitada às vagas: se for maior, aparece um alerta, mas o cálculo usa a meta.</li>
+      <li>Salas em contrato mensal fixo contam desde a inauguração; só a venda por hora cresce aos poucos.</li>
+      <li>Impostos são percentuais fixos sobre o faturamento (Simples + cartão no studio; um percentual nas salas). IR/CSLL fora do Simples e a reforma tributária (CBS/IBS a partir de 2027) não estão modelados.</li>
+      <li>"Lucro por mês" é sobra de caixa: inclui a parcela do financiamento ou do leasing dos aparelhos e não desconta depreciação (mostrada à parte).</li>
+      <li>A caução volta no fim do período analisado; luvas não voltam. Sem valor de venda do negócio, salvo se informado.</li>
+    </ul></div>`;
+
+  LAST = {p:{...p}, s, verdictHTML: document.getElementById("verdict").innerHTML, bigsHTML: document.getElementById("bigs").innerHTML, resumo, lucro, riscos, comparar, caixa, como};
+  document.getElementById("results").innerHTML =
+    `<div class="tab" data-tab="resumo">${resumo}</div><div class="tab" data-tab="lucro">${lucro}</div><div class="tab" data-tab="riscos">${riscos}</div>
+     <div class="tab" data-tab="comparar">${comparar}</div><div class="tab" data-tab="caixa">${caixa}</div><div class="tab" data-tab="como">${como}</div>`;
+  showTab(UI.tab);
+  bindChart(ch, s);
+}
+function showTab(t){
+  UI.tab = t; saveUI();
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab===t));
+  document.querySelectorAll("#results .tab").forEach(d => d.classList.toggle("on", d.dataset.tab===t));
+}
+document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+function rerender(){ save(); renderInputs(); renderResults(); }
+document.getElementById("btnReset").onclick = () => { if(confirm("Voltar todos os campos aos valores padrão?")){ P = {...DEFAULTS}; rerender(); } };
+document.getElementById("btnExport").onclick = () => {
+  const b = new Blob([JSON.stringify(P,null,2)],{type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "core-one-premissas.json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+};
+// ================= Exportar Simulação (PDF) =================
+// Cores fixas do tema claro: o PDF sai sempre igual, mesmo com o site em modo escuro.
+const LIGHT = {bg:"#ffffff", surface:"#ffffff", "surface-2":"#f1f0ea", text:"#12263f", muted:"#5b6676", border:"#dedcd3", brand:"#0b2636",
+  accent:"#3f7f66", "accent-weak":"#e4efe9", gold:"#a08a5a", ok:"#2e7d4f", "ok-weak":"#e6f3eb", warn:"#9a6a00", "warn-weak":"#fdf4dc",
+  bad:"#b3261e", "bad-weak":"#fbeae8", "chart-line":"#3f7f66", "chart-fill":"rgba(63,127,102,.12)", grid:"#e7e5dd", "s-in":"#2f8c64", "s-res":"#3f6fb5", "s-out":"#c0832a"};
+const PDF_LIB = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+function loadScript(src){
+  return new Promise((ok, fail) => {
+    if(window.html2pdf) return ok();
+    const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => fail(new Error("Falha ao carregar " + src));
+    document.head.appendChild(s);
+  });
+}
+function svgToPng(svg){
+  return new Promise((ok, fail) => {
+    let s = svg.replace(/var\(--([\w-]+)\)/g, (m,n) => LIGHT[n] || "#000")
+      .replace(/<line id="cx"[^>]*\/>/, "").replace(/<circle id="cdot"[^>]*\/>/, "").replace(/<rect id="hit"[^>]*\/>/, "");
+    const vb = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(s), w = +vb[1], h = +vb[2];
+    s = s.replace("<svg ", `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" font-family="Segoe UI, Arial, sans-serif" `);
+    const img = new Image();
+    img.onload = () => { const c = document.createElement("canvas"); c.width = w*2; c.height = h*2; const x = c.getContext("2d");
+      x.fillStyle = "#fff"; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height); ok({url:c.toDataURL("image/png"), w, h}); };
+    img.onerror = () => fail(new Error("Falha ao converter gráfico"));
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(s);
+  });
+}
+async function svgsToImages(html){
+  for(const sv of (html.match(/<svg[\s\S]*?<\/svg>/g) || [])){
+    // largura/altura explícitas: a quebra de página precisa saber a altura antes de a imagem carregar
+    const im = await svgToPng(sv);
+    html = html.replace(sv, `<img src="${im.url}" width="${im.w}" height="${im.h}" style="width:100%;height:auto;aspect-ratio:${im.w}/${im.h};display:block">`);
+  }
+  return html;
+}
+function fmtVal(id, v){ if(id==="modelo") return MODELS[v]; return num(v, Math.abs(v%1)>1e-9 ? (Math.abs(v*100%1)>1e-9 ? 4 : 2) : 0); }
+function premissasHTML(p){
+  const eq = equipFields(p);
+  return GROUPS.map(g => {
+    const rows = g.f.filter(([id]) => g.id!=="equip" || id==="modelo" || eq.includes(id)).map(([id,l,u]) => {
+      const ch = p[id]!==DEFAULTS[id];
+      return `<tr${ch?' class="hl"':''}><td>${l}</td><td>${fmtVal(id,p[id])} ${u}</td><td>${ch?`alterado (padrão: ${fmtVal(id,DEFAULTS[id])})`:"padrão"}</td></tr>`;
+    }).join("");
+    return `<div class="card"><h3>${g.g}</h3><table><tr><th>Premissa</th><th>Valor usado</th><th>Situação</th></tr>${rows}</table></div>`;
+  }).join("");
+}
+const REP_STYLE = `<style>
+.rep{${Object.entries(LIGHT).map(([k,v])=>`--${k}:${v}`).join(";")};background:#fff;color:#12263f;width:calc(100% - 10px);padding:0;font:12.5px/1.4 "Segoe UI",Roboto,Arial,sans-serif}
+.rep .scroll{overflow:visible}.rep table{font-size:11.5px}.rep th,.rep td{white-space:normal;padding:5px 6px}
+.rep .card{padding:10px 12px;margin-bottom:10px}.rep .big .a{font-size:20px}.rep .hbar{grid-template-columns:170px 1fr 110px;font-size:11.5px}
+.rep .ind .l{font-size:11.5px}.rep .ind .l small{font-size:10.5px}.rep .ind .v{font-size:11.5px}
+.rep h2.sec{font-size:19px;margin:4px 0 12px;color:#0b2636;border-bottom:2px solid #3f7f66;padding-bottom:5px}
+.rep .card{box-shadow:none}.rep .tip{display:none}
+.rep .bigs{grid-template-columns:repeat(4,minmax(0,1fr))}
+.rep .indgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rep .cover{background:#0b2636;color:#fff;border-radius:14px;padding:18px 20px;display:flex;gap:18px;align-items:center;margin-bottom:14px}
+.rep .cover img{height:78px;border-radius:10px}.rep .cover h1{margin:0;font-size:24px}.rep .cover p{margin:3px 0 0;color:#c8d3e0;font-size:13px}
+</style>`;
+function repSection(title, body){ return `<div class="rep">${REP_STYLE}${title?`<h2 class="sec">${title}</h2>`:""}${body}</div>`; }
+// Monta as 7 seções do relatório (usadas no PDF e na versão para impressão)
+async function buildSections(){
+  if(!LAST) throw new Error("Sem simulação calculada");
+  const L = LAST, p = L.p, agora = new Date();
+  const quando = agora.toLocaleDateString("pt-BR") + " às " + agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  const nAlt = Object.keys(DEFAULTS).filter(k => p[k]!==DEFAULTS[k]).length;
+  const capa = `<div class="cover"><img src="${document.querySelector(".logo").src}" alt="Core One"><div><h1>Core One · Simulação de viabilidade</h1>
+    <p>Studio de movimento + salas de atendimento · Rua Real Grandeza, 190 — Botafogo, Rio de Janeiro</p>
+    <p>Gerado em ${quando} · ${nAlt ? nAlt + " premissa(s) diferente(s) do padrão (destacadas na seção 6)" : "premissas padrão"} · aparelhos: ${MODELS[p.modelo]}</p></div></div>
+    ${L.verdictHTML}<div class="bigs">${L.bigsHTML}</div>
+    <p class="note">Valores estimados a partir das premissas da seção 6. Não substituem orçamento de obra, parecer contábil ou validação da Vigilância Sanitária.</p>`;
+  const resumo = (await svgsToImages(L.resumo)).replace(" Passe o mouse para ver cada mês.", "");
+  const caixa = L.caixa.replace(/<details>/g,"<div>").replace(/<\/details>/g,"</div>").replace(/<summary[^>]*>[\s\S]*?<\/summary>/, "<h3>Mês a mês</h3>");
+  const secoes = [
+    repSection("", capa + resumo.replace(/^\s*/, "")),
+    repSection("2. Lucro do mês", L.lucro),
+    repSection("3. Riscos e cenários", L.riscos),
+    repSection("4. Comparar opções", L.comparar),
+    repSection("5. Caixa ao longo do tempo", caixa),
+    repSection("6. Premissas usadas", `<p class="note" style="margin-bottom:10px">Linhas destacadas = valores alterados em relação ao padrão. Em "Aparelhos" aparecem só os campos da forma escolhida.</p>` + premissasHTML(p)),
+    repSection("7. Como calculamos", L.como),
+  ];
+  return {secoes, agora, quando};
+}
+async function buildPdf(){
+  const {secoes, agora, quando} = await buildSections();
+  await loadScript(PDF_LIB);
+  const opt = {
+    margin:[10,8,14,8], filename:`core-one-simulacao-${agora.toISOString().slice(0,10)}.pdf`,
+    image:{type:"jpeg", quality:0.95},
+    html2canvas:{scale:2, backgroundColor:"#ffffff", scrollX:0, scrollY:0},
+    jsPDF:{unit:"mm", format:"a4", orientation:"portrait"},
+    pagebreak:{mode:["css","legacy"], avoid:["tr",".ind",".hbar",".alert","img",".chartbox",".card:has(.chartbox)",".big",".verdict","h3",".cover",".legend"]},
+  };
+  let w = html2pdf().set(opt).from(secoes[0]).toPdf();
+  for(const sec of secoes.slice(1)) w = w.get("pdf").then(pdf => { pdf.addPage(); }).from(sec).toContainer().toCanvas().toPdf();
+  // devolvido dentro de um objeto: o "worker" do html2pdf é thenable e seria consumido pelo await
+  return {worker: w.get("pdf").then(pdf => {
+    const n = pdf.internal.getNumberOfPages(), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+    for(let i=1;i<=n;i++){ pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(110); pdf.text(`Core One · Simulação de ${quando} · página ${i} de ${n}`, W/2, H-6, {align:"center"}); }
+  })};
+}
+document.getElementById("btnPdf").onclick = async () => {
+  const b = document.getElementById("btnPdf"), txt = b.textContent;
+  b.disabled = true; b.textContent = "Gerando PDF…";
+  try { const {worker} = await buildPdf(); await worker.save(); }
+  catch(e){
+    console.error(e);
+    if(confirm("Não foi possível gerar o PDF direto (a biblioteca de PDF precisa de internet).\n\nAbrir a versão para impressão? Na janela que abrir, escolha \"Salvar como PDF\" como impressora.")){
+      try { await printReport(); } catch(e2){ console.error(e2); alert("Também não foi possível abrir a impressão: " + e2.message); }
+    }
+  }
+  finally { b.disabled = false; b.textContent = txt; }
+};
+// Alternativa sem internet: imprime o mesmo relatório por um iframe oculto (o navegador salva em PDF)
+async function printReport(doPrint = true){
+  const {secoes} = await buildSections();
+  const css = document.querySelector("head style").outerHTML;
+  const printCss = `<style>@page{size:A4;margin:10mm 8mm}html,body{background:#fff!important;margin:0}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}.rep{width:auto}.rep+.rep{break-before:page}
+    tr,.ind,.hbar,.alert,img,.big,.verdict,.cover,h3,.card:has(.chartbox){break-inside:avoid}</style>`;
+  const fr = document.createElement("iframe");
+  fr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(fr);
+  const doc = fr.contentDocument;
+  doc.open(); doc.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Core One — Simulação</title>${css}${printCss}</head><body>${secoes.join("")}</body></html>`); doc.close();
+  await new Promise(r => setTimeout(r, 400));
+  if(!doPrint) return fr; // usado só em testes
+  fr.contentWindow.focus(); fr.contentWindow.print();
+  setTimeout(() => fr.remove(), 60000);
+}
+
+document.getElementById("btnImport").onclick = () => document.getElementById("fileImport").click();
+document.getElementById("fileImport").onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  f.text().then(t => { try{ P = sanitize(JSON.parse(t)); rerender(); }catch(err){ alert("Arquivo inválido."); } });
+  e.target.value = "";
+};
+
+renderInputs(); renderResults();
+</script>
+</body>
+</html>
