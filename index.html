@@ -772,7 +772,7 @@ function renderResults(){
       ${indBox("Receitas", [
         ["Faturamento por mês", brl(s.receitaTotal), "Studio + salas"],
         ["Faturamento por ano", brl(s.receitaTotal*12)],
-        ["Mensalidade média recebida", brl2(d.ticket), "Já com descontos e inadimplência"],
+        ["Tíquete médio por aluno", brl2(d.ticket), "Mensalidade média por aluno, já com descontos e inadimplência (sem matrícula)"],
         ["Faturamento por m²", brl2(s.receitaTotal/Math.max(1,p.areaBrutaTerreo+p.areaBruta2))+"/mês"],
         ["Faturamento por hora aberta", brl2(s.recT/Math.max(1,d.horasOp)), "Só o studio"],
       ])}
@@ -830,7 +830,7 @@ function renderResults(){
   const lucro = `
     <div class="card"><h3>Para onde vai o dinheiro</h3><p class="sub">Cada custo mensal comparado ao faturamento de ${brl(s.receitaTotal)}. O que sobra é o lucro: ${brl(s.resultado)} (${pct(s.resultado/tot)}).</p>
       ${custos.map(([l,v])=>`<div class="hbar"><span>${l}</span><div class="track"><i style="width:${(v/maxC*100).toFixed(1)}%"></i></div><span class="val">${brl(v)} · ${pct(v/tot,0)}</span></div>`).join("")}</div>
-    <div class="card"><h3>Demonstrativo do mês (DRE)</h3><p class="sub">Studio maduro com ${p.alunosAlvo} alunos e preços do 1º ano.</p><div class="scroll"><table>
+    <div class="card"><h3>Demonstrativo do mês (DRE)</h3><p class="sub">Studio maduro com ${p.alunosAlvo} alunos e preços do 1º ano. Tíquete médio por aluno: <b>${brl2(d.ticket)}</b> por mês.</p><div class="scroll"><table>
       <tr><th>Linha</th><th>R$ por mês</th><th>% do faturamento</th></tr>
       ${row("Mensalidades do studio", s.recPlanos)}${s.recMat?row("Matrículas", s.recMat):""}${p.recExtra?row("Outras receitas do studio", p.recExtra):""}
       ${s.c.recHora?row("Aluguel das salas por hora", s.c.recHora):""}${s.c.recFixo?row("Salas em contrato mensal", s.c.recFixo):""}
