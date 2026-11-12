@@ -847,9 +847,11 @@ function renderResults(){
     </div></div>`;
 
   // ----- Aba Lucro do mês -----
-  const custos = [["Impostos e taxas do studio",s.impT],["Impostos das salas",s.c.imp],["Aluguel",p.aluguel],["Condomínio + IPTU",p.condIptu],["Outras taxas do imóvel",p.taxasPrediais],["Garantia do aluguel",p.garantia],
+  const custosAll = [["Impostos e taxas do studio",s.impT],["Impostos das salas",s.c.imp],["Aluguel",p.aluguel],["Condomínio + IPTU",p.condIptu],["Outras taxas do imóvel",p.taxasPrediais],["Garantia do aluguel",p.garantia],
     ["Instrutores",d.tecnica],["Recepção e limpeza",p.apoio],["Retirada dos sócios",p.proLabore],["Energia, água, internet",p.utilidades],["Divulgação",p.marketing],["Sistema e fechaduras",p.software],
-    ["Contador",p.contador],["Seguro",p.seguro],["Lixo hospitalar",p.residuos],["Outros",p.outros],["Aparelhos ("+s.eq.label+")",s.eqOp],["Custos variáveis das salas",s.c.vari+s.c.plat],["Custos por aluno",s.cvar]].filter(x=>x[1]>0.5).sort((a,b)=>b[1]-a[1]);
+    ["Contador",p.contador],["Seguro",p.seguro],["Lixo hospitalar",p.residuos],["Outros",p.outros],["Aparelhos ("+s.eq.label+")",s.eqOp],["Custos variáveis das salas",s.c.vari+s.c.plat],["Custos por aluno",s.cvar]];
+  const totCustos = custosAll.reduce((t,c)=>t+c[1],0);
+  const custos = custosAll.filter(x=>x[1]>0.5).sort((a,b)=>b[1]-a[1]);
   const maxC = Math.max(1, ...custos.map(c=>c[1]));
   const row = (l,v,cls="") => `<tr class="${cls}"><td>${l}</td><td>${sgn(v)}</td><td>${pct(v/tot)}</td></tr>`;
   const lucro = `
@@ -861,8 +863,7 @@ function renderResults(){
       ${s.c.recHora?row("Aluguel das salas por hora", s.c.recHora):""}${s.c.recFixo?row("Salas em contrato mensal", s.c.recFixo):""}
       <tr class="total"><td>Faturamento</td><td>${brl(s.receitaTotal)}</td><td>100%</td></tr>
       ${custos.map(([l,v])=>row("(−) "+l, -v)).join("")}
-      <tr class="total"><td>Total de custos</td><td>${brl(-custos.reduce((t,c)=>t+c[1],0))}</td><td>${pct(custos.reduce((t,c)=>t+c[1],0)/tot)}</td></tr>
-      <tr class="total"><td>Total de custos</td><td>${brl(-custos.reduce((t,c)=>t+c[1],0))}</td><td>${pct(custos.reduce((t,c)=>t+c[1],0)/tot)}</td></tr>
+      <tr class="total"><td>Total de custos</td><td>${brl(-totCustos)}</td><td>${pct(totCustos/tot)}</td></tr>
       <tr class="total"><td>Lucro do mês (caixa)</td><td>${sgn(s.resultado)}</td><td>${pct(s.resultado/tot)}</td></tr>
       ${row("(−) Desgaste do investimento (depreciação)", -deprec, "sub")}
       <tr class="total"><td>Lucro contábil</td><td>${sgn(s.resultado-deprec)}</td><td>${pct((s.resultado-deprec)/tot)}</td></tr>
