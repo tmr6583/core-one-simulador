@@ -754,6 +754,30 @@ function renderResults(){
 
   // ----- Aba Resumo -----
   const ch = cashChart(s), bal = balanco(p, s);
+  // Decomposição do "dinheiro que vocês precisam ter" até o mês do pico
+  const dec = (() => {
+    const m1 = s.minMes; let obraP = 0, opP = 0, parc = 0;
+    s.rows.forEach(r => { if(r.m<=m1){ if(r.fase==="Obra") obraP += r.proj; else opP += r.proj; parc += loanPay(p, r.m); } });
+    const emp = p.empValor, luv = p.luvas + s.caucaoVal;
+    const total = s.upfront - emp - obraP - opP + parc;
+    return {m1, obra:-obraP, op:-opP, parc, emp, luv, total, eqCap:s.eq.capex, capO:s.d.capexObra};
+  })();
+  const decomp = `
+    <div class="card"><h3>Como chegamos a ${brl(s.exposicao)}: dinheiro que vocês precisam ter</h3>
+      <p class="sub">Tudo o que sai do bolso dos sócios até o mês ${dec.m1} (o pior momento do caixa). Passe de um item para o outro para entender cada parte.</p>
+      <div class="scroll"><table>
+        <tr><th>Item</th><th>Valor</th><th>O que é</th></tr>
+        <tr><td>Obra e instalações</td><td>${brl(dec.capO)}</td><td>Inclui a reserva de imprevistos da obra.</td></tr>
+        <tr><td>Aparelhos (${MODELS[p.modelo]})</td><td>${brl(dec.eqCap)}</td><td>Pagamento inicial dos aparelhos.</td></tr>
+        <tr><td>Luvas e caução</td><td>${brl(dec.luv)}</td><td>Pagos na assinatura do contrato.</td></tr>
+        <tr class="total"><td>= Investimento para abrir</td><td>${brl(s.upfront)}</td><td>Desembolso antes da primeira mensalidade.</td></tr>
+        <tr><td>(−) Empréstimo recebido</td><td>${sgn(-dec.emp)}</td><td>${dec.emp>0?"Entra no caixa dos sócios.":"Não há empréstimo."}</td></tr>
+        <tr><td>+ Aluguel e custos durante a obra</td><td>${brl(dec.obra)}</td><td>Aluguel, condomínio e taxas pagos antes de abrir (sem receita).</td></tr>
+        <tr><td>+ Prejuízo da operação até o mês ${dec.m1}</td><td>${brl(dec.op)}</td><td>${dec.op>=0?"Soma das perdas mensais depois da abertura, com a rampa de alunos.":"A operação já dá lucro nesse período; esse valor reduz o total."}</td></tr>
+        <tr><td>+ Parcelas do empréstimo até o mês ${dec.m1}</td><td>${brl(dec.parc)}</td><td>${dec.parc>0?"Juros e amortizações pagos no período.":"Não há parcelas."}</td></tr>
+        <tr class="total"><td>= Dinheiro que vocês precisam ter</td><td>${brl(dec.total)}</td><td>Pior saldo acumulado dos sócios.</td></tr>
+      </table></div>
+      <p class="note">Some os itens de cima para baixo; o resultado é igual ao indicador do topo. Os valores de obra e aparelhos mudam nos campos "Investimento para abrir" e "Aparelhos de musculação".</p></div>`;
   const resumo = `
     <div class="card"><h3>Balanço do mês: studio, salas e negócio total</h3><p class="sub">Quanto entra, quanto sai e o que sobra por mês com o negócio maduro (${p.alunosAlvo} alunos e ${num(p.ocupCow,0)}% de ocupação das salas).</p>
       <div class="legend"><span><i style="background:var(--s-in)"></i>Entradas</span><span><i style="background:var(--s-out)"></i>Saídas</span><span><i style="background:var(--s-res)"></i>Resultado (entradas − saídas)</span></div>
@@ -767,6 +791,7 @@ function renderResults(){
     <div class="card"><h3>Caixa dos sócios ao longo do tempo</h3><p class="sub">Quanto dinheiro saiu (abaixo de zero) e quando volta (acima de zero). Passe o mouse para ver cada mês.</p>
       <div class="chartbox" id="chartbox">${ch.svg}<div class="tip"></div></div>
       <p class="note">Inclui a obra, os meses até os alunos chegarem${p.empValor>0?" e o empréstimo":""}.</p></div>
+    ${decomp}
     <div class="card"><h3>Pontos de atenção</h3>${alerts(p,s).map(([t,m])=>`<div class="alert ${t}"><b>${ICON[t]}</b><span>${m}</span></div>`).join("")}</div>
     <div class="card"><h3>Indicadores</h3><p class="sub">Todos os números para o studio maduro (${p.alunosAlvo} alunos), salvo indicação.</p><div class="indgrid">
       ${indBox("Receitas", [
