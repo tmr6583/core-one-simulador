@@ -861,6 +861,8 @@ function renderResults(){
       ${s.c.recHora?row("Aluguel das salas por hora", s.c.recHora):""}${s.c.recFixo?row("Salas em contrato mensal", s.c.recFixo):""}
       <tr class="total"><td>Faturamento</td><td>${brl(s.receitaTotal)}</td><td>100%</td></tr>
       ${custos.map(([l,v])=>row("(−) "+l, -v)).join("")}
+      <tr class="total"><td>Total de custos</td><td>${brl(-custos.reduce((t,c)=>t+c[1],0))}</td><td>${pct(custos.reduce((t,c)=>t+c[1],0)/tot)}</td></tr>
+      <tr class="total"><td>Total de custos</td><td>${brl(-custos.reduce((t,c)=>t+c[1],0))}</td><td>${pct(custos.reduce((t,c)=>t+c[1],0)/tot)}</td></tr>
       <tr class="total"><td>Lucro do mês (caixa)</td><td>${sgn(s.resultado)}</td><td>${pct(s.resultado/tot)}</td></tr>
       ${row("(−) Desgaste do investimento (depreciação)", -deprec, "sub")}
       <tr class="total"><td>Lucro contábil</td><td>${sgn(s.resultado-deprec)}</td><td>${pct((s.resultado-deprec)/tot)}</td></tr>
