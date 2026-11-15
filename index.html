@@ -63,18 +63,20 @@ button,select,input{font:inherit;color:inherit}
 
 /* Herói */
 .hero{margin:16px auto 0}
-.verdict{border-radius:14px;padding:14px 18px;border:1px solid;display:flex;gap:12px;align-items:flex-start}
-.verdict .ic{font-size:22px;line-height:1}
-.verdict b{display:block;font-size:17px}
-.verdict span{color:var(--muted);font-size:14px}
-.bigs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+.verdict{border-radius:12px;padding:9px 14px;border:1px solid;display:flex;gap:10px;align-items:center}
+.verdict .ic{font-size:18px;line-height:1}
+.verdict>div:last-child{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:10px;line-height:1.35}
+.verdict b{font-size:16px}
+.verdict span{color:var(--muted);font-size:13.5px}
+.bigs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:10px}
 @media (max-width:900px){.bigs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:480px){.bigs{grid-template-columns:1fr}}
-.big{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
-.big .q{font-size:13px;color:var(--muted)}
-.big .a{font-size:26px;font-weight:700;margin:2px 0;letter-spacing:-.3px}
-.big .d{font-size:12.5px;color:var(--muted)}
-.meter{height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden;margin-top:8px}
+.big{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:7px 14px 8px}
+.big .q{font-size:12.5px;color:var(--muted);line-height:1.3}
+.big .a{font-size:23px;font-weight:700;margin:0;letter-spacing:-.3px;line-height:1.25}
+.big .a .de{font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0}
+.big .d{font-size:12px;color:var(--muted);line-height:1.35}
+.meter{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin:4px 0 3px}
 .meter i{display:block;height:100%;background:var(--accent);border-radius:5px}
 .meter.warn i{background:var(--warn)} .meter.bad i{background:var(--bad)}
 
@@ -163,6 +165,8 @@ th:first-child,td:first-child{text-align:left;white-space:normal}
 th{color:var(--muted);font-weight:600;font-size:12.5px}
 tr.total td{font-weight:700;border-top:2px solid var(--border)}
 tr.hl td{background:var(--accent-weak)}
+table.qfat th{text-align:right;line-height:1.25}table.qfat th:first-child{text-align:left}table.qfat th small,table.qfat td small{font-weight:400;color:var(--muted)}
+table.qfat td.atual{outline:2px solid var(--accent);outline-offset:-2px;font-weight:700}
 tr.sub td{color:var(--muted);font-size:13px}
 .scroll{overflow-x:auto}
 .note{color:var(--muted);font-size:12.5px;margin:8px 0 0}
@@ -691,6 +695,15 @@ function resumoAnual(s){
   }
   const t = anos.reduce((a, y) => ({studio: a.studio + y.studio, salas: a.salas + y.salas, total: a.total + y.total, abertos: a.abertos + y.abertos}), {studio:0, salas:0, total:0, abertos:0});
   return {anos, total: {...t, meses: s.rows.length, alunosFim: anos.length ? anos[anos.length-1].alunosFim : 0}};
+}
+// D9: quadro alunos × ticket médio × faturamento das mensalidades por mês (studio).
+// Linhas: 50% a 100% das vagas, ponto de equilíbrio e meta. Colunas: ticket médio atual e com os preços 10% e 5% menores e 5%, 10% e 20% maiores.
+const QF_TICKETS = [0.9, 0.95, 1, 1.05, 1.1, 1.2];
+function quadroFaturamento(s){
+  const d = s.d, lot = d.lotacao, A = Math.round(s.A), be = Number.isFinite(s.be) ? s.be : null;
+  const ns = [...new Set([0.5,0.6,0.7,0.8,0.9,1].map(x => Math.round(lot*x)).concat([be, A].filter(x => x !== null)))].filter(n => n > 0).sort((a,b) => a-b);
+  const tickets = QF_TICKETS.map(f => ({f, t: d.ticket*f}));
+  return {tickets, lot, A, be, linhas: ns.map(n => ({n, empata: n===be, meta: n===A, maximo: n===lot, vals: tickets.map(x => n*x.t)}))};
 }
 // TIR mensal por bisseção, anualizada. null se não houver troca de sinal (ex.: fluxo nunca volta, ou duas trocas).
 function irr(flows){
@@ -1453,8 +1466,8 @@ function renderResults(){
   const meterCls = beFrac>1 ? "bad" : beFrac>0.7 ? "warn" : "";
   document.getElementById("bigs").innerHTML = `
     <div class="big"><div class="q">Lucro por mês com ${num(s.A)} alunos</div><div class="a">${sgn(s.resultado)}</div><div class="d">Depois de impostos e todos os custos, com o studio maduro.${s.resultadoPos!==null?` Depois de quitar os aparelhos: ${brl(s.resultadoPos)}/mês.`:""}</div></div>
-    <div class="big"><div class="q">Alunos para empatar</div><div class="a">${Number.isFinite(s.be)?s.be:"—"} <span style="font-size:15px;color:var(--muted)">de ${d.lotacao} vagas</span></div>
-      <div class="meter ${meterCls}"><i style="width:${Math.min(100, fin(beFrac)*100).toFixed(0)}%"></i></div><div class="d">${Number.isFinite(beFrac)?pct(beFrac,0)+" do studio ocupado para não ter prejuízo.":""}</div></div>
+    <div class="big"><div class="q">Alunos para empatar · máximo possível</div><div class="a">${Number.isFinite(s.be)?s.be:"—"} <span class="de">de ${d.lotacao} no máximo</span></div>
+      <div class="meter ${meterCls}"><i style="width:${Math.min(100, fin(beFrac)*100).toFixed(0)}%"></i></div><div class="d">Máximo: <b>${d.lotacao} alunos</b> (${d.capSim} por horário).${!Number.isFinite(beFrac) ? " Nenhum número de alunos empata." : beFrac>1 ? " Empatar exige mais alunos do que cabem." : ` Empata com ${pct(beFrac,0)}.`}</div></div>
     <div class="big"><div class="q">Dinheiro que vocês precisam ter</div><div class="a">${brl(s.exposicao)}</div><div class="d">Obra, aparelhos e prejuízos até o negócio se pagar sozinho. Com reserva de ${num(p.reservaMeses)} meses: <b>${brl(s.capitalRec)}</b>${capDisp(p)>0?` · vocês têm ${brl(capDisp(p))}`:""}.</div></div>
     <div class="big"><div class="q">Tempo para recuperar o investimento</div><div class="a">${s.payback?tempo(s.payback):"não volta"}</div><div class="d">${s.payback?"Contado a partir da inauguração.":`Não acontece em ${anosTxt(s.H)}.`}</div></div>`;
 
@@ -1504,6 +1517,16 @@ function renderResults(){
         <tr class="total"><td>Total</td><td></td><td>${num(ra.total.alunosFim)}</td><td>${brl(ra.total.studio)}</td><td>${brl(ra.total.salas)}</td><td>${brl(ra.total.total)}</td><td>${porMes(ra.total)}</td></tr>
       </table></div>
       <p class="note">Faturamento antes de impostos e cartão: mensalidades (já com descontos e inadimplência), matrículas, outras receitas do studio e aluguel das salas, com os reajustes anuais. Alunos ativos no mês; a média considera só os meses abertos. Mês a mês na aba "Caixa".</p></div>`; })()
+    + (() => { const q = quadroFaturamento(s), mx = Math.max(1, ...q.linhas.flatMap(l => l.vals)), cap = p.modoCrescimento==="captacao" ? "base estável" : "meta";
+      const cor = v => `background:rgba(63,111,181,${(Math.min(1, v/mx)*0.32).toFixed(2)})`;
+      return `
+    <div class="card"><h3>Alunos × ticket médio × faturamento</h3><p class="sub">Faturamento das mensalidades por mês: número de alunos (linhas) vezes o ticket médio (colunas). Ticket médio atual: <b>${brl2(d.ticket)}</b> (mix de planos, já com descontos e inadimplência). Máximo de alunos: <b>${num(q.lot)}</b>.</p>
+      <div class="scroll"><table class="qfat">
+        <tr><th>Alunos</th>${q.tickets.map(x => `<th>${brl2(x.t)}<br><small>${x.f===1?"ticket atual":(x.f>1?"+":"")+num((x.f-1)*100,0)+"%"}</small></th>`).join("")}<th>Por ano<br><small>ticket atual</small></th></tr>
+        ${q.linhas.map(l => { const tag = [l.empata?"empata":"", l.meta?cap:"", l.maximo?"máximo":""].filter(Boolean).join(", ");
+          return `<tr${l.empata||l.meta?' class="hl"':""}><td>${num(l.n)} <small>(${pct(l.n/Math.max(1,q.lot),0)})</small>${tag?` · ${tag}`:""}</td>${l.vals.map((v,i) => `<td style="${cor(v)}"${l.meta&&q.tickets[i].f===1?' class="atual"':""}>${brl(v)}</td>`).join("")}<td>${brl(l.vals[QF_TICKETS.indexOf(1)]*12)}</td></tr>`; }).join("")}
+      </table></div>
+      <p class="note">Só mensalidades do studio, antes de impostos e da taxa do cartão; não inclui matrículas, outras receitas nem as salas. Preços do 1º ano (sem reajuste). Em destaque: o ponto de equilíbrio e a ${cap}; com contorno, a situação atual. Cores mais fortes = faturamento maior.</p></div>`; })()
     + `
     <div class="card"><h3>Caixa dos sócios ao longo do tempo</h3><p class="sub">Quanto dinheiro saiu (abaixo de zero) e quando volta (acima de zero). Passe o mouse para ver cada mês.</p>
       <div class="chartbox" id="chartbox">${ch.svg}<div class="tip"></div></div>
@@ -1978,7 +2001,7 @@ function premissasHTML(p){
 const REP_STYLE = `<style>
 .rep{${Object.entries(LIGHT).map(([k,v])=>`--${k}:${v}`).join(";")};background:#fff;color:#12263f;width:calc(100% - 10px);padding:0;font:12.5px/1.4 "Segoe UI",Roboto,Arial,sans-serif}
 .rep .scroll{overflow:visible}.rep table{font-size:11.5px}.rep th,.rep td{white-space:normal;padding:5px 6px}
-.rep .card{padding:10px 12px;margin-bottom:10px}.rep .big .a{font-size:20px}.rep .hbar{grid-template-columns:170px 1fr 110px;font-size:11.5px}
+.rep .card{padding:10px 12px;margin-bottom:10px}.rep .big .a{font-size:20px}.rep .big .a .de{font-size:11px}.rep .hbar{grid-template-columns:170px 1fr 110px;font-size:11.5px}
 .rep .ind .l{font-size:11.5px}.rep .ind .l small{font-size:10.5px}.rep .ind .v{font-size:11.5px}
 .rep h2.sec{font-size:19px;margin:4px 0 12px;color:#0b2636;border-bottom:2px solid #3f7f66;padding-bottom:5px}
 .rep .card{box-shadow:none}.rep .tip{display:none}.rep small.pb-c{font-weight:400;color:var(--muted);font-size:.85em}
@@ -2218,7 +2241,7 @@ async function buildResumoInvestidor(){
   const prop = `<div class="prop"><b>A proposta.</b> No térreo, studio de musculação e funcional com até ${d.capSim} alunos treinando ao mesmo tempo e planos de ${brl(p.p2)} a ${brl(p.p45)} por mês (mensalidade média ${brl2(d.ticket)}). No 2º andar, ${num(p.salas)} salas de terapia alugadas por hora (${brl2(p.precoHora)}/h). Meta: ${num(s.A)} alunos (${pct(s.A/Math.max(1,d.lotacao),0)} das ${d.lotacao} vagas)${p.modoCrescimento==="captacao"?"":` em ${num(p.rampa)} meses`}, com ${num(p.ocupCow)}% de ocupação das salas.</div>`;
   const bigs = `<div class="bigs">
     <div class="big"><div class="q">Lucro por mês (maduro)</div><div class="a">${sgn(s.resultado)}</div><div class="d">Margem de ${pct(s.resultado/Math.max(1,s.receitaTotal),0)} sobre ${brl(s.receitaTotal)}</div></div>
-    <div class="big"><div class="q">Alunos para empatar</div><div class="a">${Number.isFinite(s.be)?s.be:"—"}</div><div class="d">de ${d.lotacao} vagas</div></div>
+    <div class="big"><div class="q">Alunos para empatar</div><div class="a">${Number.isFinite(s.be)?s.be:"—"}</div><div class="d">de ${d.lotacao} alunos no máximo</div></div>
     <div class="big"><div class="q">Capital recomendado</div><div class="a">${brl(s.capitalRec)}</div><div class="d">Necessário ${brl(s.exposicao)} + reserva ${brl(s.reserva)}</div></div>
     <div class="big"><div class="q">Recupera o investimento</div><div class="a">${s.payback?s.payback+" meses":"não volta"}</div><div class="d">TIR do projeto ${pct(s.tir,0)} ao ano</div></div></div>`;
   const ex = (c, t) => c ? ` <small class="ex">(${t})</small>` : "";
