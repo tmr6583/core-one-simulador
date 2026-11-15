@@ -161,6 +161,17 @@ tr.sub td{color:var(--muted);font-size:13px}
 .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
 .gloss dt{font-weight:650;margin-top:8px}
 .gloss dd{margin:2px 0 0;color:var(--muted);font-size:14px}
+.pl{font-size:12px;color:var(--muted);margin:8px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{border:1px solid var(--border);background:var(--surface-2);border-radius:999px;padding:5px 11px;cursor:pointer;font-size:13px}
+.presets button:hover{border-color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0b2636;color:#fff;padding:10px 14px;border-radius:10px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:50;font-size:14px;max-width:92vw}
+.toast button{background:#7fbfa3;color:#0b2636;border:0;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:600}
+.cen-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px solid var(--border);font-size:13px}
+.cen-row .n{flex:1;min-width:0}.cen-row .n small{display:block;color:var(--muted);font-size:11.5px}
+.cen-row button{border:1px solid var(--border);background:var(--surface-2);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px}
+.cen-form{display:flex;gap:6px}.cen-form input{flex:1;min-width:0}
+.cen-atual{font-size:12.5px;color:var(--accent);margin-top:6px}
 </style>
 </head>
 <body>
@@ -174,8 +185,8 @@ tr.sub td{color:var(--muted);font-size:13px}
     <div class="actions">
       <button class="btn primary" id="btnPdf" title="Baixa um PDF com todas as premissas, resultados e gráficos desta simulação">Exportar Simulação</button>
       <button class="btn" id="btnReset" title="Volta todos os campos para os valores padrão do projeto">Restaurar Valores Padrão</button>
-      <button class="btn" id="btnExport" title="Baixa um arquivo com todas as premissas para enviar ao sócio">Salvar premissas</button>
-      <button class="btn" id="btnImport" title="Carrega um arquivo de premissas salvo antes">Abrir premissas</button>
+      <button class="btn" id="btnExport" title="Baixa um arquivo com o cenário atual (nome, data e todas as premissas) para guardar ou enviar ao sócio">Baixar cenário</button>
+      <button class="btn" id="btnImport" title="Carrega um arquivo de cenário baixado antes">Abrir cenário</button>
       <input type="file" id="fileImport" accept="application/json" hidden>
     </div>
   </div>
@@ -350,6 +361,7 @@ const GROUPS = [
     ["horizonte","Período analisado","meses",60,12,"Quantos meses, a partir da assinatura do contrato, entram na conta. Padrão: igual ao prazo do contrato.",0],
     ["tma","Rendimento mínimo desejado","% ao ano",15,0.5,"Quanto o dinheiro renderia em outra aplicação (ex.: CDI). O negócio só compensa se render mais que isso.",1],
     ["lucroAlvo","Lucro mensal desejado","R$/mês",10000,500,"Calcula quantos alunos seriam necessários para chegar a esse lucro.",1],
+    ["paybackAlvo","Prazo desejado para recuperar o investimento","meses",36,1,"Usado na meta inversa e na simulação de risco (aba Riscos e cenários).",1],
     ["multSaida","Valor de venda do negócio no fim","× lucro anual",0,0.5,"Se venderem o negócio no fim do período, por quantas vezes o lucro de um ano. 0 = não considerar venda.",0],
   ]},
   {id:"cenarios", g:"Cenários bom e ruim", intro:"Quanto cada premissa piora no cenário ruim e melhora no cenário bom.", f:[
@@ -611,7 +623,13 @@ function sensitivity(p){
 // ================= Interface: premissas =================
 function renderInputs(){
   const el = document.getElementById("inputs");
-  let h = `<div class="side-head"><h2>Premissas</h2><p>Altere qualquer valor e veja o resultado na hora. Campos alterados ficam em amarelo.</p>
+  const grupos = [...new Set(Object.values(PRESETS).map(x => x.grupo))];
+  let h = `<div class="side-head"><h2>Cenários rápidos</h2><p>Um clique muda várias premissas de uma vez. Dá para desfazer logo em seguida.</p>
+    ${grupos.map(g => `<div class="pl">${g}</div><div class="presets">${Object.entries(PRESETS).filter(([,x]) => x.grupo===g).map(([id,x]) => `<button data-preset="${id}" title="${x.nome}">${x.label}</button>`).join("")}</div>`).join("")}</div>
+    <div class="side-head"><h2>Meus cenários</h2><p>Grave as premissas atuais com um nome para voltar a elas depois. Ficam guardados neste navegador; para levar a outro computador, use "Baixar cenário".</p>
+    <div class="cen-form"><input class="search" id="cenNome" placeholder="Nome do cenário (ex.: contrato com condomínio)" maxlength="80"><button class="btn" id="cenGravar">Gravar</button></div>
+    <div id="cenLista"></div>${UI.cenario ? `<div class="cen-atual">Cenário em uso: <b>${escHtml(UI.cenario)}</b></div>` : ""}</div>
+    <div class="side-head"><h2>Premissas</h2><p>Altere qualquer valor e veja o resultado na hora. Campos alterados ficam em amarelo.</p>
     <div class="seg"><button data-modo="essencial">Só o essencial</button><button data-modo="todas">Todas as premissas</button></div>
     <input class="search" id="search" type="search" placeholder="Procurar (ex.: aluguel, sala, imposto)">
     <div class="changed-note" id="changedCount"></div></div>`;
@@ -632,7 +650,7 @@ function renderInputs(){
   el.innerHTML = h;
   el.querySelectorAll(".field input").forEach(inp => inp.addEventListener("input", e => {
     const id = e.target.id.slice(2), v = parseFloat(e.target.value);
-    if(!isNaN(v)){ P[id]=v; e.target.closest(".field").classList.toggle("changed", v!==DEFAULTS[id]); save(); renderResults(); if(FIELDS[id].g==="equip") applyFilter(); }
+    if(!isNaN(v)){ P[id]=v; e.target.closest(".field").classList.toggle("changed", v!==DEFAULTS[id]); save(); agendarResultados(); if(FIELDS[id].g==="equip") applyFilter(); }
   }));
   el.querySelectorAll(".field select").forEach(sel => sel.addEventListener("change", e => {
     const id = e.target.id.slice(2);
@@ -641,6 +659,18 @@ function renderInputs(){
   el.querySelectorAll(".reset").forEach(b => b.addEventListener("click", () => { P[b.dataset.id] = DEFAULTS[b.dataset.id]; save(); renderInputs(); renderResults(); }));
   el.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { UI.modo = b.dataset.modo; saveUI(); applyFilter(); }));
   document.getElementById("search").addEventListener("input", applyFilter);
+  el.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.preset; aplicarMudancas(presetValores(id, P), PRESETS[id].nome);
+  }));
+  document.getElementById("cenGravar").addEventListener("click", () => {
+    const inp = document.getElementById("cenNome"), nome = inp.value.trim();
+    if(!nome){ inp.focus(); toast("Dê um nome ao cenário antes de gravar."); return; }
+    const l = lerCenarios().filter(c => c.nome !== nome);
+    l.unshift(cenarioArquivo(nome, P));
+    if(!gravarCenarios(l)){ toast("Não foi possível gravar neste navegador. Use \"Baixar cenário\"."); return; }
+    UI.cenario = nome; saveUI(); renderInputs(); toast(`Cenário "${nome}" gravado.`);
+  });
+  renderCenarios();
   applyFilter();
 }
 // Campos de "Aparelhos" que fazem sentido para cada forma de aquisição
@@ -743,7 +773,8 @@ const ICON = {bad:"✕", warn:"!", ok:"✓"};
 function cashChart(s){
   const rows = s.rows, W = 800, Hh = 260, L = 64, R = 16, T = 16, B = 30;
   const vals = [-s.upfront + s.p.empValor, ...rows.map(r=>r.cumSoc)];
-  let mn = Math.min(0, ...vals), mx = Math.max(0, ...vals); if(mx===mn) mx = mn+1;
+  const cap = s.p.capital > 0 ? -s.p.capital : null;
+  let mn = Math.min(0, ...vals, cap ?? 0), mx = Math.max(0, ...vals); if(mx===mn) mx = mn+1;
   // escala com valores "redondos" no eixo
   const raw = (mx-mn)/5, mag = Math.pow(10, Math.floor(Math.log10(raw))), nrm = raw/mag;
   const step = (nrm<=1?1:nrm<=2?2:nrm<=2.5?2.5:nrm<=5?5:10)*mag;
@@ -756,6 +787,7 @@ function cashChart(s){
   tv.forEach(v => { svg += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/><text x="${L-8}" y="${y(v)+4}" font-size="11" text-anchor="end" fill="var(--muted)">R$ ${kfmt(v)}</text>`; });
   for(let i=0;i<vals.length;i+=12){ const anc = i===0?"start":(i>=vals.length-1?"end":"middle"); svg += `<text x="${x(i)}" y="${Hh-10}" font-size="11" text-anchor="${anc}" fill="var(--muted)">${i===0?"assinatura":"mês "+i}</text>`; }
   svg += `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-width="1.2"/>`;
+  if(cap !== null) svg += `<line x1="${L}" x2="${W-R}" y1="${y(cap)}" y2="${y(cap)}" stroke="var(--bad)" stroke-dasharray="6 4"/><text x="${W-R-4}" y="${y(cap)-6}" font-size="12" text-anchor="end" fill="var(--text)">capital dos sócios: ${brl(-cap)}</text>`;
   svg += `<polygon points="${x(0)},${y(0)} ${pts.join(" ")} ${x(vals.length-1)},${y(0)}" fill="var(--chart-fill)"/>`;
   svg += `<polyline points="${pts.join(" ")}" fill="none" stroke="var(--chart-line)" stroke-width="2" stroke-linejoin="round"/>`;
   // rótulos dos marcos: à direita do ponto, ou à esquerda quando o ponto está perto da borda direita
@@ -830,6 +862,90 @@ function balanceChart(b){
 }
 
 let LAST = null;
+
+// ================= Cenários rápidos (D1, D2, D3) =================
+const PRESETS = {
+  "capt-otimista":   {grupo:"Captação de alunos", label:"Otimista", nome:"Captação otimista (40 → 140 em 9 meses, cancelamento 3%)", v:{modoCrescimento:"linear", alunosIniciais:40, alunosAlvo:140, rampa:9, churn:3}},
+  "capt-realista":   {grupo:"Captação de alunos", label:"Realista", nome:"Captação realista (15 → 120 em 15 meses, cancelamento 5%)", v:{modoCrescimento:"linear", alunosIniciais:15, alunosAlvo:120, rampa:15, churn:5}},
+  "capt-pessimista": {grupo:"Captação de alunos", label:"Pessimista", nome:"Captação pessimista (0 → 100 em 24 meses, cancelamento 8%)", v:{modoCrescimento:"linear", alunosIniciais:0, alunosAlvo:100, rampa:24, churn:8}},
+  "mix-padrao":      {grupo:"Mix de planos", label:"Padrão 45/40/15", nome:"Mix padrão (45/40/15)", v:{m2:45, m3:40, m45:15}},
+  "mix-2x":          {grupo:"Mix de planos", label:"2x maioria 60/25/15", nome:"Mix com 2x maioria (60/25/15)", v:{m2:60, m3:25, m45:15}},
+  "mix-qualivida":   {grupo:"Mix de planos", label:"Tipo Qualivida 35/30/35", nome:"Mix tipo Qualivida (35/30/35)", v:{m2:35, m3:30, m45:35}},
+  "es-condominio":   {grupo:"E se…", label:"Condomínio volta a R$ 3.200", nome:"E se o condomínio + IPTU voltar a R$ 3.200", v:{condIptu:3200}},
+  "es-salas20":      {grupo:"E se…", label:"Salas a 20%", nome:"E se as salas ficarem só 20% ocupadas", v:{ocupCow:20}},
+  "es-horario":      {grupo:"E se…", label:"Horário 6h–22h", nome:"E se o studio e as salas abrirem das 6h às 22h", v:{abreSemana:6, fechaSemana:22, abreSalaSemana:6, fechaSalaSemana:22}},
+  "es-imposto":      {grupo:"E se…", label:"Imposto 2 pontos maior", nome:"E se o imposto for 2 pontos maior", v:p => { const d = regime(p, p.modelo).d;
+                        return {modoSimples:"manual", tSimples:+(d.tSimp*100+2).toFixed(1), tCow:+(d.tC*100+2).toFixed(1)}; }},
+};
+function presetValores(id, p){ const pr = PRESETS[id]; return typeof pr.v === "function" ? pr.v(p) : pr.v; }
+
+// ================= Meta inversa (D5) =================
+// Menor valor em [lo, hi] que cumpre ok(); null se nem o maior cumpre. Supõe que ok() só melhora quando o valor cresce.
+function buscaMin(lo, hi, ok, inteiro){
+  if(!ok(hi)) return null; if(ok(lo)) return lo;
+  for(let i=0; i<(inteiro ? 40 : 32); i++){
+    const mid = inteiro ? Math.floor((lo+hi)/2) : (lo+hi)/2;
+    if(ok(mid)) hi = mid; else lo = mid;
+    if(inteiro && hi - lo <= 1) break;
+  }
+  return hi;
+}
+const comPrecos = (p, f) => ({...p, p2:p.p2*f, p3:p.p3*f, p45:p.p45*f});
+function metaInversa(p){
+  const lucroOk = q => regime(q, q.modelo).resultado >= p.lucroAlvo;
+  const pbOk = q => { const x = simulate(q, q.modelo); return x.payback !== null && x.payback <= p.paybackAlvo; };
+  const alvo = (ok) => ({
+    alunos: buscaMin(0, 3000, n => ok(comAlunos(p, n, {limitarVagas:"nao"})), true),
+    preco:  buscaMin(0.3, 3, f => ok(comPrecos(p, f)), false),
+    ocup:   buscaMin(0, 100, o => ok({...p, ocupCow:o}), false),
+  });
+  return {lucro: alvo(lucroOk), payback: alvo(pbOk)};
+}
+
+// ================= Fôlego de caixa (D6) =================
+function folego(s, capital){
+  if(!(capital > 0)) return null;
+  const v0 = -s.upfront + s.p.empValor;
+  let acaba = v0 < -capital ? 0 : null;
+  if(acaba === null){ const r = s.rows.find(r => r.cumSoc < -capital); if(r) acaba = r.m; }
+  return {acaba, sobra: capital - s.exposicao, sobraRec: capital - s.capitalRec};
+}
+
+// ================= Simulação de risco — Monte Carlo (D7) =================
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function monteCarlo(p, n = 500, seed = 20261115){
+  const r = rng(seed), f = v => 1 + (v/100)*(2*r() - 1);
+  const res = [];
+  for(let i=0; i<n; i++){
+    const fa = f(p.varAlunos), fo = f(p.varOcup), fp = f(p.varPrecos), fc = f(p.varCustos), fr = f(p.varRampa);
+    const q = {...p, alunosAlvo: Math.round(p.alunosAlvo*fa), novosMes: p.novosMes*fa, ocupCow: Math.min(100, p.ocupCow*fo)};
+    ["p2","p3","p45","precoHora","precoAvulsa","precoTurno","aluguelFixoSala","matricula"].forEach(k => q[k] = p[k]*fp);
+    ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = p[k]*fc);
+    q.rampa = p.rampa>0 ? Math.max(1, Math.round(p.rampa*fr)) : 0;
+    q.rampaCow = p.rampaCow>0 ? Math.max(1, Math.round(p.rampaCow*fr)) : 0;
+    q.alunosIniciais = Math.min(q.alunosAlvo, p.alunosIniciais);
+    const x = simulate(q, q.modelo);
+    res.push({payback: x.payback === null ? Infinity : x.payback, exposicao: x.exposicao, vpl: x.vpl, resultado: x.resultado});
+  }
+  const q = (arr, k) => { const a = arr.map(o => o[k]).sort((a,b) => a-b); return [0.1,0.5,0.9].map(t => a[Math.min(a.length-1, Math.floor(t*a.length))]); };
+  const share = fn => res.filter(fn).length / n;
+  const buckets = [["até 12 meses",0,12],["13 a 24",13,24],["25 a 36",25,36],["37 a 48",37,48],["49 a 60",49,60],["61 ou mais",61,1e9]];
+  const hist = buckets.map(([l,a,b]) => [l, share(o => o.payback>=a && o.payback<=b && Number.isFinite(o.payback))]).concat([["não volta", share(o => !Number.isFinite(o.payback))]]);
+  return {n, pPrazo: share(o => o.payback <= p.paybackAlvo), pVolta: share(o => Number.isFinite(o.payback)), pVpl: share(o => o.vpl > 0), pPrej: share(o => o.resultado < 0),
+          payback: q(res, "payback"), exposicao: q(res, "exposicao"), resultado: q(res, "resultado"), hist};
+}
+let MC = null; // último resultado da simulação de risco + premissas usadas
+
+// ================= Cenários gravados (D4) =================
+const CEN_KEY = STORE_KEY + "-cenarios";
+function lerCenarios(){ try{ return JSON.parse(localStorage.getItem(CEN_KEY) || "[]"); }catch(e){ return []; } }
+function gravarCenarios(l){ try{ localStorage.setItem(CEN_KEY, JSON.stringify(l)); return true; }catch(e){ return false; } }
+function cenarioArquivo(nome, p){ return {app:"Core One — Simulador", versao:1, nome: nome || "Cenário sem nome", data: new Date().toISOString(), premissas: {...p}}; }
+// Aceita o formato novo ({nome, premissas}) e o antigo (premissas soltas)
+function lerArquivoCenario(o){
+  if(o && typeof o === "object" && o.premissas && typeof o.premissas === "object") return {nome: o.nome || "Cenário importado", data: o.data || null, premissas: sanitize(o.premissas)};
+  return {nome: "Cenário importado", data: null, premissas: sanitize(o || {})};
+}
 
 // ================= Gráficos genéricos (C1–C9) =================
 function niceScale(mn, mx, n=5){
@@ -987,6 +1103,14 @@ function renderResults(){
       <div class="chartbox" id="chartbox">${ch.svg}<div class="tip"></div></div>
       <p class="note">Inclui a obra, os meses até os alunos chegarem${p.empValor>0?" e o empréstimo":""}.</p></div>
     ${decomp}
+    <div class="card"><h3>Fôlego de caixa</h3>${(()=>{ const fo = folego(s, p.capital);
+      if(!fo) return `<p class="sub">Informe o "Dinheiro que os sócios têm para investir" (grupo Dinheiro dos sócios e empréstimo) para ver até quando o dinheiro dura.</p>`;
+      const cab = fo.acaba === null
+        ? `<div class="alert ok"><b>✓</b><span>O capital de ${brl(p.capital)} cobre o pior momento (mês ${s.minMes}, ${brl(-s.exposicao)}). Sobram ${brl(fo.sobra)}${fo.sobraRec<0?`, mas faltam ${brl(-fo.sobraRec)} para a reserva de ${num(p.reservaMeses)} meses`:" e a reserva também está coberta"}.</span></div>`
+        : `<div class="alert bad"><b>✕</b><span>O dinheiro acaba no mês ${fo.acaba} após a assinatura${fo.acaba>p.mesesObra?` (mês ${fo.acaba-Math.round(p.mesesObra)} de funcionamento)`:" (ainda na obra)"}. Faltam ${brl(-fo.sobra)} para chegar ao pior momento (mês ${s.minMes}) e ${brl(-fo.sobraRec)} para ter também a reserva.</span></div>`;
+      return `<p class="sub">Compara o dinheiro dos sócios com o caixa acumulado mês a mês (linha tracejada no gráfico do caixa).</p>${cab}
+        <div class="scroll"><table><tr><td>Capital dos sócios</td><td>${brl(p.capital)}</td></tr><tr><td>Dinheiro necessário (pior momento)</td><td>${brl(s.exposicao)}</td></tr>
+        <tr><td>Capital recomendado (com reserva)</td><td>${brl(s.capitalRec)}</td></tr><tr class="total"><td>${fo.sobra>=0?"Folga":"Falta"} em relação ao necessário</td><td>${sgn(fo.sobra)}</td></tr></table></div>`; })()}</div>
     <div class="card"><h3>Pontos de atenção</h3>${alerts(p,s).map(([t,m])=>`<div class="alert ${t}"><b>${ICON[t]}</b><span>${m}</span></div>`).join("")}</div>
     <div class="card"><h3>Indicadores</h3><p class="sub">Todos os números para o studio maduro (${num(s.A)} alunos), salvo indicação.</p><div class="indgrid">
       ${indBox("Receitas", [
@@ -1096,7 +1220,18 @@ function renderResults(){
   const fmtBe = o => Number.isFinite(o.be) ? `${o.be} (${pct(o.be/Math.max(1,o.lot),0)})` : "—";
   const precosF = [0.9,0.95,1,1.05,1.1,1.2], alunosF = [0.6,0.7,0.8,0.9,1,1.1].filter(f => f<=1 || p.limitarVagas!=="sim").map(f=>Math.round(d.lotacao*f));
   const pts = [...new Set([0.4,0.5,0.6,0.7,0.8,0.9,1].map(x=>Math.round(d.lotacao*x)).concat([s.be,Math.round(s.A),alunosLucro]).filter(x=>Number.isFinite(x)&&x>=0))].sort((a,b)=>a-b);
+  const mi = metaInversa(p);
+  const fmtA = v => v===null ? "não alcança" : `${num(v)} alunos${v>d.lotacao?` <span class="neg">(acima das ${d.lotacao} vagas)</span>`:""}`;
+  const fmtP = v => v===null ? "não alcança" : `${v>=1?"+":""}${num((v-1)*100,1)}% <small class="note">(2x ${brl(p.p2*v)})</small>`;
+  const fmtO = v => v===null ? "não alcança" : `${num(v,1)}%`;
+  const mcOk = MC && MC.key === JSON.stringify(P);
   const riscos = `
+    <div class="card"><h3>O que precisa para chegar lá (meta inversa)</h3><p class="sub">Para cada objetivo, quanto cada alavanca precisaria mudar, uma de cada vez, mantendo o resto igual. Objetivos nos campos "Lucro mensal desejado" e "Prazo desejado para recuperar" (grupo Metas).</p><div class="scroll"><table>
+      <tr><th>Objetivo</th><th>Mínimo de alunos</th><th>Variação mínima dos preços</th><th>Ocupação mínima das salas</th></tr>
+      <tr><td>Lucro de ${brl(p.lucroAlvo)} por mês</td><td>${fmtA(mi.lucro.alunos)}</td><td>${fmtP(mi.lucro.preco)}</td><td>${fmtO(mi.lucro.ocup)}</td></tr>
+      <tr><td>Recuperar o investimento em até ${num(p.paybackAlvo)} meses</td><td>${fmtA(mi.payback.alunos)}</td><td>${fmtP(mi.payback.preco)}</td><td>${fmtO(mi.payback.ocup)}</td></tr>
+      <tr class="sub"><td>Hoje</td><td>${num(s.A)} alunos</td><td>preços atuais</td><td>${num(p.ocupCow,0)}%</td></tr>
+    </table></div><p class="note">Valores abaixo dos atuais significam folga: o objetivo já é atingido e a alavanca ainda pode piorar até ali. Preço: variação aplicada aos três planos (entre parênteses, como ficaria o plano 2x). "Não alcança": nem com 3.000 alunos, preços 3× maiores ou 100% de ocupação.</p></div>
     <div class="card"><h3>Cenários ruim, esperado e bom</h3><p class="sub">Ruim: ${p.varAlunos}% menos alunos, ${p.varOcup}% menos ocupação das salas, preços ${p.varPrecos}% menores, custos ${p.varCustos}% maiores e ${p.varRampa}% mais tempo para encher. Bom: o contrário.</p><div class="scroll"><table>
       <tr><th></th>${sc.map(([n])=>`<th>${n}</th>`).join("")}</tr>
       ${scRow("Alunos", x=>x.A)}
@@ -1114,6 +1249,22 @@ function renderResults(){
         const xs = ser[0].vals.map((_,i) => i);
         return lineChart({xs, series:ser, yfmt:kR, xfmt:x => x===0?"assinatura":"mês "+x, xticks:xs.filter(x => x%12===0), aria:"Caixa acumulado dos sócios nos cenários ruim, esperado e bom",
           tip:(i) => `Mês ${i}: ` + ser.map(se => `${se.name} ${brl(se.vals[i])}`).join(" · ")}); })()}</div></div>
+    <div class="card"><h3>Simulação de risco</h3><p class="sub">Sorteia 500 combinações das premissas dentro das faixas do grupo "Cenários bom e ruim" (alunos ±${p.varAlunos}%, ocupação das salas ±${p.varOcup}%, preços ±${p.varPrecos}%, custos ±${p.varCustos}%, tempo para encher ±${p.varRampa}%) e mostra a chance de cada resultado.</p>
+      ${mcOk ? (()=>{ const r = MC.res, fP = v => Number.isFinite(v) ? v+" meses" : "não volta";
+        return `<div class="indgrid">${indBox("Chances", [
+            [`Recuperar em até ${num(p.paybackAlvo)} meses`, pct(r.pPrazo,0)],
+            [`Recuperar dentro da análise (${num(p.horizonte)} meses)`, pct(r.pVolta,0)],
+            ["Render mais que a aplicação alternativa (VPL > 0)", pct(r.pVpl,0)],
+            ["Dar prejuízo mesmo com o studio maduro", pct(r.pPrej,0)]])}
+          ${indBox("Faixas (10% pior · mediana · 10% melhor)", [
+            ["Tempo para recuperar", `${fP(r.payback[2])} · ${fP(r.payback[1])} · ${fP(r.payback[0])}`],
+            ["Dinheiro necessário", `${brl(r.exposicao[2])} · ${brl(r.exposicao[1])} · ${brl(r.exposicao[0])}`],
+            ["Lucro por mês (maduro)", `${brl(r.resultado[0])} · ${brl(r.resultado[1])} · ${brl(r.resultado[2])}`]])}</div>
+          <div class="pl" style="margin-top:12px">Em quanto tempo o investimento volta (% das simulações)</div>
+          ${r.hist.map(([l,v]) => `<div class="hbar"><span>${l}</span><div class="track"><i style="width:${(v*100).toFixed(1)}%"></i></div><span class="val">${pct(v,0)}</span></div>`).join("")}
+          <p class="note">Sorteio uniforme e independente em cada faixa; mesma semente sempre (resultado reproduzível). Não é previsão: mostra a sensibilidade às premissas incertas.</p>`; })()
+        : `<p class="note">${MC ? "As premissas mudaram desde a última simulação. " : ""}Leva alguns segundos.</p>`}
+      <button class="btn" id="btnMC">${mcOk ? "Rodar de novo" : "Rodar 500 simulações"}</button></div>
     <div class="card"><h3>O que mais mexe no lucro</h3><p class="sub">Cada premissa 10% menor e 10% maior, uma de cada vez. As do topo são as que mais merecem atenção.</p>
       ${legendHTML([["Premissa 10% menor","var(--s-out)"],["Premissa 10% maior","var(--s-res)"]])}
       <div class="chartbox">${tornadoChart(sv.rows.filter(r => r.swing>=1).map(r => ({l:r.l, lo:r.lo.res, hi:r.hi.res})), sv.base.resultado, "Lucro do mês com cada premissa 10% menor e 10% maior")}</div>
@@ -1216,6 +1367,9 @@ function renderResults(){
       <li>Vagas = horas abertas × alunos ao mesmo tempo ÷ treinos por aluno × aproveitamento.</li>
       <li>Alunos no tempo: linha reta ou curva em S até a meta (curva em S = 3x² − 2x³, com x = mês ÷ meses até a meta); ou por captação: alunos do mês = alunos do mês anterior × (1 − cancelamento) + novos. A base estável da captação é novos ÷ cancelamento. Com "limitar às vagas", nunca passa da lotação.</li>
       <li>Capital recomendado = dinheiro que vocês precisam ter + reserva (meses × custos fixos do mês).</li>
+      <li>Meta inversa: busca o menor nº de alunos, aumento de preço ou ocupação das salas que atinge o lucro desejado ou o prazo desejado, mudando uma alavanca de cada vez.</li>
+      <li>Fôlego de caixa: primeiro mês em que o caixa acumulado dos sócios fica abaixo de −(capital informado).</li>
+      <li>Simulação de risco: 500 sorteios uniformes e independentes dentro das faixas dos cenários (alunos, ocupação das salas, preços, custos, tempo para encher), com semente fixa.</li>
       <li>Mensalidade média = soma de (preço × % dos alunos) × (1 − % plano longo × desconto) × (1 − não pagas).</li>
       <li>Instrutores = (horas abertas × instrutores + horas extras de pico) × custo da hora + adicional do RT.</li>
       <li>Horas das salas = (fecha − abre) × dias, com o horário próprio das salas e os mesmos dias do studio.</li>
@@ -1243,6 +1397,11 @@ function renderResults(){
      <div class="tab" data-tab="comparar">${comparar}</div><div class="tab" data-tab="caixa">${caixa}</div><div class="tab" data-tab="como">${como}</div>`;
   showTab(UI.tab);
   bindChart(ch, s);
+  const bmc = document.getElementById("btnMC");
+  if(bmc && bmc.addEventListener) bmc.addEventListener("click", () => {
+    bmc.disabled = true; bmc.textContent = "Calculando…";
+    setTimeout(() => { MC = {key: JSON.stringify(P), res: monteCarlo(P)}; renderResults(); }, 30);
+  });
 }
 function showTab(t){
   UI.tab = t; saveUI();
@@ -1252,11 +1411,46 @@ function showTab(t){
 document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
 function rerender(){ save(); renderInputs(); renderResults(); }
-document.getElementById("btnReset").onclick = () => { if(confirm("Voltar todos os campos aos valores padrão?")){ P = {...DEFAULTS}; rerender(); } };
+// Enquanto a pessoa digita, recalcula só depois de uma pausa curta (a tela tem muitos cálculos)
+let _timerRes = null;
+function agendarResultados(){ clearTimeout(_timerRes); _timerRes = setTimeout(renderResults, 150); }
+const escHtml = t => String(t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg, desfazer){
+  let t = document.getElementById("toast"); if(t) t.remove();
+  t = document.createElement("div"); t.id = "toast"; t.className = "toast"; t.setAttribute("role","status");
+  t.innerHTML = `<span>${escHtml(msg)}</span>${desfazer ? `<button>Desfazer</button>` : ""}`;
+  document.body.appendChild(t);
+  if(desfazer) t.querySelector("button").onclick = () => { desfazer(); t.remove(); };
+  setTimeout(() => { if(t.parentNode) t.remove(); }, 9000);
+}
+// Aplica um conjunto de premissas e oferece "Desfazer"
+function aplicarMudancas(mud, nome){
+  const antes = {...P}, uiAntes = UI.cenario;
+  P = sanitize({...P, ...mud}); UI.cenario = nome; saveUI(); rerender();
+  toast(`Aplicado: ${nome}.`, () => { P = antes; UI.cenario = uiAntes; saveUI(); rerender(); });
+}
+function renderCenarios(){
+  const box = document.getElementById("cenLista"); if(!box) return;
+  const l = lerCenarios();
+  box.innerHTML = l.length ? l.map((c,i) => `<div class="cen-row"><div class="n">${escHtml(c.nome)}<small>${c.data ? new Date(c.data).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}) : ""}</small></div>
+      <button data-cl="${i}" title="Usar estas premissas">Carregar</button><button data-cb="${i}" title="Baixar como arquivo">Baixar</button><button data-cx="${i}" title="Excluir">Excluir</button></div>`).join("")
+    : `<p class="note">Nenhum cenário gravado ainda.</p>`;
+  box.querySelectorAll("[data-cl]").forEach(b => b.onclick = () => { const c = l[+b.dataset.cl]; aplicarMudancas(lerArquivoCenario(c).premissas, c.nome); });
+  box.querySelectorAll("[data-cb]").forEach(b => b.onclick = () => baixarCenario(l[+b.dataset.cb]));
+  box.querySelectorAll("[data-cx]").forEach(b => b.onclick = () => { const c = l[+b.dataset.cx];
+    if(confirm(`Excluir o cenário "${c.nome}"?`)){ gravarCenarios(l.filter((_,j) => j !== +b.dataset.cx)); if(UI.cenario===c.nome){ UI.cenario = null; saveUI(); } renderInputs(); } });
+}
+function baixarCenario(c){
+  const slug = (c.nome || "cenario").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase() || "cenario";
+  const b = new Blob([JSON.stringify(c, null, 2)], {type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `core-one-cenario-${slug}-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+document.getElementById("btnReset").onclick = () => { if(confirm("Voltar todos os campos aos valores padrão?")){ aplicarMudancas({...DEFAULTS}, "Valores padrão"); UI.cenario = null; saveUI(); renderInputs(); } };
 document.getElementById("btnExport").onclick = () => {
-  const b = new Blob([JSON.stringify(P,null,2)],{type:"application/json"});
-  const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "core-one-premissas.json"; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  const nome = prompt("Nome do cenário para o arquivo:", UI.cenario || "Cenário Core One");
+  if(nome === null) return;
+  baixarCenario(cenarioArquivo(nome.trim() || "Cenário Core One", P));
 };
 // ================= Exportar Simulação (PDF) =================
 // Cores fixas do tema claro: o PDF sai sempre igual, mesmo com o site em modo escuro.
@@ -1324,7 +1518,7 @@ async function buildSections(){
   const nAlt = Object.keys(DEFAULTS).filter(k => p[k]!==DEFAULTS[k]).length;
   const capa = `<div class="cover"><img src="${document.querySelector(".logo").src}" alt="Core One"><div><h1>Core One · Simulação de viabilidade</h1>
     <p>Studio de movimento + salas de atendimento · Rua Real Grandeza, 190 — Botafogo, Rio de Janeiro</p>
-    <p>Gerado em ${quando} · ${nAlt ? nAlt + " premissa(s) diferente(s) do padrão (destacadas na seção 6)" : "premissas padrão"} · aparelhos: ${MODELS[p.modelo]}</p></div></div>
+    ${UI.cenario ? `<p>Cenário: <b>${escHtml(UI.cenario)}</b></p>` : ""}<p>Gerado em ${quando} · ${nAlt ? nAlt + " premissa(s) diferente(s) do padrão (destacadas na seção 6)" : "premissas padrão"} · aparelhos: ${MODELS[p.modelo]}</p></div></div>
     ${L.verdictHTML}<div class="bigs">${L.bigsHTML}</div>
     <p class="note">Valores estimados a partir das premissas da seção 6. Não substituem orçamento de obra, parecer contábil ou validação da Vigilância Sanitária.</p>`;
   const resumo = (await svgsToImages(L.resumo)).replace(" Passe o mouse para ver cada mês.", "");
@@ -1391,7 +1585,10 @@ async function printReport(doPrint = true){
 document.getElementById("btnImport").onclick = () => document.getElementById("fileImport").click();
 document.getElementById("fileImport").onchange = e => {
   const f = e.target.files[0]; if(!f) return;
-  f.text().then(t => { try{ P = sanitize(JSON.parse(t)); rerender(); }catch(err){ alert("Arquivo inválido."); } });
+  f.text().then(t => { try{ const c = lerArquivoCenario(JSON.parse(t));
+      aplicarMudancas(c.premissas, c.nome);
+      if(confirm(`Cenário "${c.nome}" carregado. Gravar também em "Meus cenários"?`)){ const l = lerCenarios().filter(x => x.nome !== c.nome); l.unshift(cenarioArquivo(c.nome, P)); gravarCenarios(l); renderInputs(); }
+    }catch(err){ alert("Arquivo inválido."); } });
   e.target.value = "";
 };
 
