@@ -311,6 +311,7 @@ const GROUPS = [
     ["custoHoraInstr","Custo da hora do instrutor","R$/hora",37,0.5,"Salário mais encargos, por hora trabalhada. Base do projeto: R$ 37/hora.",1],
     ["instrBase","Instrutores em todos os horários","pessoas",1,1,"Quantos instrutores ficam no studio o tempo todo.",0],
     ["horasPico2","Horas com instrutor extra no pico","h/mês",100,5,"Horas no mês em que um 2º instrutor reforça os horários cheios (ex.: 7h–9h e 17h–20h).",1],
+    ["vinculoInstr","Como os instrutores são contratados","","clt",null,"CLT ou autônomo (pessoa física): o pagamento entra na folha usada no Fator R do Simples. MEI ou empresa: não entra, a folha cai e o imposto pode passar para o Anexo V (bem mais caro).",1],
     ["adicRT","Adicional do responsável técnico","R$/mês",0,50,"Valor extra para o instrutor que assina como responsável técnico no CREF1.",0],
     ["apoio","Recepção e limpeza","R$/mês",7500,100,"Salários com encargos da recepção (no pico) e da limpeza.",1],
     ["proLabore","Retirada fixa dos sócios","R$/mês",0,100,"Salário mensal dos sócios. Pela regra atual, os sócios ganham só com o lucro.",0],
@@ -326,7 +327,7 @@ const GROUPS = [
     ["inflCustos","Aumento anual dos custos","% ao ano",4.5,0.5,"Quanto os custos (fora o aluguel) sobem a cada 12 meses. Padrão: 4,5%, inflação estimada.",0],
   ]},
   {id:"impostos", g:"Impostos e taxas", intro:"Descontos sobre o faturamento do studio.", f:[
-    ["modoSimples","Como calcular o Simples","","auto",null,"Automático: pela tabela do Anexo III, conforme o faturamento dos últimos 12 meses (studio + salas). Manual: usa os percentuais fixos informados. A confirmar com o contador.",1],
+    ["modoSimples","Como calcular o Simples","","auto",null,"Automático: academia e sublocação de salas pagam pelo Anexo III se a folha de pagamento for pelo menos 28% do faturamento (Fator R); abaixo disso, pelo Anexo V. A alíquota segue o faturamento dos últimos 12 meses (studio + salas). Manual: usa os percentuais fixos informados. A confirmar com o contador.",1],
     ["tSimples","Imposto (Simples Nacional) no modo manual","% do faturamento",10.5,0.1,"Usado só no modo manual.",1],
     ["tCartao","Taxa de cartão e maquininha","% do faturamento",2.5,0.1,"Parte cobrada pela operadora em cada pagamento.",1],
   ]},
@@ -373,10 +374,11 @@ const GROUPS = [
   ]},
 ];
 const MODELS = {seminovos:"Comprar seminovos", novos:"Comprar novos à vista", leasing:"Alugar (leasing)", cdc:"Financiar novos (CDC)"};
-const SIMPLES_MODES = {auto:"Automático (tabela do Anexo III)", manual:"Manual (% fixo)"};
+const SIMPLES_MODES = {auto:"Automático (Anexo III ou V pelo Fator R)", manual:"Manual (% fixo)"};
 const GROWTH_MODES = {linear:"Linha reta até a meta", curvaS:"Curva em S até a meta", captacao:"Por captação mensal (novos − cancelamentos)"};
 const YESNO = {sim:"Sim", nao:"Não"};
-const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES, modoCrescimento: GROWTH_MODES, limitarVagas: YESNO};
+const VINCULOS = {clt:"CLT ou autônomo (pessoa física)", pj:"MEI ou empresa (PJ)"};
+const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES, modoCrescimento: GROWTH_MODES, limitarVagas: YESNO, vinculoInstr: VINCULOS};
 const FIELDS = {}; GROUPS.forEach(g => g.f.forEach(f => FIELDS[f[0]] = {l:f[1], u:f[2], v:f[3], st:f[4], h:f[5], e:f[6], g:g.id}));
 const DEFAULTS = {}; Object.keys(FIELDS).forEach(k => DEFAULTS[k] = FIELDS[k].v);
 
@@ -427,17 +429,26 @@ function horasSalas(p){
   const h = (a,b) => Math.max(0, b-a);
   return h(p.abreSalaSemana,p.fechaSalaSemana)*p.diasUteis + h(p.abreSalaSab,p.fechaSalaSab)*p.sabados + h(p.abreSalaDom,p.fechaSalaDom)*p.domingos;
 }
-// Simples Nacional — Anexo III (LC 123/2006, redação da LC 155/2016): alíquota efetiva pela receita bruta dos últimos 12 meses (A3)
+// Simples Nacional (LC 123/2006, redação da LC 155/2016). Academias e "administração e locação de imóveis de terceiros"
+// (art. 18, § 5º-D) pagam pelo Anexo III se a folha dos 12 meses for ≥ 28% da receita (Fator R, §§ 5º-J e 5º-M); abaixo, Anexo V.
+// Tabelas: [teto da faixa de receita em 12 meses, alíquota nominal, parcela a deduzir]
 const ANEXO_III = [[180000,0.06,0],[360000,0.112,9360],[720000,0.135,17640],[1800000,0.16,35640],[3600000,0.21,125640],[4800000,0.33,648000]];
-function simplesEfetivo(rbt12){
-  if(!(rbt12>0)) return ANEXO_III[0][1];
-  const f = ANEXO_III.find(x => rbt12 <= x[0]) || ANEXO_III[ANEXO_III.length-1];
+const ANEXO_V   = [[180000,0.155,0],[360000,0.18,4500],[720000,0.195,9900],[1800000,0.205,17100],[3600000,0.23,62100],[4800000,0.305,540000]];
+const FATOR_R_MIN = 0.28;
+function simplesEfetivo(rbt12, anexo = "III"){
+  const T = anexo==="V" ? ANEXO_V : ANEXO_III;
+  if(!(rbt12>0)) return T[0][1];
+  const f = T.find(x => rbt12 <= x[0]) || T[T.length-1];
   return (rbt12*f[1] - f[2]) / rbt12;
 }
+// Folha que conta no Fator R: salários e encargos de pessoas físicas + pró-labore (pagamentos a MEI/PJ não contam)
+function folhaFatorR(p, d){ return (p.vinculoInstr==="pj" ? 0 : d.tecnica) + p.apoio + p.proLabore; }
 // Taxas aplicadas: studio = Simples + cartão; salas = Simples (automático) ou % manual
-function taxas(p, rbt12){
-  const simp = p.modoSimples==="manual" ? p.tSimples/100 : simplesEfetivo(rbt12);
-  return {simp, tT: simp + p.tCartao/100, tC: p.modoSimples==="manual" ? p.tCow/100 : simp};
+function taxas(p, rbt12, fatorR = Infinity){
+  if(p.modoSimples==="manual") return {simp: p.tSimples/100, tT: (p.tSimples+p.tCartao)/100, tC: p.tCow/100, anexo: "manual", fatorR};
+  const anexo = fatorR >= FATOR_R_MIN ? "III" : "V";
+  const simp = simplesEfetivo(rbt12, anexo);
+  return {simp, tT: simp + p.tCartao/100, tC: simp, anexo, fatorR};
 }
 function equip(p, m){
   switch(m){
@@ -494,7 +505,8 @@ function regimeCore(p, modelo, A, d, eq){
   const ch = p.churn/100, novos = A*ch;
   const recPlanos = A*d.ticket, recMat = novos*p.matricula, recT = recPlanos+recMat+p.recExtra;
   const c0 = cow(p, p.ocupCow);
-  const tx = taxas(p, 12*(recT + c0.rec));
+  const receitaMes = recT + c0.rec;
+  const tx = taxas(p, 12*receitaMes, receitaMes>0 ? folhaFatorR(p, d)/receitaMes : Infinity);
   const c = cow(p, p.ocupCow, 1, tx.tC);
   const eqOp = eq.opex(1), opex = p.aluguel + d.outrosFixos + eqOp;
   const impT = recT*tx.tT, cvar = A*p.cvAluno + novos*p.cac;
@@ -504,7 +516,7 @@ function regimeCore(p, modelo, A, d, eq){
 function regime(p, modelo){
   const d = deriv(p), eq = equip(p, modelo);
   const r = regimeCore(p, modelo, alunosRegime(p, d), d, eq);
-  d.tT = r.tx.tT; d.tC = r.tx.tC; d.tSimp = r.tx.simp;
+  d.tT = r.tx.tT; d.tC = r.tx.tC; d.tSimp = r.tx.simp; d.anexo = r.tx.anexo; d.fatorR = r.tx.fatorR; d.folhaR = folhaFatorR(p, d);
   const ch = p.churn/100;
   const margAluno = d.ticket*(1-d.tT) - p.cvAluno + ch*(p.matricula*(1-d.tT) - p.cac);
   const fixoLiq = r.opex - r.c.liq - p.recExtra*(1-d.tT);
@@ -531,8 +543,8 @@ function simulate(p0, modelo){
   const H = Math.max(12, p.horizonte);
   const flows = [-upfront];
   let cumProj = -upfront, cumSoc = -upfront + p.empValor, minSoc = cumSoc, minMes = 0, dcum = -upfront;
-  let payback = null, paybackDesc = null, prevA = 0, mesLucro = null, mesesNeg = 0;
-  const rows = [], recHist = [];
+  let payback = null, paybackDesc = null, prevA = 0, mesLucro = null, mesesNeg = 0, mesesAnexoV = 0;
+  const rows = [], recHist = [], folHist = [];
   for(let m=1; m<=H; m++){
     const yA = Math.floor((m-1)/12);
     const alug = m<=p.carencia ? 0 : p.aluguel*Math.pow(1+p.reajAluguel/100, yA);
@@ -549,15 +561,19 @@ function simulate(p0, modelo){
       const recT = A*d.ticket*fP + novos*p.matricula*fP + p.recExtra*fP;
       const c0 = cow(p, p.ocupCow*fCow, fP);
       // Receita bruta dos 12 meses anteriores; no início da atividade, média dos meses anteriores × 12 (no 1º mês, o próprio mês × 12)
-      const prev = recHist.slice(-12);
-      const rbt12 = prev.length===0 ? (recT + c0.rec)*12 : (prev.length<12 ? prev.reduce((a,b)=>a+b,0)/prev.length*12 : prev.reduce((a,b)=>a+b,0));
-      const tx = taxas(p, rbt12);
+      const prev = recHist.slice(-12), prevF = folHist.slice(-12), soma = a => a.reduce((x,y)=>x+y,0);
+      const folhaMes = folhaFatorR(p, d)*fC;
+      const rbt12 = prev.length===0 ? (recT + c0.rec)*12 : (prev.length<12 ? soma(prev)/prev.length*12 : soma(prev));
+      // Fator R: folha ÷ receita dos 12 meses anteriores (no 1º mês, os valores do próprio mês)
+      const fr = prev.length===0 ? (recT + c0.rec > 0 ? folhaMes/(recT + c0.rec) : Infinity) : (soma(prev) > 0 ? soma(prevF)/soma(prev) : Infinity);
+      const tx = taxas(p, rbt12, fr);
       const c = cow(p, p.ocupCow*fCow, fP, tx.tC);
-      recHist.push(recT + c.rec);
+      recHist.push(recT + c.rec); folHist.push(folhaMes);
       const custos = alug + d.outrosFixos*fC + eq.opex(k) + eq.oneoff(k) + (A*p.cvAluno + novos*p.cac)*fC;
       proj = recT*(1-tx.tT) + c.liq - custos;
-      row = {m, k, fase:"Funcionando", alunos:A, receita:recT + c.rec, simp:tx.simp};
+      row = {m, k, fase:"Funcionando", alunos:A, receita:recT + c.rec, simp:tx.simp, anexo:tx.anexo, fatorR:fr};
       if(proj<0) mesesNeg++;
+      if(tx.anexo==="V") mesesAnexoV++;
       if(mesLucro===null && proj>=0) mesLucro = k;
     }
     const soc = proj - loanPay(p, m);
@@ -577,7 +593,7 @@ function simulate(p0, modelo){
   const pvFut = flowsR.slice(1).reduce((s,f,i)=> s + f/Math.pow(1+im,i+1), 0);
   const reserva = Math.max(0, p.reservaMeses)*r.opex;
   return {...r, p, capexTotal, upfront, payback, paybackDesc, exposicao: Math.max(0,-minSoc), reserva, capitalRec: Math.max(0,-minSoc) + reserva, minMes, vpl, tir: irr(flowsR),
-          il: upfront>0 ? pvFut/upfront : null, rows, H, mesLucro, mesesNeg, residual, caucaoVal, cumFinal: cumProj + residual + caucaoVal};
+          il: upfront>0 ? pvFut/upfront : null, rows, H, mesLucro, mesesNeg, mesesAnexoV, residual, caucaoVal, cumFinal: cumProj + residual + caucaoVal};
 }
 function irr(flows){
   const npv = rate => flows.reduce((s,f,i)=> s + f/Math.pow(1+rate,i), 0);
@@ -714,7 +730,7 @@ function groupInfo(p, s){
     cow:`${num(d.horasSala)} h/mês por sala · receita ${brl(s.c.rec)}/mês`,
     equipe:`Folha: ${brl(d.folha)}/mês`,
     opex:`Custos fixos totais: ${brl(s.opex)}/mês`,
-    impostos:`Simples ${p.modoSimples==="manual"?"manual":"automático"}: ${pct(d.tSimp)} em regime · studio ${pct(d.tT)} com cartão · salas ${pct(d.tC)}`,
+    impostos: p.modoSimples==="manual" ? `Simples manual: studio ${pct(d.tT)} com cartão · salas ${pct(d.tC)}` : `Anexo ${d.anexo} (Fator R ${pct(d.fatorR,0)}) · Simples ${pct(d.tSimp)} em regime · studio ${pct(d.tT)} com cartão`,
     equip:`${MODELS[p.modelo]} · ${brl(s.eq.capex)} agora + ${brl(s.eqOp)}/mês`,
     fin:p.capital>0 ? `Capital: ${brl(p.capital)}` : `Capital ainda não informado`,
     metas:`${p.modoCrescimento==="captacao"?"Base estável":"Meta"}: ${num(s.A)} alunos = ${pct(s.A/Math.max(1,d.lotacao),0)} das vagas`,
@@ -752,6 +768,11 @@ function alerts(p, s){
     : `A meta de ${num(p.alunosAlvo)} alunos é maior do que cabe no studio (${d.lotacao}).${p.limitarVagas==="sim"?" A simulação limita às vagas.":" Reduza a meta ou aumente horário/área."}`]);
   if(p.modoCrescimento==="captacao" && p.churn<=0) a.push(["warn","No modo por captação, informe a taxa de cancelamentos (grupo Planos). Sem ela, a base de alunos só cresce."]);
   if(p.modoCrescimento==="captacao" && Number.isFinite(s.be) && s.A < s.be) a.push(["bad",`Com ${num(p.novosMes)} alunos novos por mês e ${num(p.churn,1)}% de cancelamento, a base se estabiliza em ${num(s.A)} alunos, abaixo dos ${s.be} necessários para empatar. Seriam precisos ~${num(Math.ceil(s.be*p.churn/100))} novos por mês.`]);
+  if(p.modoSimples!=="manual"){
+    if(d.anexo==="V") a.push(["bad",`Fator R de ${pct(d.fatorR,0)}: a folha (${brl(d.folhaR)}/mês) fica abaixo de 28% do faturamento, e o Simples passa para o Anexo V (${pct(d.tSimp)} em vez de ~${pct(simplesEfetivo(12*s.receitaTotal,"III"))}). Instrutores como CLT/autônomo ou pró-labore aumentam a folha.`]);
+    else if(d.fatorR < 0.32) a.push(["warn",`Fator R de ${pct(d.fatorR,0)}, perto do limite de 28%. Se o faturamento crescer sem aumentar a folha, o Simples passa para o Anexo V (bem mais caro).`]);
+    if(s.mesesAnexoV>0 && d.anexo!=="V") a.push(["warn",`Em ${s.mesesAnexoV} mês(es) da simulação o Fator R ficou abaixo de 28% e o Simples foi pelo Anexo V.`]);
+  }
   if(p.faltas<0 || p.faltas>=100) a.push(["bad","A taxa de faltas precisa ficar entre 0% e 99%."]);
   if(p.capital>0 && p.capital >= s.exposicao && p.capital < s.capitalRec) a.push(["warn",`O capital dos sócios (${brl(p.capital)}) cobre o necessário, mas não a reserva de ${num(p.reservaMeses)} meses. Capital recomendado: ${brl(s.capitalRec)}.`]);
   if(Number.isFinite(s.be) && s.be <= d.lotacao && s.be/d.lotacao > 0.7) a.push(["warn",`Para empatar é preciso ocupar ${pct(s.be/d.lotacao,0)} das vagas. Pouca folga se os alunos demorarem a vir.`]);
@@ -1155,6 +1176,8 @@ function renderResults(){
         ["Imóvel ÷ faturamento", pct((p.aluguel+p.condIptu+p.taxasPrediais+p.garantia)/tot), "Aluguel, condomínio e taxas"],
         ["Equipe ÷ faturamento", pct(d.folha/tot)],
         ["Custo fixo por aluno", s.A>0?brl2(s.opex/s.A):"—"],
+        ["Folha que conta no Fator R", brl(d.folhaR)+"/mês", `Fator R = ${pct(d.fatorR,1)} do faturamento (mínimo 28% para o Anexo III)`],
+        ["Simples Nacional em regime", p.modoSimples==="manual" ? pct(d.tSimp)+" (manual)" : `${pct(d.tSimp)} (Anexo ${d.anexo})`, "Mais 2,5% de cartão no studio"],
         ["Custo da equipe técnica", brl(d.tecnica)+"/mês", `${num(d.horasOp*p.instrBase+p.horasPico2)} horas de instrutor`],
       ])}
       ${indBox("Alunos", [
@@ -1373,7 +1396,7 @@ function renderResults(){
       <li>Mensalidade média = soma de (preço × % dos alunos) × (1 − % plano longo × desconto) × (1 − não pagas).</li>
       <li>Instrutores = (horas abertas × instrutores + horas extras de pico) × custo da hora + adicional do RT.</li>
       <li>Horas das salas = (fecha − abre) × dias, com o horário próprio das salas e os mesmos dias do studio.</li>
-      <li>Simples Nacional (modo automático): alíquota efetiva do Anexo III = (receita dos 12 meses × alíquota da faixa − parcela a deduzir) ÷ receita dos 12 meses, sobre studio + salas. No início da atividade, a receita dos 12 meses é estimada pela média dos meses já faturados × 12. A taxa de cartão é somada só no studio.</li>
+      <li>Simples Nacional (modo automático): academia e sublocação de salas são "atividades do Fator R". Fator R = folha dos 12 meses (salários e encargos de pessoas físicas + pró-labore; MEI/PJ não contam) ÷ receita dos 12 meses. Se ≥ 28%, Anexo III; se menor, Anexo V. Alíquota efetiva = (receita dos 12 meses × alíquota da faixa − parcela a deduzir) ÷ receita dos 12 meses, sobre studio + salas. No início da atividade, usa a média dos meses já faturados × 12. A taxa de cartão é somada só no studio.</li>
       <li>Depreciação: obra dividida pelo prazo do contrato; aparelhos próprios pela vida útil (leasing não deprecia).</li>
       <li>Salas: horas alugadas = horas disponíveis × ocupação; preço médio pondera pacote, avulsa e turno; sobra = receita − impostos − taxa do app − custo por hora.</li>
       <li>Alunos para empatar = (custos fixos − sobra das salas − outras receitas) ÷ quanto cada aluno deixa.</li>
@@ -1384,7 +1407,7 @@ function renderResults(){
       <li>Durante a obra entram só aluguel (fora da carência), condomínio + IPTU, outras taxas do imóvel e garantia. Equipe, contas e sistema começam na inauguração.</li>
       <li>A meta de alunos não é limitada às vagas: se for maior, aparece um alerta, mas o cálculo usa a meta.</li>
       <li>Salas em contrato mensal fixo contam desde a inauguração; só a venda por hora cresce aos poucos.</li>
-      <li>O Simples segue a tabela do Anexo III (ou um % manual). O enquadramento real (anexo, fator R, tratamento da cessão das salas) depende do contador. A reforma tributária (CBS/IBS a partir de 2027) não está modelada.</li>
+      <li>O Simples segue os Anexos III e V pelo Fator R (ou um % manual). O enquadramento real (CNAE, tratamento da cessão das salas, ISS) depende do contador. O INSS patronal já está dentro do Simples nos Anexos III e V; o "custo da hora do instrutor" deve incluir só FGTS, férias e 13º. A reforma tributária (CBS/IBS a partir de 2027) e a tributação de dividendos não estão modeladas.</li>
       <li>Reajustes de preços, custos e aluguel de 4,5% ao ano (inflação estimada) e taxa mínima de 15% ao ano, ambos em valores correntes.</li>
       <li>A análise padrão vai até o fim do contrato de locação (60 meses); depois, depende da renovação.</li>
       <li>"Lucro por mês" é sobra de caixa: inclui a parcela do financiamento ou do leasing dos aparelhos e não desconta depreciação (mostrada à parte).</li>
@@ -1487,6 +1510,29 @@ async function svgsToImages(html){
   return html;
 }
 function fmtVal(id, v){ if(SELECTS[id]) return SELECTS[id][v]; return num(v, Math.abs(v%1)>1e-9 ? (Math.abs(v*100%1)>1e-9 ? 4 : 2) : 0); }
+// Premissas compactas para o PDF: essenciais + alteradas + opcionais com valor; só os campos que valem para as escolhas feitas
+function premissasCompactas(p, s){
+  const eq = equipFields(p), d = s.d;
+  const vale = id => {
+    if(FIELDS[id].g==="equip" && id!=="modelo" && !eq.includes(id)) return false;
+    if((id==="tSimples" || id==="tCow") && p.modoSimples!=="manual") return false;
+    if(id==="novosMes" && p.modoCrescimento!=="captacao") return false;
+    if((id==="alunosAlvo" || id==="rampa") && p.modoCrescimento==="captacao") return false;
+    return FIELDS[id].e || p[id]!==DEFAULTS[id] || (typeof p[id]==="number" && p[id]!==0);
+  };
+  const boxes = GROUPS.map(g => {
+    const rows = g.f.filter(([id]) => vale(id)).map(([id,l,u]) => { const ch = p[id]!==DEFAULTS[id];
+      return `<tr${ch?' class="alt"':''}><td>${l}</td><td>${fmtVal(id,p[id])}${u&&!SELECTS[id]?" "+u:""}${ch?` <small>(padrão ${fmtVal(id,DEFAULTS[id])})</small>`:""}</td></tr>`; }).join("");
+    return rows ? `<div class="pbox"><h4>${g.g}</h4><table>${rows}</table></div>` : "";
+  }).join("");
+  const deriv = [["Horas abertas por mês", num(d.horasOp)+" h"],["Treinos por aluno", `${num(d.aulasMes,1)}/mês (contratados ${num(d.aulasContratadas,1)})`],
+    ["Vagas no studio", `${d.lotacao} alunos (${d.capSim} ao mesmo tempo)`],["Alunos em regime", num(s.A)],["Mensalidade média", brl2(d.ticket)],
+    ["Horas por sala", num(d.horasSala)+" h/mês"],["Custos fixos do mês", brl(s.opex)],["Investimento para abrir", brl(s.upfront)],
+    ["Simples em regime", p.modoSimples==="manual" ? pct(d.tSimp)+" (manual)" : `${pct(d.tSimp)} · Anexo ${d.anexo} · Fator R ${pct(d.fatorR,0)}`]];
+  return `<p class="note" style="margin:0 0 8px">Premissas usadas nesta simulação. Linhas em destaque foram alteradas (entre parênteses, o valor padrão). Campos opcionais zerados e campos que não se aplicam às escolhas feitas não aparecem.</p>
+    <div class="pgrid">${boxes}</div>
+    <div class="pcalc"><h4>Números que saem das premissas</h4><div class="pcalc-g">${deriv.map(([l,v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}</div></div>`;
+}
 function premissasHTML(p){
   const eq = equipFields(p);
   return GROUPS.map(g => {
@@ -1508,6 +1554,15 @@ const REP_STYLE = `<style>
 .rep .indgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .rep .cover{background:#0b2636;color:#fff;border-radius:14px;padding:18px 20px;display:flex;gap:18px;align-items:center;margin-bottom:14px}
 .rep .cover img{height:78px;border-radius:10px}.rep .cover h1{margin:0;font-size:24px}.rep .cover p{margin:3px 0 0;color:#c8d3e0;font-size:13px}
+.rep .pgrid{column-count:3;column-gap:6px}
+.rep .pbox{border:1px solid var(--border);border-radius:7px;padding:4px 6px;break-inside:avoid;display:inline-block;width:100%;margin:0 0 5px}
+.rep .pcalc{border:1px solid var(--border);border-radius:7px;padding:5px 8px;background:var(--accent-weak);margin-top:2px}
+.rep .pcalc h4{margin:0 0 3px;font-size:10.5px;color:var(--accent)}
+.rep .pcalc-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 12px;font-size:9.5px}
+.rep .pcalc-g div{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dashed var(--border);padding:1px 0}
+.rep .pbox h4{margin:0 0 2px;font-size:10.5px;color:var(--accent)}
+.rep .pbox table{font-size:9px;line-height:1.25}.rep .pbox td{padding:1px 2px;border-bottom:1px dashed var(--border);white-space:normal}
+.rep .pbox td:last-child{text-align:right;font-weight:600}.rep .pbox tr.alt td{background:var(--warn-weak)}.rep .pbox small{font-weight:400;color:var(--muted)}
 </style>`;
 function repSection(title, body){ return `<div class="rep">${REP_STYLE}${title?`<h2 class="sec">${title}</h2>`:""}${body}</div>`; }
 // Monta as 7 seções do relatório (usadas no PDF e na versão para impressão)
@@ -1518,18 +1573,18 @@ async function buildSections(){
   const nAlt = Object.keys(DEFAULTS).filter(k => p[k]!==DEFAULTS[k]).length;
   const capa = `<div class="cover"><img src="${document.querySelector(".logo").src}" alt="Core One"><div><h1>Core One · Simulação de viabilidade</h1>
     <p>Studio de movimento + salas de atendimento · Rua Real Grandeza, 190 — Botafogo, Rio de Janeiro</p>
-    ${UI.cenario ? `<p>Cenário: <b>${escHtml(UI.cenario)}</b></p>` : ""}<p>Gerado em ${quando} · ${nAlt ? nAlt + " premissa(s) diferente(s) do padrão (destacadas na seção 6)" : "premissas padrão"} · aparelhos: ${MODELS[p.modelo]}</p></div></div>
-    ${L.verdictHTML}<div class="bigs">${L.bigsHTML}</div>
-    <p class="note">Valores estimados a partir das premissas da seção 6. Não substituem orçamento de obra, parecer contábil ou validação da Vigilância Sanitária.</p>`;
+    ${UI.cenario ? `<p>Cenário: <b>${escHtml(UI.cenario)}</b></p>` : ""}<p>Gerado em ${quando} · ${nAlt ? nAlt + " premissa(s) diferente(s) do padrão (destacadas na seção 1)" : "premissas padrão"} · aparelhos: ${MODELS[p.modelo]}</p></div></div>
+    <p class="note">Valores estimados a partir das premissas da seção 1. Não substituem orçamento de obra, parecer contábil ou validação da Vigilância Sanitária.</p>`;
+  const tirarBotoes = h => h.replace(/<button[\s\S]*?<\/button>/g, "");
   const resumo = (await svgsToImages(L.resumo)).replace(" Passe o mouse para ver cada mês.", "");
-  const caixa = L.caixa.replace(/<details>/g,"<div>").replace(/<\/details>/g,"</div>").replace(/<summary[^>]*>[\s\S]*?<\/summary>/, "<h3>Mês a mês</h3>");
+  const caixaHtml = L.caixa.replace(/<details>/g,"<div>").replace(/<\/details>/g,"</div>").replace(/<summary[^>]*>[\s\S]*?<\/summary>/, "<h3>Mês a mês</h3>");
   const secoes = [
-    repSection("", capa + resumo.replace(/^\s*/, "")),
-    repSection("2. Lucro do mês", L.lucro),
-    repSection("3. Riscos e cenários", L.riscos),
-    repSection("4. Comparar opções", L.comparar),
-    repSection("5. Caixa ao longo do tempo", caixa),
-    repSection("6. Premissas usadas", `<p class="note" style="margin-bottom:10px">Linhas destacadas = valores alterados em relação ao padrão. Em "Aparelhos" aparecem só os campos da forma escolhida.</p>` + premissasHTML(p)),
+    repSection("", capa + `<h2 class="sec">1. Premissas</h2>` + premissasCompactas(p, L.s)),
+    repSection("2. Resultado", L.verdictHTML + `<div class="bigs">${L.bigsHTML}</div>` + resumo.replace(/^\s*/, "")),
+    repSection("3. Lucro do mês", await svgsToImages(L.lucro)),
+    repSection("4. Riscos e cenários", tirarBotoes(await svgsToImages(L.riscos))),
+    repSection("5. Comparar opções", await svgsToImages(L.comparar)),
+    repSection("6. Caixa ao longo do tempo", await svgsToImages(caixaHtml)),
     repSection("7. Como calculamos", L.como),
   ];
   return {secoes, agora, quando};
@@ -1542,7 +1597,7 @@ async function buildPdf(){
     image:{type:"jpeg", quality:0.95},
     html2canvas:{scale:2, backgroundColor:"#ffffff", scrollX:0, scrollY:0},
     jsPDF:{unit:"mm", format:"a4", orientation:"portrait"},
-    pagebreak:{mode:["css","legacy"], avoid:["tr",".ind",".hbar",".alert","img",".chartbox",".card:has(.chartbox)",".big",".verdict","h3",".cover",".legend"]},
+    pagebreak:{mode:["css","legacy"], avoid:["tr",".ind",".hbar",".alert","img",".chartbox",".big",".verdict","h3",".cover",".legend",".pbox"]},
   };
   let w = html2pdf().set(opt).from(secoes[0]).toPdf();
   for(const sec of secoes.slice(1)) w = w.get("pdf").then(pdf => { pdf.addPage(); }).from(sec).toContainer().toCanvas().toPdf();
