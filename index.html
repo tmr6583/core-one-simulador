@@ -203,6 +203,29 @@ tr.sub td{color:var(--muted);font-size:13px}
 .cen-row button{border:1px solid var(--border);background:var(--surface-2);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px}
 .cen-form{display:flex;gap:6px}.cen-form input{flex:1;min-width:0}
 .cen-atual{font-size:12.5px;color:var(--accent);margin-top:6px}
+/* V1 — revisão visual (UX/UI, 15-11-2026): só aparência; nenhuma fórmula ou dado muda */
+.card h3{font-size:17px;font-weight:650;letter-spacing:-.1px;margin-bottom:4px}
+.card .sub{font-size:13.5px;line-height:1.5;margin:0 0 10px}
+.note{font-size:13px;line-height:1.55}
+th{font-size:12.5px;letter-spacing:.01em}
+td,th,.big .a{font-variant-numeric:tabular-nums}
+.legend{font-size:13.5px;gap:14px}
+.legend i{width:12px;height:12px;border-radius:3px}
+/* Rótulos dos gráficos: os de 10–11 px sobem 1 px; títulos e valores maiores mantêm a hierarquia */
+.chartbox svg text[font-size="11"]{font-size:12px}.chartbox svg text[font-size="10"]{font-size:11px}
+/* Contorno da cor do fundo atrás de cada rótulo: o texto não se mistura com linhas, grades e barras */
+.chartbox svg text{paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+/* Valores do eixo vertical (ex.: −R$ 1.000 mil) não são mais cortados na borda esquerda */
+.chartbox svg{overflow:visible}
+/* Linha da tabela sob o mouse fica marcada: ajuda a ler da esquerda para a direita */
+@media (hover:hover){#results table tr:hover>td{box-shadow:inset 0 0 0 999px rgba(63,127,102,.07)}}
+.pl{font-size:12.5px}
+.indbox h4{font-size:14.5px;letter-spacing:.01em}
+:root{--grid:#d9d6cc}
+:root:not([data-theme="light"]) .chartbox svg line[stroke="var(--grid)"]{opacity:.9}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--grid:#2b4262}}
+:root[data-theme="dark"]{--grid:#2b4262}
+@media (max-width:700px){.card{padding:12px 13px}.big .a{font-size:18px}}
 </style>
 </head>
 <body>
