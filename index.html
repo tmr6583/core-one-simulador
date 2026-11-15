@@ -410,6 +410,21 @@ const VINCULOS = {clt:"CLT ou autônomo (pessoa física)", pj:"MEI ou empresa (P
 const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES, modoCrescimento: GROWTH_MODES, limitarVagas: YESNO, vinculoInstr: VINCULOS};
 const FIELDS = {}; GROUPS.forEach(g => g.f.forEach(f => FIELDS[f[0]] = {l:f[1], u:f[2], v:f[3], st:f[4], h:f[5], e:f[6], g:g.id}));
 const DEFAULTS = {}; Object.keys(FIELDS).forEach(k => DEFAULTS[k] = FIELDS[k].v);
+// Limites de cada campo (à prova de erros): nada negativo, horas de 0 a 24, partes de um todo até 100%,
+// prazos até 30 anos (períodos enormes travariam a tela) e nenhum valor absurdo.
+function limites(id){
+  const u = FIELDS[id].u;
+  if(u==="h") return [0, 24];
+  if(u==="dias") return [0, 31];
+  if(u==="anos") return [0, 50];
+  if(/^meses/.test(u)) return [0, 360];
+  if(u==="% ao ano" || (u==="% ao mês" && id!=="churn")) return [0, 1000];
+  if(u.includes("%")) return [0, 100];
+  return [0, 1e9];
+}
+// Prazos em meses usados mês a mês são inteiros (o motor e as tabelas usam o mesmo valor)
+const MESES_INTEIROS = ["mesesObra","carencia","leasingPrazo","cdcPrazo","empPrazo","empCarencia","horizonte"];
+const limitar = (id, v) => { const [a, b] = limites(id), x = Math.min(b, Math.max(a, v)); return MESES_INTEIROS.includes(id) ? Math.round(x) : x; };
 // Versão (E1). Ao mudar qualquer valor padrão: atualize "padroes" com a data, registre no Contexto.md e no teste do código.
 // Ao publicar uma versão nova do simulador: atualize "app". O código muda sozinho quando algum padrão muda.
 function assinaturaPadroes(){
@@ -417,13 +432,23 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.2.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.2.1", padroes:"15-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
 let P = load();
 function load(){ try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s) return sanitize(s); }catch(e){} return {...DEFAULTS}; }
-function sanitize(o){ const r = {...DEFAULTS}; for(const k in DEFAULTS) if(k in o) r[k] = SELECTS[k] ? (SELECTS[k][o[k]]?o[k]:DEFAULTS[k]) : (Number.isFinite(+o[k]) ? +o[k] : DEFAULTS[k]); return r; }
+// Aceita só chaves conhecidas, opções válidas e números finitos (texto numérico também); o resto volta ao padrão
+function sanitize(o){
+  const r = {...DEFAULTS}, tem = (obj, k) => Object.prototype.hasOwnProperty.call(obj, k);
+  if(!o || typeof o !== "object") return r;
+  for(const k in DEFAULTS){ if(!tem(o, k)) continue; const v = o[k];
+    if(SELECTS[k]){ if(typeof v === "string" && tem(SELECTS[k], v)) r[k] = v; continue; }
+    const n = typeof v === "number" ? v : (typeof v === "string" && v.trim() !== "" ? +v.replace(",", ".") : NaN);
+    if(Number.isFinite(n)) r[k] = limitar(k, n);
+  }
+  return r;
+}
 function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(P)); }catch(e){} }
 function loadUI(){ try{ return {tab:"resumo", modo:"essencial", ...JSON.parse(localStorage.getItem(STORE_KEY+"-ui")||"{}")}; }catch(e){ return {tab:"resumo", modo:"essencial"}; } }
 function saveUI(){ try{ localStorage.setItem(STORE_KEY+"-ui", JSON.stringify(UI)); }catch(e){} }
@@ -432,7 +457,7 @@ const fin = v => Number.isFinite(v) ? v : 0;
 const brl = v => fin(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
 const brl2 = v => fin(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:2});
 const num = (v,d=0) => fin(v).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
-const pct = (v,d=1) => Number.isFinite(v) ? num(v*100,d)+"%" : "—";
+const pct = (v,d=1) => !Number.isFinite(v) ? "—" : (v > 99.99 ? "mais de 9.999%" : num(v*100,d)+"%");
 const sgn = v => `<span class="${v<0?'neg':'pos'}">${brl(v)}</span>`;
 const pmt = (pv,i,n) => n<=0 ? 0 : (!i ? pv/n : pv*i/(1-Math.pow(1+i,-n)));
 const anosTxt = H => H%12===0 ? (H===12 ? "1 ano" : `${H/12} anos`) : `${num(H/12,1)} anos`;
@@ -501,13 +526,13 @@ function equip(p, m){
     default: return {capex:p.seminovosValor, opex:()=>p.seminovosManut, oneoff:()=>0, label:"manutenção dos aparelhos"};
   }
 }
-function cow(p, ocup, priceF=1, tC=p.tCow/100){
+function cow(p, ocup, priceF=1, tC=p.tCow/100, costF=1){
   const sf = Math.min(Math.max(p.salasFixas,0), p.salas), sh = Math.max(0, p.salas - sf);
-  const horas = Math.round(horasSalas(p)*ocup/100);
+  const horas = Math.round(horasSalas(p)*Math.min(100, Math.max(0, ocup))/100);
   const pa = p.pctAvulsa/100, pt = p.pctTurno/100, pp = Math.max(0, 1-pa-pt);
   const precoMed = (p.precoHora*pp + p.precoAvulsa*pa + p.precoTurno*pt)*priceF;
   const recHora = sh*horas*precoMed, recFixo = sf*p.aluguelFixoSala*priceF, rec = recHora+recFixo;
-  const imp = rec*tC, plat = recHora*p.comissaoPlat/100, vari = sh*horas*p.custoVarHora;
+  const imp = rec*tC, plat = recHora*p.comissaoPlat/100, vari = sh*horas*p.custoVarHora*costF;
   return {sh, horas, precoMed, recSala:horas*precoMed, recHora, recFixo, rec, imp, plat, vari, liq:rec-imp-plat-vari};
 }
 function loanPay(p, m){
@@ -554,6 +579,18 @@ function regimeCore(p, modelo, A, d, eq){
   const resultado = recT - impT - cvar + c.liq - opex;
   return {c, tx, eqOp, opex, A, novos, recPlanos, recMat, recT, impT, cvar, resultado};
 }
+// Menor nº de alunos com resultado mensal ≥ alvo (Infinity se nenhum). Varre de 1 em 1, porque o resultado nem sempre
+// cresce com os alunos: com mais faturamento o Simples muda de faixa e, pelo Fator R, pode passar ao Anexo V.
+// Acima de 1.000 alunos (ou 2× as vagas), busca binária até 20.000.
+function minAlunos(p, modelo, alvo, d, eq){
+  const res = N => regimeCore(p, modelo, N, d, eq).resultado;
+  const L = Math.min(20000, Math.max(1000, 2*d.lotacao));
+  for(let N=0; N<=L; N++) if(res(N) >= alvo) return N;
+  let lo = L+1, hi = 20000;
+  if(lo > hi || res(hi) < alvo) return Infinity;
+  while(lo < hi){ const mid = Math.floor((lo+hi)/2); if(res(mid) >= alvo) hi = mid; else lo = mid+1; }
+  return lo;
+}
 function regime(p, modelo){
   const d = deriv(p), eq = equip(p, modelo);
   const r = regimeCore(p, modelo, alunosRegime(p, d), d, eq);
@@ -561,15 +598,10 @@ function regime(p, modelo){
   const ch = p.churn/100;
   const margAluno = d.ticket*(1-d.tT) - p.cvAluno + ch*(p.matricula*(1-d.tT) - p.cac);
   const fixoLiq = r.opex - r.c.liq - p.recExtra*(1-d.tT);
-  // Break-even: menor nº de alunos com resultado ≥ 0, recalculando o Simples em cada faturamento (busca binária; o resultado cresce com os alunos)
-  const res = N => regimeCore(p, modelo, N, d, eq).resultado;
-  let be = Infinity;
-  if(margAluno > 0){
-    let lo = 0, hi = 20000;
-    if(res(hi) >= 0){ while(lo < hi){ const mid = Math.floor((lo+hi)/2); if(res(mid) >= 0) hi = mid; else lo = mid+1; } be = lo; }
-  }
+  // Break-even: menor nº de alunos com resultado ≥ 0, recalculando o Simples em cada faturamento
+  const be = minAlunos(p, modelo, 0, d, eq);
   // Lucro depois de quitar os aparelhos (A5): CDC após o prazo; leasing com prazo após a compra
-  const kPos = modelo==="cdc" ? p.cdcPrazo+1 : (modelo==="leasing" && p.leasingPrazo>0 ? p.leasingPrazo+1 : null);
+  const kPos = modelo==="cdc" && p.cdcPrazo>0 ? p.cdcPrazo+1 : (modelo==="leasing" && p.leasingPrazo>0 ? p.leasingPrazo+1 : null);
   const resultadoPos = kPos ? r.resultado + r.eqOp - eq.opex(kPos) : null;
   return {...r, d, eq, margAluno, fixoLiq, be, kPos, resultadoPos, receitaTotal: r.recT + r.c.rec};
 }
@@ -608,7 +640,7 @@ function simulate(p0, modelo){
       // Fator R: folha ÷ receita dos 12 meses anteriores (no 1º mês, os valores do próprio mês)
       const fr = prev.length===0 ? (recT + c0.rec > 0 ? folhaMes/(recT + c0.rec) : Infinity) : (soma(prev) > 0 ? soma(prevF)/soma(prev) : Infinity);
       const tx = taxas(p, rbt12, fr);
-      const c = cow(p, p.ocupCow*fCow, fP, tx.tC);
+      const c = cow(p, p.ocupCow*fCow, fP, tx.tC, fC);
       recHist.push(recT + c.rec); folHist.push(folhaMes);
       const custos = alug + d.outrosFixos*fC + eq.opex(k) + eq.oneoff(k) + (A*p.cvAluno + novos*p.cac)*fC;
       proj = recT*(1-tx.tT) + c.liq - custos;
@@ -629,27 +661,32 @@ function simulate(p0, modelo){
   const last12 = flows.slice(-12).reduce((a,b)=>a+b,0);
   const residual = p.multSaida>0 ? Math.max(0, last12)*p.multSaida : 0;
   const caucaoVal = p.caucao*p.aluguel;
-  const flowsR = flows.slice(); flowsR[flowsR.length-1] += residual + caucaoVal;
+  // No fim: venda (se houver), caução de volta e saldo do financiamento dos aparelhos ainda a pagar
+  const cdcFim = saldoCDC(p, H, modelo), dividasFim = dividasNoMes(p, H, modelo);
+  const flowsR = flows.slice(); flowsR[flowsR.length-1] += residual + caucaoVal - cdcFim;
   const vpl = flowsR.reduce((s,f,i)=> s + f/Math.pow(1+im,i), 0);
   const pvFut = flowsR.slice(1).reduce((s,f,i)=> s + f/Math.pow(1+im,i+1), 0);
   const reserva = Math.max(0, p.reservaMeses)*r.opex;
   return {...r, p, capexTotal, upfront, payback, paybackDesc, exposicao: Math.max(0,-minSoc), reserva, capitalRec: Math.max(0,-minSoc) + reserva, minMes, vpl, tir: irr(flowsR),
-          il: upfront>0 ? pvFut/upfront : null, rows, H, mesLucro, mesesNeg, mesesAnexoV, residual, caucaoVal, cumFinal: cumSoc + residual + caucaoVal};
+          il: upfront>0 ? pvFut/upfront : null, rows, H, mesLucro, mesesNeg, mesesAnexoV, residual, caucaoVal, dividasFim, cumFinal: cumSoc + residual + caucaoVal - dividasFim};
 }
+// TIR mensal por bisseção, anualizada. null se não houver troca de sinal (ex.: fluxo nunca volta, ou duas trocas).
 function irr(flows){
   const npv = rate => flows.reduce((s,f,i)=> s + f/Math.pow(1+rate,i), 0);
   let lo = -0.9, hi = 1, flo = npv(lo), fhi = npv(hi);
+  while(!(flo*fhi < 0) && hi < 64){ hi *= 2; fhi = npv(hi); } // retornos acima de 100% ao mês
   if(!(flo*fhi < 0)) return null;
   for(let i=0;i<200;i++){ const mid=(lo+hi)/2, fm=npv(mid); if(flo*fm<=0){hi=mid;fhi=fm;} else {lo=mid;flo=fm;} }
   return Math.pow(1+(lo+hi)/2, 12) - 1;
 }
 function scenario(p, sign){
   const q = {...p}, a = p.varAlunos/100*sign, o = p.varOcup/100*sign, pr = p.varPrecos/100*sign, c = -p.varCustos/100*sign, r = -p.varRampa/100*sign;
-  q.alunosAlvo = Math.round(p.alunosAlvo*(1+a)); q.alunosIniciais = Math.min(q.alunosAlvo, p.alunosIniciais);
-  q.novosMes = p.novosMes*(1+a);
-  q.ocupCow = p.ocupCow*(1+o);
-  ["p2","p3","p45","precoHora","precoAvulsa","precoTurno","aluguelFixoSala","matricula"].forEach(k => q[k] = p[k]*(1+pr));
-  ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = p[k]*(1+c));
+  q.alunosAlvo = Math.max(0, Math.round(p.alunosAlvo*(1+a)));
+  if(p.modoCrescimento!=="captacao") q.alunosIniciais = Math.min(q.alunosAlvo, p.alunosIniciais); // na captação a meta não vale
+  q.novosMes = Math.max(0, p.novosMes*(1+a));
+  q.ocupCow = Math.min(100, Math.max(0, p.ocupCow*(1+o)));
+  ["p2","p3","p45","precoHora","precoAvulsa","precoTurno","aluguelFixoSala","matricula"].forEach(k => q[k] = Math.max(0, p[k]*(1+pr)));
+  ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = Math.max(0, p[k]*(1+c)));
   q.rampa = p.rampa>0 ? Math.max(1, Math.round(p.rampa*(1+r))) : 0;
   q.rampaCow = p.rampaCow>0 ? Math.max(1, Math.round(p.rampaCow*(1+r))) : 0;
   return q;
@@ -696,7 +733,7 @@ function renderInputs(){
       const ch = P[id]!==DEFAULTS[id] ? " changed" : "";
       const ctl = SELECTS[id]
         ? `<select id="f_${id}">${Object.entries(SELECTS[id]).map(([k,v])=>`<option value="${k}" ${P[id]===k?"selected":""}>${v}</option>`).join("")}</select>`
-        : `<input id="f_${id}" type="number" inputmode="decimal" min="0"${u==="h"?' max="24"':""} step="${st}" value="${P[id]}">`;
+        : `<input id="f_${id}" type="number" inputmode="decimal" min="${limites(id)[0]}" max="${limites(id)[1]}" step="${st}" value="${P[id]}">`;
       h += `<div class="field${ch}" data-id="${id}" data-ess="${ess?1:0}" data-label="${(g.g+" "+l+" "+hint).toLowerCase()}">
         <div class="row"><label for="f_${id}">${l}</label><div class="inp">${ctl}<span class="u">${u}</span></div></div>
         ${hint?`<div class="help">${hint}</div>`:""}
@@ -707,7 +744,12 @@ function renderInputs(){
   el.innerHTML = h;
   el.querySelectorAll(".field input").forEach(inp => inp.addEventListener("input", e => {
     const id = e.target.id.slice(2), v = parseFloat(e.target.value);
-    if(!isNaN(v)){ P[id]=v; e.target.closest(".field").classList.toggle("changed", v!==DEFAULTS[id]); save(); agendarResultados(); if(FIELDS[id].g==="equip") applyFilter(); }
+    if(Number.isFinite(v)){ P[id] = limitar(id, v); e.target.closest(".field").classList.toggle("changed", P[id]!==DEFAULTS[id]); save(); agendarResultados(); if(FIELDS[id].g==="equip") applyFilter(); }
+  }));
+  // Ao sair do campo: mostra o valor realmente usado (fora dos limites ou vazio, volta ao último válido)
+  el.querySelectorAll(".field input").forEach(inp => inp.addEventListener("change", e => {
+    const id = e.target.id.slice(2);
+    if(String(P[id]) !== e.target.value) e.target.value = P[id];
   }));
   el.querySelectorAll(".field select").forEach(sel => sel.addEventListener("change", e => {
     const id = e.target.id.slice(2);
@@ -786,11 +828,15 @@ function groupInfo(p, s){
 // ================= Interface: resultados =================
 function verdict(p, s){
   const d = s.d, beOk = Number.isFinite(s.be) && s.be <= d.lotacao;
-  if(!beOk || s.resultado<=0) return ["bad","✕","Com estas premissas, o negócio não se sustenta.", Number.isFinite(s.be) ? `Precisaria de ${s.be} alunos para empatar, mas só cabem ${d.lotacao}.` : "Cada aluno custa mais do que paga."];
+  if(!beOk || s.resultado<=0) return ["bad","✕","Com estas premissas, o negócio não se sustenta.",
+    !Number.isFinite(s.be) ? "Nenhum número de alunos cobre os custos."
+    : s.be > d.lotacao ? `Precisaria de ${s.be} alunos para empatar, mas só cabem ${d.lotacao}.`
+    : s.A < s.be ? `Com ${num(s.A)} alunos o resultado é de ${brl(s.resultado)}/mês. Para empatar são precisos ${s.be} alunos.`
+    : `Com ${num(s.A)} alunos o resultado é de ${brl(s.resultado)}/mês, embora ${s.be} alunos já empatem: com mais faturamento o Simples fica mais caro (faixa ou Anexo V pelo Fator R).`];
   if(s.payback===null) return ["bad","✕","Dá lucro quando estiver cheio, mas o investimento não volta.", `Com lucro de ${brl(s.resultado)}/mês e ${num(s.A)} alunos, os ${brl(s.exposicao)} que precisam ser colocados não voltam em ${anosTxt(s.H)}.`];
   if(s.vpl<0) return ["warn","!","O investimento volta, mas rende menos do que outra aplicação.", `Recupera em ${tempo(s.payback)}, porém rende abaixo dos ${num(p.tma,1)}% ao ano desejados.`];
   if(s.be/d.lotacao>0.7 || (capDisp(p)>0 && capDisp(p)<s.exposicao)) return ["warn","!","Viável, mas com risco alto.", `Precisa de ${pct(s.be/d.lotacao,0)} das vagas ocupadas para empatar${capDisp(p)>0 && capDisp(p)<s.exposicao?` e faltam ${brl(s.exposicao-capDisp(p))} de capital`:""}.`];
-  return ["ok","✓","Viável com estas premissas.", `Recupera o investimento em ${tempo(s.payback)} e rende ${s.tir===null?"—":pct(s.tir,0)} ao ano.`];
+  return ["ok","✓","Viável com estas premissas.", `Recupera o investimento em ${tempo(s.payback)} e rende ${s.tir===null?`acima dos ${num(p.tma,1)}%`:pct(s.tir,0)} ao ano.`];
 }
 function alerts(p, s){
   const a = [], d = s.d;
@@ -828,7 +874,9 @@ function alerts(p, s){
   if(p.prazoContrato>0 && p.horizonte > p.prazoContrato) a.push(["warn",`A análise vai até o mês ${num(p.horizonte)}, mas o contrato de locação termina no mês ${num(p.prazoContrato)}. Depois disso, o aluguel e a permanência dependem da renovação.`]);
   if(p.fatorOcup>100 || p.ocupCow>100) a.push(["bad","Aproveitamento dos horários ou ocupação das salas acima de 100%."]);
   if(p.modoCrescimento!=="captacao" && p.alunosIniciais > p.alunosAlvo) a.push(["warn","Há mais alunos na inauguração do que na meta. A simulação usa a meta."]);
-  if(s.A>0 && Number.isFinite(s.be) && s.A >= s.be && s.be <= d.lotacao) a.push(["ok",`${p.modoCrescimento==="captacao"?"A base estável":"A meta"} de ${num(s.A)} alunos fica ${num(s.A-s.be)} acima do ponto de equilíbrio.`]);
+  if(s.A>0 && Number.isFinite(s.be) && s.A >= s.be && s.resultado < 0) a.push(["bad",`Com ${s.be} alunos o negócio já empata, mas com ${num(s.A)} alunos o resultado volta a ser negativo (${brl(s.resultado)}/mês): o faturamento maior encarece o Simples${p.modoSimples!=="manual"&&d.anexo==="V"?" (Anexo V pelo Fator R)":""}. Veja a tabela "Lucro por número de alunos".`]);
+  if(p.horizonte < 12) a.push(["warn",`O período analisado mínimo é de 12 meses; a simulação usa 12 em vez de ${num(p.horizonte)}.`]);
+  if(s.A>0 && Number.isFinite(s.be) && s.A >= s.be && s.be <= d.lotacao && s.resultado >= 0) a.push(["ok",`${p.modoCrescimento==="captacao"?"A base estável":"A meta"} de ${num(s.A)} alunos fica ${num(s.A-s.be)} acima do ponto de equilíbrio.`]);
   return a;
 }
 const ICON = {bad:"✕", warn:"!", ok:"✓"};
@@ -943,26 +991,33 @@ const PRESETS = {
 function presetValores(id, p){ const pr = PRESETS[id]; return typeof pr.v === "function" ? pr.v(p) : pr.v; }
 
 // ================= Meta inversa (D5) =================
-// Menor valor em [lo, hi] que cumpre ok(); null se nem o maior cumpre. Supõe que ok() só melhora quando o valor cresce.
-function buscaMin(lo, hi, ok, inteiro){
-  if(!ok(hi)) return null; if(ok(lo)) return lo;
+// Menor valor em [lo, hi] que cumpre ok(); null se nenhum cumpre. O resultado nem sempre melhora quando o valor cresce
+// (o Simples pode mudar de anexo pelo Fator R), então primeiro varre em passos e depois refina entre o último que falha e o 1º que cumpre.
+function buscaMin(lo, hi, ok, inteiro, passos = 60){
+  if(ok(lo)) return lo;
+  let a = lo, b = null;
+  for(let i=1; i<=passos; i++){ const x = inteiro ? Math.round(lo + (hi-lo)*i/passos) : lo + (hi-lo)*i/passos;
+    if(x <= a) continue; if(ok(x)){ b = x; break; } a = x; }
+  if(b === null) return null;
   for(let i=0; i<(inteiro ? 40 : 32); i++){
-    const mid = inteiro ? Math.floor((lo+hi)/2) : (lo+hi)/2;
-    if(ok(mid)) hi = mid; else lo = mid;
-    if(inteiro && hi - lo <= 1) break;
+    if(inteiro && b - a <= 1) break;
+    const mid = inteiro ? Math.floor((a+b)/2) : (a+b)/2;
+    if(ok(mid)) b = mid; else a = mid;
   }
-  return hi;
+  return b;
 }
 const comPrecos = (p, f) => ({...p, p2:p.p2*f, p3:p.p3*f, p45:p.p45*f});
+// Alunos para chegar a um lucro mensal (conta exata, como o ponto de equilíbrio)
+function alunosParaLucro(p, alvo){ const q = intMonths(p), d = deriv(q); const n = minAlunos(q, q.modelo, alvo, d, equip(q, q.modelo)); return Number.isFinite(n) ? n : null; }
 function metaInversa(p){
-  const lucroOk = q => regime(q, q.modelo).resultado >= p.lucroAlvo;
+  const lucroOk = q => regime(intMonths(q), q.modelo).resultado >= p.lucroAlvo;
   const pbOk = q => { const x = simulate(q, q.modelo); return x.payback !== null && x.payback <= p.paybackAlvo; };
-  const alvo = (ok) => ({
-    alunos: buscaMin(0, 3000, n => ok(comAlunos(p, n, {limitarVagas:"nao"})), true),
+  const alvo = (ok, lucro) => ({
+    alunos: lucro ? alunosParaLucro(p, p.lucroAlvo) : buscaMin(0, 3000, n => ok(comAlunos(p, n, {limitarVagas:"nao"})), true),
     preco:  buscaMin(0.3, 3, f => ok(comPrecos(p, f)), false),
     ocup:   buscaMin(0, 100, o => ok({...p, ocupCow:o}), false),
   });
-  return {lucro: alvo(lucroOk), payback: alvo(pbOk)};
+  return {lucro: alvo(lucroOk, true), payback: alvo(pbOk, false)};
 }
 
 // ================= Fôlego de caixa (D6) =================
@@ -985,11 +1040,15 @@ function saldoDevedor(pv, i, n, pagas){
   return pmt(pv, i, n)*(1 - Math.pow(1+i, -(n-pagas)))/i;
 }
 // Dívidas em aberto no fim do mês m (contado da assinatura): empréstimo e CDC dos aparelhos
-function dividasNoMes(p, m){
+function dividasNoMes(p, m, modelo = p.modelo){
   const emp = p.empValor>0 ? (m<=p.empCarencia ? p.empValor : p.empPrazo<=0 ? 0 : saldoDevedor(p.empValor, p.empTaxa/100, p.empPrazo, m - p.empCarencia)) : 0;
+  return emp + saldoCDC(p, m, modelo);
+}
+// Saldo do financiamento (CDC) dos aparelhos no fim do mês m (as parcelas começam no 1º mês aberto)
+function saldoCDC(p, m, modelo = p.modelo){
+  if(modelo!=="cdc" || !(p.cdcPrazo>0)) return 0;
   const k = Math.max(0, m - p.mesesObra);
-  const cdc = p.modelo==="cdc" && p.cdcPrazo>0 ? saldoDevedor(p.novosValor - Math.min(p.cdcEntrada, p.novosValor), p.cdcTaxa/100, p.cdcPrazo, Math.min(k, p.cdcPrazo)) : 0;
-  return emp + cdc;
+  return saldoDevedor(p.novosValor - Math.min(p.cdcEntrada, p.novosValor), p.cdcTaxa/100, p.cdcPrazo, Math.min(k, p.cdcPrazo));
 }
 // IR do investidor pessoa física (a confirmar com o contador): lucros distribuídos isentos até R$ 50 mil por mês por empresa;
 // acima disso, 10% retidos sobre o total do mês (Lei 15.270/2025). Ganho na venda da participação: 15%.
@@ -1093,7 +1152,7 @@ function matrizRiscos(p, s){
     {nome: p.modoCrescimento==="captacao" ? "Metade dos alunos novos por mês" : "Alunos chegam no dobro do tempo", prob:"Média", mud: p.modoCrescimento==="captacao" ? {novosMes: p.novosMes/2} : {rampa: Math.max(1,p.rampa)*2, rampaCow: Math.max(1,p.rampaCow)*2}, mitig:"Pré-venda antes da inauguração; meta mínima de alunos para abrir."},
     {nome:"Salas alugam um terço a menos", prob:"Média", mud:{ocupCow: p.ocupCow*2/3}, mitig:"Cartas de intenção de terapeutas antes da obra; 1 ou 2 salas em contrato mensal fixo."},
     {nome:"Preços dos planos 10% abaixo", prob:"Média", mud: precos(0.9), mitig:"Validar preços com pesquisa ou pré-venda (preços ainda não validados, RN-002)."},
-    {nome:"Obra custa 20% a mais", prob:"Alta", mud:{contingencia: p.contingencia + 20}, mitig:"Três orçamentos fechados; contrato de empreitada com preço global."},
+    {nome:"Obra custa 20% a mais", prob:"Alta", mud: Object.fromEntries(["capexNaoDet","capObraCivil","capEletrica","capHidraulica","capClima","capPiso","capAcess","capProjeto","capLicencas","capMobiliario","capTI","capMktPre"].map(k => [k, p[k]*1.2])), mitig:"Três orçamentos fechados; contrato de empreitada com preço global."},
     {nome:"Área de treino menor que a estimada", prob: d.capArea < d.capSim ? "Alta" : "Baixa", mud: d.capArea < d.capSim ? {capSim: d.capArea} : {}, semEfeito: !(d.capArea < d.capSim), mitig:"Conferir com a planta; ajustar leiaute ou capacidade (RN-013)."},
     {nome:"Custos mensais 10% maiores", prob:"Média", mud: custos, mitig:"Orçamentos de contas e serviços; revisar contratos a cada ano."},
     {nome:"Inadimplência de 5% dos alunos", prob:"Média", mud:{inadimpl: Math.max(p.inadimpl, 5)}, mitig:"Cobrança recorrente no cartão; acesso bloqueado na fechadura em caso de atraso."},
@@ -1144,7 +1203,7 @@ function monteCarlo(p, n = 500, seed = 20261115){
     ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = p[k]*fc);
     q.rampa = p.rampa>0 ? Math.max(1, Math.round(p.rampa*fr)) : 0;
     q.rampaCow = p.rampaCow>0 ? Math.max(1, Math.round(p.rampaCow*fr)) : 0;
-    q.alunosIniciais = Math.min(q.alunosAlvo, p.alunosIniciais);
+    if(p.modoCrescimento!=="captacao") q.alunosIniciais = Math.min(q.alunosAlvo, p.alunosIniciais); // na captação a meta não vale
     const x = simulate(q, q.modelo);
     res.push({payback: x.payback === null ? Infinity : x.payback, exposicao: x.exposicao, vpl: x.vpl, resultado: x.resultado});
   }
@@ -1159,13 +1218,18 @@ let MC = null; // último resultado da simulação de risco + premissas usadas
 
 // ================= Cenários gravados (D4) =================
 const CEN_KEY = STORE_KEY + "-cenarios";
-function lerCenarios(){ try{ return JSON.parse(localStorage.getItem(CEN_KEY) || "[]"); }catch(e){ return []; } }
+function lerCenarios(){ try{ const l = JSON.parse(localStorage.getItem(CEN_KEY) || "[]");
+  return Array.isArray(l) ? l.filter(c => c && typeof c === "object" && c.premissas && typeof c.premissas === "object").map(c => ({...c, nome: typeof c.nome === "string" && c.nome.trim() ? c.nome.slice(0, 80) : "Cenário sem nome"})) : []; }catch(e){ return []; } }
 function gravarCenarios(l){ try{ localStorage.setItem(CEN_KEY, JSON.stringify(l)); return true; }catch(e){ return false; } }
 function cenarioArquivo(nome, p){ return {app:"Core One — Simulador", versao:1, simulador: VERSAO.app, padroes: VERSAO.padroes, nome: nome || "Cenário sem nome", data: new Date().toISOString(), premissas: {...p}}; }
 // Aceita o formato novo ({nome, premissas}) e o antigo (premissas soltas)
+// Arquivo sem nenhuma premissa conhecida é recusado (lança erro)
 function lerArquivoCenario(o){
-  if(o && typeof o === "object" && o.premissas && typeof o.premissas === "object") return {nome: o.nome || "Cenário importado", data: o.data || null, premissas: sanitize(o.premissas)};
-  return {nome: "Cenário importado", data: null, premissas: sanitize(o || {})};
+  const nova = o && typeof o === "object" && o.premissas && typeof o.premissas === "object" && !Array.isArray(o.premissas);
+  const prem = nova ? o.premissas : o;
+  if(!prem || typeof prem !== "object" || Array.isArray(prem) || !Object.keys(DEFAULTS).some(k => Object.prototype.hasOwnProperty.call(prem, k)))
+    throw new Error("Arquivo sem premissas do simulador");
+  return {nome: nova && typeof o.nome === "string" && o.nome.trim() ? o.nome.trim().slice(0, 80) : "Cenário importado", data: nova && o.data ? o.data : null, premissas: sanitize(prem)};
 }
 
 // ================= Gráficos genéricos (C1–C9) =================
@@ -1265,7 +1329,8 @@ function investidorHTML(p, s, iv, rs, rem, cen){
   const pb = v => v===null ? "não recupera" : `mês ${v}`;
   const tabFU = (t, rows, tot) => `<div class="indbox"><h4>${t}</h4><table>${rows.map(([l,v]) => `<tr><td>${l}</td><td>${brl(v)}</td></tr>`).join("")}<tr class="total"><td>Total</td><td>${brl(tot)}</td></tr></table></div>`;
   const dif = iv.totF - iv.totU;
-  const finAparelhos = p.modelo==="cdc" ? `Além disso, os aparelhos são financiados: ${brl(p.novosValor - p.cdcEntrada)} pagos em ${num(p.cdcPrazo)} parcelas.` : p.modelo==="leasing" ? "Além disso, os aparelhos são alugados (leasing) e não entram no investimento." : "";
+  const finCdc = p.novosValor - Math.min(p.cdcEntrada, p.novosValor);
+  const finAparelhos = p.modelo==="cdc" ? (p.cdcPrazo>0 && finCdc>0 ? `Além disso, os aparelhos são financiados: ${brl(finCdc)} pagos em ${num(p.cdcPrazo)} parcelas.` : "") : p.modelo==="leasing" ? "Além disso, os aparelhos são alugados (leasing) e não entram no investimento." : "";
   const melhor = mt.tir!==null && mt.tir > iv.taxaAplicLiq;
   const cumInv = f => { let c = 0; return f.map(v => c += v); };
   const ser = cen.map(c => ({name: c.n, color: {Ruim:"var(--s-out)", Esperado:"var(--s-res)", Bom:"var(--s-in)"}[c.n], vals: cumInv(c.iv.fluxoInv)}));
@@ -1297,7 +1362,7 @@ function investidorHTML(p, s, iv, rs, rem, cen){
           ["Múltiplo do capital", x(mt.moic), "Recebido ÷ aportado"],
           ["Rentabilidade anual (TIR)", pct(mt.tir,1)],
           ["Recupera o aporte", pb(mt.payback), "Contado da assinatura do contrato"],
-          ["Lucro recebido por mês (último ano)", brl(iv.distMes*iv.part)]])}
+          ["Lucro recebido por mês (último ano, antes do IR)", brl(iv.distMes*iv.part)]])}
         ${indBox("Comparação com aplicação (CDI ou Tesouro)", [
           ["Aplicação: rendimento bruto", pct(p.tma/100,1) + " ao ano", 'Campo "Rendimento mínimo desejado"'],
           ["IR da aplicação", pct(iv.irA,1), `Tabela regressiva, prazo de ${num(s.H)} meses`],
@@ -1345,7 +1410,8 @@ function renderResults(){
   const p = P, s = simulate(p, p.modelo), d = s.d;
   groupInfo(p, s);
   const tot = Math.max(1, s.receitaTotal);
-  const alunosLucro = s.margAluno>0 ? Math.ceil((s.fixoLiq + p.lucroAlvo)/s.margAluno - 1e-9) : Infinity;
+  // Alunos para o lucro desejado: conta exata (o Simples é recalculado para cada nº de alunos), igual à meta inversa
+  const alunosLucro = minAlunos(s.p, p.modelo, p.lucroAlvo, d, s.eq);
   // Depreciação (A7): obra no prazo do contrato; aparelhos próprios na vida útil (leasing: aparelhos não são da empresa)
   const valAparelhos = p.modelo==="seminovos" ? p.seminovosValor : (p.modelo==="leasing" ? 0 : p.novosValor);
   const depObra = p.prazoContrato>0 ? s.d.capexObra/p.prazoContrato : 0;
@@ -1453,7 +1519,7 @@ function renderResults(){
         ["Retorno por real investido", s.il===null?"—":num(s.il,2), "Acima de 1 = vale a pena"],
         ["Retorno anual com o studio maduro", pct(s.resultado*12/Math.max(1,s.capexTotal)), "Lucro de um ano cheio ÷ investimento inicial (ignora o tempo de obra e os meses de prejuízo)"],
         ["1º mês com lucro", s.mesLucro?`mês ${s.mesLucro} de funcionamento`:"não acontece"],
-        [`Caixa dos sócios no fim de ${anosTxt(s.H)}`, sgn(s.cumFinal), "Já descontado o empréstimo; inclui a venda do negócio e a caução, se houver"],
+        [`Caixa dos sócios no fim de ${anosTxt(s.H)}`, sgn(s.cumFinal), "Já descontados o empréstimo e o financiamento dos aparelhos ainda em aberto; inclui a venda do negócio e a caução, se houver"],
       ])}
       ${indBox("Pesos dos custos", [
         ["Imóvel ÷ faturamento", pct((p.aluguel+p.condIptu+p.taxasPrediais+p.garantia)/tot), "Aluguel, condomínio e taxas"],
@@ -1683,9 +1749,9 @@ function renderResults(){
       <li>Simples Nacional (modo automático): academia e sublocação de salas são "atividades do Fator R". Fator R = folha dos 12 meses (salários e encargos de pessoas físicas + pró-labore; MEI/PJ não contam) ÷ receita dos 12 meses. Se ≥ 28%, Anexo III; se menor, Anexo V. Alíquota efetiva = (receita dos 12 meses × alíquota da faixa − parcela a deduzir) ÷ receita dos 12 meses, sobre studio + salas. No início da atividade, usa a média dos meses já faturados × 12. A taxa de cartão é somada só no studio.</li>
       <li>Depreciação: obra dividida pelo prazo do contrato; aparelhos próprios pela vida útil (leasing não deprecia).</li>
       <li>Salas: horas alugadas = horas disponíveis × ocupação; preço médio pondera pacote, avulsa e turno; sobra = receita − impostos − taxa do app − custo por hora.</li>
-      <li>Alunos para empatar: menor nº de alunos com lucro ≥ 0, recalculando o Simples para o faturamento de cada nº de alunos. Aproximação: (custos fixos − sobra das salas − outras receitas) ÷ quanto cada aluno deixa.</li>
+      <li>Alunos para empatar: menor nº de alunos com lucro ≥ 0, testando cada nº de alunos e recalculando o Simples para o faturamento de cada um (o lucro nem sempre cresce com os alunos: o Fator R pode levar ao Anexo V). "Alunos para lucrar" usa a mesma conta. Aproximação: (custos fixos − sobra das salas − outras receitas) ÷ quanto cada aluno deixa.</li>
       <li>Caixa mês a mês: alunos crescem como escolhido em "Como os alunos chegam" (linha reta, curva em S ou captação) e a ocupação das salas em linha reta; preços, custos e aluguel sobem a cada 12 meses; carência conta da assinatura.</li>
-      <li>VPL e TIR usam o caixa do negócio sem o empréstimo; "dinheiro necessário" inclui o empréstimo.</li>
+      <li>VPL e TIR usam o caixa do negócio sem o empréstimo; "dinheiro necessário" inclui o empréstimo. No fim do período, o saldo ainda devido do financiamento dos aparelhos é descontado (e, no caixa dos sócios, também o do empréstimo). A TIR aparece como "—" quando o fluxo não tem uma única virada de negativo para positivo.</li>
       <li>Investidor: participação de exemplo = aporte ÷ (aporte + dinheiro dos sócios + VPL). Post-money = aporte ÷ participação; pre-money = post-money − aporte. Caixa da empresa = sócios + investidor + empréstimo + caixa do mês; depois do pior momento, a sobra acima da reserva × % distribuído vai para sócios e investidor pela participação. Se o caixa ficar negativo, aporte extra no pior mês, dividido pela participação.</li>
       <li>Retorno do investidor: TIR e múltiplo dos fluxos líquidos (lucros recebidos, caixa final e venda, menos IR). Aplicação: rendimento bruto = "Rendimento mínimo desejado", com IR regressivo (22,5% até 6 meses, 20% até 12, 17,5% até 24, 15% acima).</li>
       <li>Se fechar no mês N: caixa acumulado + revenda dos aparelhos (% × valor × (1 − meses de uso ÷ durabilidade)) + caução − multa (meses de aluguel × meses que faltam ÷ prazo) − saldo do empréstimo e do financiamento.</li>
@@ -1772,10 +1838,11 @@ function aplicarMudancas(mud, nome){
 function renderCenarios(){
   const box = document.getElementById("cenLista"); if(!box) return;
   const l = lerCenarios();
-  box.innerHTML = l.length ? l.map((c,i) => `<div class="cen-row"><div class="n">${escHtml(c.nome)}<small>${c.data ? new Date(c.data).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}) : ""}</small></div>
+  box.innerHTML = l.length ? l.map((c,i) => `<div class="cen-row"><div class="n">${escHtml(c.nome)}<small>${c.data && !isNaN(new Date(c.data)) ? new Date(c.data).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}) : ""}</small></div>
       <button data-cl="${i}" title="Usar estas premissas">Carregar</button><button data-cb="${i}" title="Baixar como arquivo">Baixar</button><button data-cx="${i}" title="Excluir">Excluir</button></div>`).join("")
     : `<p class="note">Nenhum cenário gravado ainda.</p>`;
-  box.querySelectorAll("[data-cl]").forEach(b => b.onclick = () => { const c = l[+b.dataset.cl]; aplicarMudancas(lerArquivoCenario(c).premissas, c.nome); });
+  box.querySelectorAll("[data-cl]").forEach(b => b.onclick = () => { const c = l[+b.dataset.cl];
+    try{ aplicarMudancas(lerArquivoCenario(c).premissas, c.nome); }catch(e){ toast(`O cenário "${c.nome}" não tem premissas válidas.`); } });
   box.querySelectorAll("[data-cb]").forEach(b => b.onclick = () => baixarCenario(l[+b.dataset.cb]));
   box.querySelectorAll("[data-cx]").forEach(b => b.onclick = () => { const c = l[+b.dataset.cx];
     if(confirm(`Excluir o cenário "${c.nome}"?`)){ gravarCenarios(l.filter((_,j) => j !== +b.dataset.cx)); if(UI.cenario===c.nome){ UI.cenario = null; saveUI(); } renderInputs(); } });
@@ -1979,7 +2046,7 @@ async function buildResumoInvestidor(){
   const melhor = mt.tir!==null && mt.tir > iv.taxaAplicLiq;
   const retorno = `<div class="card"><h3>Retorno do investidor (líquido de IR)</h3><div class="two">${linhas([
       ["Total aportado", brl(mt.aportado)], ["Total recebido em " + num(s.H) + " meses", brl(mt.recebido)], ["Múltiplo do capital", x(mt.moic)],
-      ["Rentabilidade anual (TIR)", pct(mt.tir,1)], ["Recupera o aporte", mt.payback===null ? "não recupera" : pb(mt.payback) + " após a assinatura"], ["Lucro recebido por mês (último ano)", brl(iv.distMes*iv.part)]])}
+      ["Rentabilidade anual (TIR)", pct(mt.tir,1)], ["Recupera o aporte", mt.payback===null ? "não recupera" : pb(mt.payback) + " após a assinatura"], ["Lucro recebido por mês (último ano, antes do IR)", brl(iv.distMes*iv.part)]])}
     ${linhas([["Aplicação (CDI/Tesouro) bruta", pct(p.tma/100,1) + " ao ano"], ["Aplicação líquida de IR", pct(iv.taxaAplicLiq,1) + " ao ano"],
       [`Em ${num(s.H)} meses na aplicação`, brl(iv.aplicFinal)], [`Em ${num(s.H)} meses no negócio`, brl(iv.invFinal)],
       ["Venda do negócio no fim", p.multSaida>0 ? `${num(p.multSaida,1)}× o lucro anual` : "não considerada"]])}</div>
