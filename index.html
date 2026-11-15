@@ -214,10 +214,11 @@ const GROUPS = [
     ["condIptu","Condomínio + IPTU","R$/mês",0,100,"Taxa de condomínio mais o IPTU dividido por 12.",1],
     ["taxasPrediais","Outras taxas do imóvel","R$/mês",0,50,"Taxas da prefeitura ou dos bombeiros, como a taxa de lixo. Deixe 0 se não souber.",0],
     ["garantia","Custo da garantia do aluguel","R$/mês",0,50,"Seguro-fiança ou título de capitalização exigido pelo proprietário, dividido por mês.",0],
-    ["reajAluguel","Reajuste do aluguel por ano","% ao ano",0,0.5,"Quanto o aluguel sobe a cada 12 meses, pelo índice do contrato (ex.: IPCA). 0 = sem reajuste.",0],
+    ["reajAluguel","Reajuste do aluguel por ano","% ao ano",4.5,0.5,"Quanto o aluguel sobe a cada 12 meses, pelo índice do contrato (ex.: IPCA). Padrão: 4,5%, inflação estimada.",0],
     ["mesesObra","Meses de obra antes de abrir","meses",2,1,"Tempo de reforma em que vocês já pagam aluguel e condomínio, mas ainda não têm alunos.",1],
     ["carencia","Meses sem pagar aluguel (carência)","meses",0,1,"Meses iniciais sem aluguel, se o proprietário aceitar. Contam a partir da assinatura do contrato.",1],
     ["luvas","Luvas (valor pago pelo ponto)","R$",0,1000,"Pagamento único para ficar com o ponto, se houver.",0],
+    ["prazoContrato","Prazo do contrato de locação","meses",60,12,"Duração do contrato. Contratos comerciais costumam ter 5 anos (60 meses). A obra se desgasta (deprecia) nesse prazo.",1],
     ["caucao","Caução (depósito de garantia)","meses de aluguel",0,1,"Depósito em meses de aluguel. O dinheiro fica parado e volta no fim do contrato.",0],
   ]},
   {id:"capex", g:"Investimento para abrir", intro:"Quanto custa deixar o espaço pronto. Os aparelhos de musculação ficam no grupo \"Aparelhos\".", f:[
@@ -234,7 +235,7 @@ const GROUPS = [
     ["capTI","Tecnologia","R$",0,500,"Computador, fechaduras eletrônicas, câmeras e som.",0],
     ["capMktPre","Divulgação antes de abrir","R$",0,500,"Campanha de pré-inauguração e pré-venda de planos.",0],
     ["contingencia","Reserva para imprevistos na obra","%",0,1,"Margem de segurança sobre o custo da obra. Obras costumam estourar entre 10% e 20%.",1],
-    ["vidaUtil","Durabilidade do investimento","anos",10,1,"Em quantos anos obra e aparelhos se desgastam. Só afeta o lucro contábil.",0],
+    ["vidaAparelhos","Durabilidade dos aparelhos","anos",6,1,"Em quantos anos os aparelhos se desgastam. A obra se desgasta no prazo do contrato. Só afeta o lucro contábil.",0],
   ]},
   {id:"horario", g:"Horário do studio", intro:"Quando o studio fica aberto. Define as horas disponíveis para treino e o custo dos instrutores.", f:[
     ["abreSemana","Abre de segunda a sexta às","h",7,0.5,"Hora de abertura (0 a 24).",1],
@@ -269,13 +270,18 @@ const GROUPS = [
     ["cac","Custo para conquistar cada aluno novo","R$",0,10,"Gasto extra por aluno novo (comissão, aula experimental, brinde), além do marketing do mês.",0],
     ["cvAluno","Custo por aluno ativo","R$/mês",0,1,"Gastos que crescem com o número de alunos: app, toalhas, materiais.",0],
     ["recExtra","Outras receitas do studio","R$/mês",0,100,"Avaliação física, personal individual, venda de produtos.",0],
-    ["reajPreco","Reajuste anual dos preços","% ao ano",0,0.5,"Quanto os preços dos planos e das salas sobem a cada 12 meses.",0],
+    ["reajPreco","Reajuste anual dos preços","% ao ano",4.5,0.5,"Quanto os preços dos planos e das salas sobem a cada 12 meses. Padrão: 4,5%, inflação estimada.",0],
   ]},
   {id:"cow", g:"Salas de atendimento (2º andar)", intro:"Salas alugadas por hora para fisioterapeutas, massoterapeutas, osteopatas e afins.", f:[
     ["salas","Número de salas","salas",4,1,"Quantas salas serão alugadas.",1],
     ["salaLarg","Largura de cada sala","m",2,0.1,"A Vigilância Sanitária pode exigir no mínimo 2,2 m.",0],
     ["salaComp","Comprimento de cada sala","m",3,0.1,"",0],
-    ["horasSala","Horas disponíveis por sala no mês","h/mês",288,1,"Total de horas em que cada sala pode ser alugada.",0],
+    ["abreSalaSemana","Salas abrem de segunda a sexta às","h",7,0.5,"Horário em que as salas podem ser alugadas. Os dias do mês são os mesmos do studio.",0],
+    ["fechaSalaSemana","Salas fecham de segunda a sexta às","h",20,0.5,"",0],
+    ["abreSalaSab","Salas abrem aos sábados às","h",7,0.5,"Deixe abertura e fechamento iguais para não abrir.",0],
+    ["fechaSalaSab","Salas fecham aos sábados às","h",12,0.5,"",0],
+    ["abreSalaDom","Salas abrem aos domingos/feriados às","h",0,0.5,"Deixe abertura e fechamento iguais para não abrir.",0],
+    ["fechaSalaDom","Salas fecham aos domingos/feriados às","h",0,0.5,"",0],
     ["precoHora","Preço da hora (pacote)","R$/hora",40,1,"Valor da hora para quem compra pacote. Em Botafogo, salas parecidas custam de R$ 33 a R$ 65 por hora.",1],
     ["ocupCow","Ocupação das salas","% das horas",30,1,"Parte das horas disponíveis que é alugada. 30% ≈ 20 horas por semana em cada sala.",1],
     ["rampaCow","Meses até as salas encherem","meses",12,1,"Tempo para chegar à ocupação acima, crescendo aos poucos.",0],
@@ -287,10 +293,10 @@ const GROUPS = [
     ["aluguelFixoSala","Valor do contrato mensal por sala","R$/mês",2200,100,"Só conta se houver salas em contrato mensal. R$ 2.200 era a referência antiga do projeto.",0],
     ["custoVarHora","Custo por hora alugada","R$/hora",0,0.5,"Limpeza entre atendimentos, lençol descartável, energia do ar-condicionado.",0],
     ["comissaoPlat","Taxa do aplicativo de reservas","% da receita",0,0.5,"Se usar uma plataforma que cobra por reserva.",0],
-    ["tCow","Impostos sobre o aluguel das salas","% da receita",10,0.5,"Estimativa até o parecer do contador.",0],
+    ["tCow","Impostos sobre o aluguel das salas","% da receita",10,0.5,"Só no modo manual do Simples. No automático, as salas pagam a mesma alíquota do studio.",0],
   ]},
   {id:"equipe", g:"Equipe", intro:"Instrutores, recepção, limpeza e sócios.", f:[
-    ["custoHoraInstr","Custo da hora do instrutor","R$/hora",37.0283,0.5,"Quanto custa uma hora de instrutor, com encargos. Base do projeto: R$ 15.700 ÷ 424 horas ≈ R$ 37,03.",1],
+    ["custoHoraInstr","Custo da hora do instrutor","R$/hora",37,0.5,"Salário mais encargos, por hora trabalhada. Base do projeto: R$ 37/hora.",1],
     ["instrBase","Instrutores em todos os horários","pessoas",1,1,"Quantos instrutores ficam no studio o tempo todo.",0],
     ["horasPico2","Horas com instrutor extra no pico","h/mês",100,5,"Horas no mês em que um 2º instrutor reforça os horários cheios (ex.: 7h–9h e 17h–20h).",1],
     ["adicRT","Adicional do responsável técnico","R$/mês",0,50,"Valor extra para o instrutor que assina como responsável técnico no CREF1.",0],
@@ -305,10 +311,11 @@ const GROUPS = [
     ["seguro","Seguro","R$/mês",350,50,"Responsabilidade civil e patrimonial. Estimativa.",0],
     ["residuos","Coleta de lixo hospitalar","R$/mês",0,50,"Só é obrigatória se houver agulhas ou material contaminado (hoje proibidos nas salas).",0],
     ["outros","Outros gastos / reserva","R$/mês",0,100,"Folga para despesas não listadas.",0],
-    ["inflCustos","Aumento anual dos custos","% ao ano",0,0.5,"Quanto os custos (fora o aluguel) sobem a cada 12 meses.",0],
+    ["inflCustos","Aumento anual dos custos","% ao ano",4.5,0.5,"Quanto os custos (fora o aluguel) sobem a cada 12 meses. Padrão: 4,5%, inflação estimada.",0],
   ]},
   {id:"impostos", g:"Impostos e taxas", intro:"Descontos sobre o faturamento do studio.", f:[
-    ["tSimples","Imposto (Simples Nacional)","% do faturamento",10.5,0.1,"Parte do faturamento paga em impostos. A confirmar com o contador.",1],
+    ["modoSimples","Como calcular o Simples","","auto",null,"Automático: pela tabela do Anexo III, conforme o faturamento dos últimos 12 meses (studio + salas). Manual: usa os percentuais fixos informados. A confirmar com o contador.",1],
+    ["tSimples","Imposto (Simples Nacional) no modo manual","% do faturamento",10.5,0.1,"Usado só no modo manual.",1],
     ["tCartao","Taxa de cartão e maquininha","% do faturamento",2.5,0.1,"Parte cobrada pela operadora em cada pagamento.",1],
   ]},
   {id:"equip", g:"Aparelhos de musculação", intro:"Quatro formas de equipar o studio. Compare na aba \"Comparar opções\".", f:[
@@ -335,7 +342,7 @@ const GROUPS = [
     ["alunosAlvo","Meta de alunos","alunos",120,1,"Alunos ativos quando o studio estiver maduro.",1],
     ["alunosIniciais","Alunos já na inauguração","alunos",0,1,"Quem comprou na pré-venda.",0],
     ["rampa","Meses até atingir a meta","meses",12,1,"Os alunos chegam aos poucos, em ritmo constante, até a meta.",1],
-    ["horizonte","Período analisado","meses",72,12,"Quantos meses, a partir da assinatura do contrato, entram na conta.",0],
+    ["horizonte","Período analisado","meses",60,12,"Quantos meses, a partir da assinatura do contrato, entram na conta. Padrão: igual ao prazo do contrato.",0],
     ["tma","Rendimento mínimo desejado","% ao ano",15,0.5,"Quanto o dinheiro renderia em outra aplicação (ex.: CDI). O negócio só compensa se render mais que isso.",1],
     ["lucroAlvo","Lucro mensal desejado","R$/mês",10000,500,"Calcula quantos alunos seriam necessários para chegar a esse lucro.",1],
     ["multSaida","Valor de venda do negócio no fim","× lucro anual",0,0.5,"Se venderem o negócio no fim do período, por quantas vezes o lucro de um ano. 0 = não considerar venda.",0],
@@ -349,13 +356,15 @@ const GROUPS = [
   ]},
 ];
 const MODELS = {seminovos:"Comprar seminovos", novos:"Comprar novos à vista", leasing:"Alugar (leasing)", cdc:"Financiar novos (CDC)"};
+const SIMPLES_MODES = {auto:"Automático (tabela do Anexo III)", manual:"Manual (% fixo)"};
+const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES};
 const FIELDS = {}; GROUPS.forEach(g => g.f.forEach(f => FIELDS[f[0]] = {l:f[1], u:f[2], v:f[3], st:f[4], h:f[5], e:f[6], g:g.id}));
 const DEFAULTS = {}; Object.keys(FIELDS).forEach(k => DEFAULTS[k] = FIELDS[k].v);
 
 const UI = loadUI();
 let P = load();
 function load(){ try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s) return sanitize(s); }catch(e){} return {...DEFAULTS}; }
-function sanitize(o){ const r = {...DEFAULTS}; for(const k in DEFAULTS) if(k in o) r[k] = (k==="modelo") ? (MODELS[o[k]]?o[k]:DEFAULTS[k]) : (Number.isFinite(+o[k]) ? +o[k] : DEFAULTS[k]); return r; }
+function sanitize(o){ const r = {...DEFAULTS}; for(const k in DEFAULTS) if(k in o) r[k] = SELECTS[k] ? (SELECTS[k][o[k]]?o[k]:DEFAULTS[k]) : (Number.isFinite(+o[k]) ? +o[k] : DEFAULTS[k]); return r; }
 function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(P)); }catch(e){} }
 function loadUI(){ try{ return {tab:"resumo", modo:"essencial", ...JSON.parse(localStorage.getItem(STORE_KEY+"-ui")||"{}")}; }catch(e){ return {tab:"resumo", modo:"essencial"}; } }
 function saveUI(){ try{ localStorage.setItem(STORE_KEY+"-ui", JSON.stringify(UI)); }catch(e){} }
@@ -383,10 +392,29 @@ function deriv(p){
   const tecnica = (horasOp*p.instrBase + p.horasPico2)*p.custoHoraInstr + p.adicRT;
   const capLinhas = p.capObraCivil+p.capEletrica+p.capHidraulica+p.capClima+p.capPiso+p.capAcess+p.capProjeto+p.capLicencas+p.capMobiliario+p.capTI+p.capMktPre;
   const capexObra = (p.capexNaoDet + capLinhas)*(1+p.contingencia/100);
-  const tT = (p.tSimples+p.tCartao)/100;
   const folha = tecnica + p.apoio + p.proLabore;
   const outrosFixos = p.condIptu+p.taxasPrediais+p.garantia+folha+p.utilidades+p.marketing+p.software+p.contador+p.seguro+p.residuos+p.outros;
-  return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, ticketBruto, ticket, tecnica, folha, capexObra, tT, outrosFixos};
+  const horasSala = horasSalas(p);
+  const capArea = p.m2Aluno>0 ? Math.floor(p.areaUtilTerreo/p.m2Aluno) : 0; // alunos que cabem na área estimada (A9)
+  const lotArea = p.aulasMes>0 ? Math.floor(horasOp*capArea/p.aulasMes*p.fatorOcup/100) : 0;
+  return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, ticketBruto, ticket, tecnica, folha, capexObra, outrosFixos, horasSala, capArea, lotArea};
+}
+// Horas por mês em que cada sala pode ser alugada (A10): horário próprio das salas × dias do studio
+function horasSalas(p){
+  const h = (a,b) => Math.max(0, b-a);
+  return h(p.abreSalaSemana,p.fechaSalaSemana)*p.diasUteis + h(p.abreSalaSab,p.fechaSalaSab)*p.sabados + h(p.abreSalaDom,p.fechaSalaDom)*p.domingos;
+}
+// Simples Nacional — Anexo III (LC 123/2006, redação da LC 155/2016): alíquota efetiva pela receita bruta dos últimos 12 meses (A3)
+const ANEXO_III = [[180000,0.06,0],[360000,0.112,9360],[720000,0.135,17640],[1800000,0.16,35640],[3600000,0.21,125640],[4800000,0.33,648000]];
+function simplesEfetivo(rbt12){
+  if(!(rbt12>0)) return ANEXO_III[0][1];
+  const f = ANEXO_III.find(x => rbt12 <= x[0]) || ANEXO_III[ANEXO_III.length-1];
+  return (rbt12*f[1] - f[2]) / rbt12;
+}
+// Taxas aplicadas: studio = Simples + cartão; salas = Simples (automático) ou % manual
+function taxas(p, rbt12){
+  const simp = p.modoSimples==="manual" ? p.tSimples/100 : simplesEfetivo(rbt12);
+  return {simp, tT: simp + p.tCartao/100, tC: p.modoSimples==="manual" ? p.tCow/100 : simp};
 }
 function equip(p, m){
   switch(m){
@@ -399,13 +427,13 @@ function equip(p, m){
     default: return {capex:p.seminovosValor, opex:()=>p.seminovosManut, oneoff:()=>0, label:"manutenção dos aparelhos"};
   }
 }
-function cow(p, ocup, priceF=1){
+function cow(p, ocup, priceF=1, tC=p.tCow/100){
   const sf = Math.min(Math.max(p.salasFixas,0), p.salas), sh = Math.max(0, p.salas - sf);
-  const horas = Math.round(p.horasSala*ocup/100);
+  const horas = Math.round(horasSalas(p)*ocup/100);
   const pa = p.pctAvulsa/100, pt = p.pctTurno/100, pp = Math.max(0, 1-pa-pt);
   const precoMed = (p.precoHora*pp + p.precoAvulsa*pa + p.precoTurno*pt)*priceF;
   const recHora = sh*horas*precoMed, recFixo = sf*p.aluguelFixoSala*priceF, rec = recHora+recFixo;
-  const imp = rec*p.tCow/100, plat = recHora*p.comissaoPlat/100, vari = sh*horas*p.custoVarHora;
+  const imp = rec*tC, plat = recHora*p.comissaoPlat/100, vari = sh*horas*p.custoVarHora;
   return {sh, horas, precoMed, recSala:horas*precoMed, recHora, recFixo, rec, imp, plat, vari, liq:rec-imp-plat-vari};
 }
 function loanPay(p, m){
@@ -415,17 +443,36 @@ function loanPay(p, m){
   if(m<=p.empCarencia+p.empPrazo) return pmt(p.empValor, i, p.empPrazo);
   return 0;
 }
-function regime(p, modelo){
-  const d = deriv(p), c = cow(p, p.ocupCow), eq = equip(p, modelo);
-  const eqOp = eq.opex(1), opex = p.aluguel + d.outrosFixos + eqOp;
-  const A = p.alunosAlvo, ch = p.churn/100, novos = A*ch;
+// Resultado de um mês "maduro" com A alunos (preços e custos do 1º ano)
+function regimeCore(p, modelo, A, d, eq){
+  const ch = p.churn/100, novos = A*ch;
   const recPlanos = A*d.ticket, recMat = novos*p.matricula, recT = recPlanos+recMat+p.recExtra;
-  const impT = recT*d.tT, cvar = A*p.cvAluno + novos*p.cac;
+  const c0 = cow(p, p.ocupCow);
+  const tx = taxas(p, 12*(recT + c0.rec));
+  const c = cow(p, p.ocupCow, 1, tx.tC);
+  const eqOp = eq.opex(1), opex = p.aluguel + d.outrosFixos + eqOp;
+  const impT = recT*tx.tT, cvar = A*p.cvAluno + novos*p.cac;
   const resultado = recT - impT - cvar + c.liq - opex;
+  return {c, tx, eqOp, opex, A, novos, recPlanos, recMat, recT, impT, cvar, resultado};
+}
+function regime(p, modelo){
+  const d = deriv(p), eq = equip(p, modelo);
+  const r = regimeCore(p, modelo, p.alunosAlvo, d, eq);
+  d.tT = r.tx.tT; d.tC = r.tx.tC; d.tSimp = r.tx.simp;
+  const ch = p.churn/100;
   const margAluno = d.ticket*(1-d.tT) - p.cvAluno + ch*(p.matricula*(1-d.tT) - p.cac);
-  const fixoLiq = opex - c.liq - p.recExtra*(1-d.tT);
-  const be = margAluno>0 ? Math.max(0, Math.ceil(fixoLiq/margAluno - 1e-9)) : Infinity;
-  return {d, c, eq, eqOp, opex, A, novos, recPlanos, recMat, recT, impT, cvar, resultado, margAluno, fixoLiq, be, receitaTotal: recT + c.rec};
+  const fixoLiq = r.opex - r.c.liq - p.recExtra*(1-d.tT);
+  // Break-even: menor nº de alunos com resultado ≥ 0, recalculando o Simples em cada faturamento (busca binária; o resultado cresce com os alunos)
+  const res = N => regimeCore(p, modelo, N, d, eq).resultado;
+  let be = Infinity;
+  if(margAluno > 0){
+    let lo = 0, hi = 20000;
+    if(res(hi) >= 0){ while(lo < hi){ const mid = Math.floor((lo+hi)/2); if(res(mid) >= 0) hi = mid; else lo = mid+1; } be = lo; }
+  }
+  // Lucro depois de quitar os aparelhos (A5): CDC após o prazo; leasing com prazo após a compra
+  const kPos = modelo==="cdc" ? p.cdcPrazo+1 : (modelo==="leasing" && p.leasingPrazo>0 ? p.leasingPrazo+1 : null);
+  const resultadoPos = kPos ? r.resultado + r.eqOp - eq.opex(kPos) : null;
+  return {...r, d, eq, margAluno, fixoLiq, be, kPos, resultadoPos, receitaTotal: r.recT + r.c.rec};
 }
 const MONTH_FIELDS = ["mesesObra","carencia","leasingPrazo","cdcPrazo","empPrazo","empCarencia","horizonte"];
 function intMonths(p){ const q = {...p}; MONTH_FIELDS.forEach(k => q[k] = Math.max(0, Math.round(q[k]))); return q; }
@@ -439,7 +486,7 @@ function simulate(p0, modelo){
   const flows = [-upfront];
   let cumProj = -upfront, cumSoc = -upfront + p.empValor, minSoc = cumSoc, minMes = 0, dcum = -upfront;
   let payback = null, paybackDesc = null, prevA = 0, mesLucro = null, mesesNeg = 0;
-  const rows = [];
+  const rows = [], recHist = [];
   for(let m=1; m<=H; m++){
     const yA = Math.floor((m-1)/12);
     const alug = m<=p.carencia ? 0 : p.aluguel*Math.pow(1+p.reajAluguel/100, yA);
@@ -453,11 +500,17 @@ function simulate(p0, modelo){
       const A = p.rampa>0 ? Math.min(p.alunosAlvo, p.alunosIniciais + (p.alunosAlvo-p.alunosIniciais)*k/p.rampa) : p.alunosAlvo;
       const novos = Math.max(0, A-prevA) + prevA*p.churn/100; prevA = A;
       const fCow = p.rampaCow>0 ? Math.min(1, k/p.rampaCow) : 1;
-      const c = cow(p, p.ocupCow*fCow, fP);
       const recT = A*d.ticket*fP + novos*p.matricula*fP + p.recExtra*fP;
+      const c0 = cow(p, p.ocupCow*fCow, fP);
+      // Receita bruta dos 12 meses anteriores; no início da atividade, média dos meses anteriores × 12 (no 1º mês, o próprio mês × 12)
+      const prev = recHist.slice(-12);
+      const rbt12 = prev.length===0 ? (recT + c0.rec)*12 : (prev.length<12 ? prev.reduce((a,b)=>a+b,0)/prev.length*12 : prev.reduce((a,b)=>a+b,0));
+      const tx = taxas(p, rbt12);
+      const c = cow(p, p.ocupCow*fCow, fP, tx.tC);
+      recHist.push(recT + c.rec);
       const custos = alug + d.outrosFixos*fC + eq.opex(k) + eq.oneoff(k) + (A*p.cvAluno + novos*p.cac)*fC;
-      proj = recT*(1-d.tT) + c.liq - custos;
-      row = {m, k, fase:"Funcionando", alunos:A, receita:recT + c.rec};
+      proj = recT*(1-tx.tT) + c.liq - custos;
+      row = {m, k, fase:"Funcionando", alunos:A, receita:recT + c.rec, simp:tx.simp};
       if(proj<0) mesesNeg++;
       if(mesLucro===null && proj>=0) mesLucro = k;
     }
@@ -511,7 +564,7 @@ function sensitivity(p){
     ["Recepção e limpeza", (q,f)=>{q.apoio*=f;}],
     ["Energia, água e internet", (q,f)=>{q.utilidades*=f;}],
     ["Divulgação mensal", (q,f)=>{q.marketing*=f;}],
-    ["Imposto (Simples)", (q,f)=>{q.tSimples*=f;}],
+    ...(p.modoSimples==="manual" ? [["Imposto (Simples)", (q,f)=>{q.tSimples*=f;}]] : []),
   ];
   return {base, lotBase: lot(p), rows: items.map(([l,fn]) => {
     const out = [0.9,1.1].map(f => { const q = {...p}; fn(q,f); const r = regime(q, q.modelo); return {res:r.resultado, be:r.be, lot:lot(q)}; });
@@ -530,13 +583,13 @@ function renderInputs(){
     h += `<details class="grp" data-g="${g.id}" ${["imovel","planos","metas"].includes(g.id)?"open":""}><summary><span><span class="t">${g.g}</span><span class="s" id="gi_${g.id}"></span></span></summary><p class="gintro">${g.intro}</p>`;
     g.f.forEach(([id,l,u,,st,hint,ess]) => {
       const ch = P[id]!==DEFAULTS[id] ? " changed" : "";
-      const ctl = id==="modelo"
-        ? `<select id="f_${id}">${Object.entries(MODELS).map(([k,v])=>`<option value="${k}" ${P.modelo===k?"selected":""}>${v}</option>`).join("")}</select>`
+      const ctl = SELECTS[id]
+        ? `<select id="f_${id}">${Object.entries(SELECTS[id]).map(([k,v])=>`<option value="${k}" ${P[id]===k?"selected":""}>${v}</option>`).join("")}</select>`
         : `<input id="f_${id}" type="number" inputmode="decimal" min="0"${u==="h"?' max="24"':""} step="${st}" value="${P[id]}">`;
       h += `<div class="field${ch}" data-id="${id}" data-ess="${ess?1:0}" data-label="${(g.g+" "+l+" "+hint).toLowerCase()}">
         <div class="row"><label for="f_${id}">${l}</label><div class="inp">${ctl}<span class="u">${u}</span></div></div>
         ${hint?`<div class="help">${hint}</div>`:""}
-        <button class="reset" data-id="${id}">Voltar ao valor padrão (${id==="modelo"?MODELS[DEFAULTS[id]]:num(DEFAULTS[id], DEFAULTS[id]%1?2:0)})</button></div>`;
+        <button class="reset" data-id="${id}">Voltar ao valor padrão (${SELECTS[id]?SELECTS[id][DEFAULTS[id]]:num(DEFAULTS[id], DEFAULTS[id]%1?2:0)})</button></div>`;
     });
     h += `</details>`;
   });
@@ -545,9 +598,10 @@ function renderInputs(){
     const id = e.target.id.slice(2), v = parseFloat(e.target.value);
     if(!isNaN(v)){ P[id]=v; e.target.closest(".field").classList.toggle("changed", v!==DEFAULTS[id]); save(); renderResults(); if(FIELDS[id].g==="equip") applyFilter(); }
   }));
-  document.getElementById("f_modelo").addEventListener("change", e => {
-    P.modelo = e.target.value; e.target.closest(".field").classList.toggle("changed", P.modelo!==DEFAULTS.modelo); save(); renderResults(); applyFilter();
-  });
+  el.querySelectorAll(".field select").forEach(sel => sel.addEventListener("change", e => {
+    const id = e.target.id.slice(2);
+    P[id] = e.target.value; e.target.closest(".field").classList.toggle("changed", P[id]!==DEFAULTS[id]); save(); renderResults(); applyFilter();
+  }));
   el.querySelectorAll(".reset").forEach(b => b.addEventListener("click", () => { P[b.dataset.id] = DEFAULTS[b.dataset.id]; save(); renderInputs(); renderResults(); }));
   el.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { UI.modo = b.dataset.modo; saveUI(); applyFilter(); }));
   document.getElementById("search").addEventListener("input", applyFilter);
@@ -571,9 +625,11 @@ function applyFilter(){
     d.querySelectorAll(".field").forEach(f => {
       const id = f.dataset.id, isEq = FIELDS[id].g==="equip" && id!=="modelo";
       // Aparelhos: só os campos da forma escolhida, sempre visíveis (são poucos)
-      const vis = isEq
+      // Simples automático: os percentuais manuais ficam escondidos
+      const manualOnly = (id==="tSimples" || id==="tCow") && P.modoSimples!=="manual";
+      const vis = !manualOnly && (isEq
         ? eqList.includes(id) && (!q || f.dataset.label.includes(q))
-        : (q ? f.dataset.label.includes(q) : true) && (q || UI.modo==="todas" || f.dataset.ess==="1" || f.classList.contains("changed"));
+        : (q ? f.dataset.label.includes(q) : true) && (q || UI.modo==="todas" || f.dataset.ess==="1" || f.classList.contains("changed")));
       f.classList.toggle("hidden", !vis); any = any || vis;
     });
     d.style.display = any ? "" : "none"; if(q && any) d.open = true;
@@ -585,12 +641,12 @@ function groupInfo(p, s){
     imovel:`${num(p.areaBrutaTerreo+p.areaBruta2)} m² · imóvel custa ${brl(p.aluguel+p.condIptu+p.taxasPrediais+p.garantia)}/mês`,
     capex:`Obra: ${brl(d.capexObra)} · total com aparelhos: ${brl(s.capexTotal)}`,
     horario:`${num(d.horasOp)} horas abertas por mês`,
-    capac:`${d.capSim} alunos ao mesmo tempo · precisam de ${num(d.areaNec)} m² · cabem até ${d.lotacao} alunos`,
+    capac:`${d.capSim} alunos ao mesmo tempo · precisam de ${num(d.areaNec)} m² · cabem até ${d.lotacao} alunos (na área estimada: ${d.capArea} ao mesmo tempo)`,
     planos:`Mensalidade média: ${brl2(d.ticket)}`,
-    cow:`Receita das salas: ${brl(s.c.rec)}/mês`,
+    cow:`${num(d.horasSala)} h/mês por sala · receita ${brl(s.c.rec)}/mês`,
     equipe:`Folha: ${brl(d.folha)}/mês`,
     opex:`Custos fixos totais: ${brl(s.opex)}/mês`,
-    impostos:`${num(d.tT*100,1)}% do faturamento do studio`,
+    impostos:`Simples ${p.modoSimples==="manual"?"manual":"automático"}: ${pct(d.tSimp)} em regime · studio ${pct(d.tT)} com cartão · salas ${pct(d.tC)}`,
     equip:`${MODELS[p.modelo]} · ${brl(s.eq.capex)} agora + ${brl(s.eqOp)}/mês`,
     fin:p.capital>0 ? `Capital: ${brl(p.capital)}` : `Capital ainda não informado`,
     metas:`${p.alunosAlvo} alunos = ${pct(p.alunosAlvo/Math.max(1,d.lotacao),0)} das vagas`,
@@ -615,7 +671,7 @@ function alerts(p, s){
   if(Math.abs(d.mixSum-100)>0.01) a.push(["bad",`Os três planos somam ${num(d.mixSum,1)}% dos alunos. Ajuste para somar 100%.`]);
   if(p.pctAvulsa+p.pctTurno>100) a.push(["bad","Horas avulsas + turno fixo passam de 100% das horas alugadas."]);
   if(p.salasFixas>p.salas) a.push(["bad","Há mais salas em contrato mensal do que salas existentes."]);
-  if(d.areaNec > p.areaUtilTerreo + 0.01) a.push(["warn",`${d.capSim} alunos × ${num(p.m2Aluno,1)} m² = ${num(d.areaNec)} m² de área livre para treinar, mas a estimativa do térreo é de ${num(p.areaUtilTerreo)} m². Confirmar com a planta.`]);
+  if(d.areaNec > p.areaUtilTerreo + 0.01) a.push(["warn",`${d.capSim} alunos × ${num(p.m2Aluno,1)} m² = ${num(d.areaNec)} m² de área livre para treinar, mas a estimativa do térreo é de ${num(p.areaUtilTerreo)} m². Nessa área cabem ${d.capArea} alunos ao mesmo tempo (≈ ${d.lotArea} alunos ativos, contra ${d.lotacao} com ${d.capSim}). Confirmar com a planta.`]);
   const areaTreino = Math.max(p.areaUtilTerreo, d.areaNec);
   if(areaTreino > p.areaBrutaTerreo) a.push(["bad",`A área de treino (${num(areaTreino)} m²) é maior que o térreo inteiro (${p.areaBrutaTerreo} m²).`]);
   else if(areaTreino > p.areaBrutaTerreo*0.8) a.push(["warn",`A área de treino (${num(areaTreino)} m²) ocupa ${pct(areaTreino/p.areaBrutaTerreo,0)} do térreo. Sobra pouco para recepção, escada e banheiros.`]);
@@ -629,7 +685,9 @@ function alerts(p, s){
   if(Math.max(0,p.fechaSemana-p.abreSemana)===0 && Math.max(0,p.fechaSab-p.abreSab)===0) a.push(["bad","O studio está sem horário de funcionamento."]);
   if([p.abreSemana,p.fechaSemana,p.abreSab,p.fechaSab,p.abreDom,p.fechaDom].some(v => v<0 || v>24)) a.push(["bad","Há horário de abertura ou fechamento fora do intervalo de 0 a 24 h."]);
   if(p.horasPico2 > d.horasOp) a.push(["warn",`As horas com instrutor extra (${num(p.horasPico2)}) passam das horas abertas no mês (${num(d.horasOp)}).`]);
-  if(p.horasSala > d.horasOp + 0.01) a.push(["warn",`Cada sala está disponível ${num(p.horasSala)} h/mês, mais que as ${num(d.horasOp)} h em que o studio fica aberto. Recepção e limpeza estão dimensionadas para o horário do studio.`]);
+  if(d.horasSala > d.horasOp + 0.01) a.push(["warn",`As salas ficam disponíveis ${num(d.horasSala)} h/mês, mais que as ${num(d.horasOp)} h em que o studio fica aberto. Recepção e limpeza estão dimensionadas para o horário do studio.`]);
+  if([p.abreSalaSemana,p.fechaSalaSemana,p.abreSalaSab,p.fechaSalaSab,p.abreSalaDom,p.fechaSalaDom].some(v => v<0 || v>24)) a.push(["bad","Há horário das salas fora do intervalo de 0 a 24 h."]);
+  if(p.prazoContrato>0 && p.horizonte > p.prazoContrato) a.push(["warn",`A análise vai até o mês ${num(p.horizonte)}, mas o contrato de locação termina no mês ${num(p.prazoContrato)}. Depois disso, o aluguel e a permanência dependem da renovação.`]);
   if(p.fatorOcup>100 || p.ocupCow>100) a.push(["bad","Aproveitamento dos horários ou ocupação das salas acima de 100%."]);
   if(p.alunosIniciais > p.alunosAlvo) a.push(["warn","Há mais alunos na inauguração do que na meta. A simulação usa a meta."]);
   if(p.alunosAlvo>0 && Number.isFinite(s.be) && p.alunosAlvo >= s.be && s.be <= d.lotacao) a.push(["ok",`A meta de ${p.alunosAlvo} alunos fica ${p.alunosAlvo-s.be} acima do ponto de equilíbrio.`]);
@@ -737,7 +795,11 @@ function renderResults(){
   groupInfo(p, s);
   const tot = Math.max(1, s.receitaTotal);
   const alunosLucro = s.margAluno>0 ? Math.ceil((s.fixoLiq + p.lucroAlvo)/s.margAluno - 1e-9) : Infinity;
-  const deprec = p.vidaUtil>0 ? s.capexTotal/(p.vidaUtil*12) : 0;
+  // Depreciação (A7): obra no prazo do contrato; aparelhos próprios na vida útil (leasing: aparelhos não são da empresa)
+  const valAparelhos = p.modelo==="seminovos" ? p.seminovosValor : (p.modelo==="leasing" ? 0 : p.novosValor);
+  const depObra = p.prazoContrato>0 ? s.d.capexObra/p.prazoContrato : 0;
+  const depAparelhos = p.vidaAparelhos>0 ? valAparelhos/(p.vidaAparelhos*12) : 0;
+  const deprec = depObra + depAparelhos;
   const parcEmp = p.empValor>0 ? pmt(p.empValor,p.empTaxa/100,p.empPrazo) : 0;
   const beFrac = Number.isFinite(s.be) ? s.be/Math.max(1,d.lotacao) : Infinity;
 
@@ -746,7 +808,7 @@ function renderResults(){
   document.getElementById("verdict").innerHTML = `<div class="verdict ${vt}"><div class="ic">${vi}</div><div><b>${vh}</b><span>${vd}</span></div></div>`;
   const meterCls = beFrac>1 ? "bad" : beFrac>0.7 ? "warn" : "";
   document.getElementById("bigs").innerHTML = `
-    <div class="big"><div class="q">Lucro por mês com ${p.alunosAlvo} alunos</div><div class="a">${sgn(s.resultado)}</div><div class="d">Depois de impostos e todos os custos, com o studio maduro.</div></div>
+    <div class="big"><div class="q">Lucro por mês com ${p.alunosAlvo} alunos</div><div class="a">${sgn(s.resultado)}</div><div class="d">Depois de impostos e todos os custos, com o studio maduro.${s.resultadoPos!==null?` Depois de quitar os aparelhos: ${brl(s.resultadoPos)}/mês.`:""}</div></div>
     <div class="big"><div class="q">Alunos para empatar</div><div class="a">${Number.isFinite(s.be)?s.be:"—"} <span style="font-size:15px;color:var(--muted)">de ${d.lotacao} vagas</span></div>
       <div class="meter ${meterCls}"><i style="width:${Math.min(100, fin(beFrac)*100).toFixed(0)}%"></i></div><div class="d">${Number.isFinite(beFrac)?pct(beFrac,0)+" do studio ocupado para não ter prejuízo.":""}</div></div>
     <div class="big"><div class="q">Dinheiro que vocês precisam ter</div><div class="a">${brl(s.exposicao)}</div><div class="d">Obra, aparelhos e prejuízos até o negócio se pagar sozinho${p.capital>0?` · vocês têm ${brl(p.capital)}`:""}.</div></div>
@@ -805,7 +867,8 @@ function renderResults(){
         ["Lucro por mês", sgn(s.resultado), "Sobra de caixa depois de tudo (≈ EBITDA)"],
         ["Margem de lucro", pct(s.resultado/tot), "De cada R$ 100 faturados, quanto sobra"],
         ["Lucro por ano", sgn(s.resultado*12)],
-        ["Lucro contábil por mês", sgn(s.resultado-deprec), `Descontando o desgaste do investimento (${brl(deprec)}/mês)`],
+        ["Lucro contábil por mês", sgn(s.resultado-deprec), `Descontando o desgaste: obra ${brl(depObra)} + aparelhos ${brl(depAparelhos)} por mês`],
+        ...(s.resultadoPos!==null?[["Lucro por mês depois de quitar os aparelhos", sgn(s.resultadoPos), `A partir do mês ${s.kPos} de funcionamento`]]:[]),
         ...(parcEmp?[["Sobra depois da parcela do empréstimo", sgn(s.resultado-parcEmp)]]:[]),
         ["Lucro com o studio lotado", sgn(regime({...p, alunosAlvo:d.lotacao}, p.modelo).resultado), `${d.lotacao} alunos`],
         [`Alunos para lucrar ${brl(p.lucroAlvo)}/mês`, Number.isFinite(alunosLucro)?`${alunosLucro} (${pct(alunosLucro/Math.max(1,d.lotacao),0)} das vagas)`:"—"],
@@ -815,7 +878,7 @@ function renderResults(){
         ["Faturamento do studio para empatar", Number.isFinite(s.be)?brl(s.be*d.ticket)+"/mês":"—"],
         ["Folga acima do equilíbrio", Number.isFinite(s.be)&&p.alunosAlvo>0?pct((p.alunosAlvo-s.be)/p.alunosAlvo):"—", "Quanto os alunos podem cair antes do prejuízo"],
         ["Quanto cada aluno deixa por mês", brl2(s.margAluno), "Mensalidade menos impostos e custos do aluno"],
-        ["Ocupação das salas que paga o aluguel", (()=>{ const un=s.c.precoMed*(1-p.tCow/100-p.comissaoPlat/100)-p.custoVarHora, cap=s.c.sh*p.horasSala, falta=p.aluguel-s.c.recFixo*(1-p.tCow/100); return falta<=0?"0%":(un>0&&cap>0?pct(falta/(un*cap),0):"—"); })()],
+        ["Ocupação das salas que paga o aluguel", (()=>{ const un=s.c.precoMed*(1-d.tC-p.comissaoPlat/100)-p.custoVarHora, cap=s.c.sh*d.horasSala, falta=p.aluguel-s.c.recFixo*(1-d.tC); return falta<=0?"0%":(un>0&&cap>0?pct(falta/(un*cap),0):"—"); })()],
         ["Sensibilidade do lucro", s.resultado>0?num((s.A*s.margAluno+s.c.liq+p.recExtra*(1-d.tT))/s.resultado,1)+"×":"—", "Se o faturamento cai 1%, o lucro cai esse múltiplo"],
       ])}
       ${indBox("Retorno do investimento", [
@@ -839,6 +902,7 @@ function renderResults(){
       ${indBox("Alunos", [
         ["Horas abertas por mês", num(d.horasOp)],
         ["Alunos treinando ao mesmo tempo", d.capSim],
+        ["Alunos ao mesmo tempo que cabem na área estimada", d.capArea, `${num(p.areaUtilTerreo)} m² ÷ ${num(p.m2Aluno,1)} m² por aluno (≈ ${d.lotArea} alunos ativos)`],
         ["Vagas no studio", d.lotacao, "Alunos ativos que cabem"],
         ["Tempo médio de permanência", p.churn>0?num(100/p.churn,1)+" meses":"sem cancelamentos"],
         ["Valor de um aluno na vida toda", p.churn>0?brl((d.ticket*(1-d.tT)-p.cvAluno)/(p.churn/100)+p.matricula*(1-d.tT)):"—", "O que ele deixa enquanto fica"],
@@ -865,8 +929,9 @@ function renderResults(){
       ${custos.map(([l,v])=>row("(−) "+l, -v)).join("")}
       <tr class="total"><td>Total de custos</td><td>${brl(-totCustos)}</td><td>${pct(totCustos/tot)}</td></tr>
       <tr class="total"><td>Lucro do mês (caixa)</td><td>${sgn(s.resultado)}</td><td>${pct(s.resultado/tot)}</td></tr>
-      ${row("(−) Desgaste do investimento (depreciação)", -deprec, "sub")}
+      ${row(`(−) Desgaste do investimento: obra ${brl(depObra)} (${num(p.prazoContrato)} meses) + aparelhos ${brl(depAparelhos)} (${num(p.vidaAparelhos)} anos)`, -deprec, "sub")}
       <tr class="total"><td>Lucro contábil</td><td>${sgn(s.resultado-deprec)}</td><td>${pct((s.resultado-deprec)/tot)}</td></tr>
+      ${s.resultadoPos!==null?`<tr class="sub"><td>Lucro do mês depois de quitar os aparelhos (a partir do mês ${s.kPos} de funcionamento)</td><td>${sgn(s.resultadoPos)}</td><td>${pct(s.resultadoPos/tot)}</td></tr>`:""}
       ${parcEmp?`<tr class="sub"><td>(−) Parcela do empréstimo</td><td>${brl(-parcEmp)}</td><td></td></tr><tr class="total"><td>Sobra depois do empréstimo</td><td>${sgn(s.resultado-parcEmp)}</td><td></td></tr>`:""}
     </table></div><p class="note">Imposto de renda fora do Simples não está incluído.</p></div>
     <div class="card"><h3>Como chegamos ao ponto de equilíbrio</h3><div class="scroll"><table>
@@ -919,8 +984,8 @@ function renderResults(){
     </table></div><p class="note">Financiamento: parcela de ${brl2(equip(p,"cdc").parcela)} por ${p.cdcPrazo} meses, mais manutenção. Leasing: ${p.leasingPrazo>0?`${p.leasingPrazo} meses e ${num(p.leasingVRG,0)}% do preço novo para ficar com os aparelhos`:"aluguel contínuo, com manutenção inclusa"}.</p></div>
     <div class="card"><h3>Salas: quanto rende cada nível de ocupação</h3><p class="sub">${p.salas} salas a ${brl(s.c.precoMed)}/hora em média.</p><div class="scroll"><table>
       <tr><th>Ocupação</th><th>Horas por sala</th><th>Receita por sala</th><th>Receita total</th><th>Sobra (sem impostos e custos)</th><th>Paga do aluguel</th><th>Lucro do negócio</th></tr>
-      ${[...new Set([10,15,20,25,30,45,60,p.ocupCow])].sort((a,b)=>a-b).map(o=>{ const c=cow(p,o); const r=regime({...p, ocupCow:o},p.modelo); return `<tr${o===p.ocupCow?' class="hl"':''}><td>${num(o,0)}%</td><td>${c.horas} h</td><td>${brl(c.recSala)}</td><td>${brl(c.rec)}</td><td>${brl(c.liq)}</td><td>${pct(c.liq/Math.max(1,p.aluguel),0)}</td><td>${sgn(r.resultado)}</td></tr>`;}).join("")}
-      <tr class="sub"><td>Todas em contrato mensal de ${brl(p.aluguelFixoSala)}</td><td>—</td><td>${brl(p.aluguelFixoSala)}</td><td>${brl(p.aluguelFixoSala*p.salas)}</td><td>${brl(p.aluguelFixoSala*p.salas*(1-p.tCow/100))}</td><td>${pct(p.aluguelFixoSala*p.salas*(1-p.tCow/100)/Math.max(1,p.aluguel),0)}</td><td>${sgn(regime({...p, salasFixas:p.salas},p.modelo).resultado)}</td></tr>
+      ${[...new Set([10,15,20,25,30,45,60,p.ocupCow])].sort((a,b)=>a-b).map(o=>{ const c=cow(p,o,1,d.tC); const r=regime({...p, ocupCow:o},p.modelo); return `<tr${o===p.ocupCow?' class="hl"':''}><td>${num(o,0)}%</td><td>${c.horas} h</td><td>${brl(c.recSala)}</td><td>${brl(c.rec)}</td><td>${brl(c.liq)}</td><td>${pct(c.liq/Math.max(1,p.aluguel),0)}</td><td>${sgn(r.resultado)}</td></tr>`;}).join("")}
+      <tr class="sub"><td>Todas em contrato mensal de ${brl(p.aluguelFixoSala)}</td><td>—</td><td>${brl(p.aluguelFixoSala)}</td><td>${brl(p.aluguelFixoSala*p.salas)}</td><td>${brl(p.aluguelFixoSala*p.salas*(1-d.tC))}</td><td>${pct(p.aluguelFixoSala*p.salas*(1-d.tC)/Math.max(1,p.aluguel),0)}</td><td>${sgn(regime({...p, salasFixas:p.salas},p.modelo).resultado)}</td></tr>
     </table></div></div>`;
 
   // ----- Aba Caixa -----
@@ -957,6 +1022,9 @@ function renderResults(){
       <li>Vagas = horas abertas × alunos ao mesmo tempo ÷ treinos por aluno × aproveitamento.</li>
       <li>Mensalidade média = soma de (preço × % dos alunos) × (1 − % plano longo × desconto) × (1 − não pagas).</li>
       <li>Instrutores = (horas abertas × instrutores + horas extras de pico) × custo da hora + adicional do RT.</li>
+      <li>Horas das salas = (fecha − abre) × dias, com o horário próprio das salas e os mesmos dias do studio.</li>
+      <li>Simples Nacional (modo automático): alíquota efetiva do Anexo III = (receita dos 12 meses × alíquota da faixa − parcela a deduzir) ÷ receita dos 12 meses, sobre studio + salas. No início da atividade, a receita dos 12 meses é estimada pela média dos meses já faturados × 12. A taxa de cartão é somada só no studio.</li>
+      <li>Depreciação: obra dividida pelo prazo do contrato; aparelhos próprios pela vida útil (leasing não deprecia).</li>
       <li>Salas: horas alugadas = horas disponíveis × ocupação; preço médio pondera pacote, avulsa e turno; sobra = receita − impostos − taxa do app − custo por hora.</li>
       <li>Alunos para empatar = (custos fixos − sobra das salas − outras receitas) ÷ quanto cada aluno deixa.</li>
       <li>Caixa mês a mês: alunos e ocupação crescem em linha reta até a meta; preços, custos e aluguel sobem a cada 12 meses; carência conta da assinatura.</li>
@@ -966,7 +1034,9 @@ function renderResults(){
       <li>Durante a obra entram só aluguel (fora da carência), condomínio + IPTU, outras taxas do imóvel e garantia. Equipe, contas e sistema começam na inauguração.</li>
       <li>A meta de alunos não é limitada às vagas: se for maior, aparece um alerta, mas o cálculo usa a meta.</li>
       <li>Salas em contrato mensal fixo contam desde a inauguração; só a venda por hora cresce aos poucos.</li>
-      <li>Impostos são percentuais fixos sobre o faturamento (Simples + cartão no studio; um percentual nas salas). IR/CSLL fora do Simples e a reforma tributária (CBS/IBS a partir de 2027) não estão modelados.</li>
+      <li>O Simples segue a tabela do Anexo III (ou um % manual). O enquadramento real (anexo, fator R, tratamento da cessão das salas) depende do contador. A reforma tributária (CBS/IBS a partir de 2027) não está modelada.</li>
+      <li>Reajustes de preços, custos e aluguel de 4,5% ao ano (inflação estimada) e taxa mínima de 15% ao ano, ambos em valores correntes.</li>
+      <li>A análise padrão vai até o fim do contrato de locação (60 meses); depois, depende da renovação.</li>
       <li>"Lucro por mês" é sobra de caixa: inclui a parcela do financiamento ou do leasing dos aparelhos e não desconta depreciação (mostrada à parte).</li>
       <li>A caução volta no fim do período analisado; luvas não voltam. Sem valor de venda do negócio, salvo se informado.</li>
     </ul></div>`;
@@ -1026,7 +1096,7 @@ async function svgsToImages(html){
   }
   return html;
 }
-function fmtVal(id, v){ if(id==="modelo") return MODELS[v]; return num(v, Math.abs(v%1)>1e-9 ? (Math.abs(v*100%1)>1e-9 ? 4 : 2) : 0); }
+function fmtVal(id, v){ if(SELECTS[id]) return SELECTS[id][v]; return num(v, Math.abs(v%1)>1e-9 ? (Math.abs(v*100%1)>1e-9 ? 4 : 2) : 0); }
 function premissasHTML(p){
   const eq = equipFields(p);
   return GROUPS.map(g => {
