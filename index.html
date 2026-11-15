@@ -624,7 +624,7 @@ function simulate(p0, modelo){
     let proj, row;
     if(m<=p.mesesObra){
       proj = -(alug + p.condIptu + p.taxasPrediais + p.garantia);
-      row = {m, fase:"Obra", alunos:null, receita:0};
+      row = {m, fase:"Obra", alunos:null, receita:0, recStudio:0, recSalas:0};
     } else {
       const k = m - p.mesesObra, y = Math.floor((k-1)/12);
       const fP = Math.pow(1+p.reajPreco/100, y), fC = Math.pow(1+p.inflCustos/100, y);
@@ -644,7 +644,7 @@ function simulate(p0, modelo){
       recHist.push(recT + c.rec); folHist.push(folhaMes);
       const custos = alug + d.outrosFixos*fC + eq.opex(k) + eq.oneoff(k) + (A*p.cvAluno + novos*p.cac)*fC;
       proj = recT*(1-tx.tT) + c.liq - custos;
-      row = {m, k, fase:"Funcionando", alunos:A, receita:recT + c.rec, simp:tx.simp, anexo:tx.anexo, fatorR:fr};
+      row = {m, k, fase:"Funcionando", alunos:A, receita:recT + c.rec, recStudio:recT, recSalas:c.rec, simp:tx.simp, anexo:tx.anexo, fatorR:fr};
       if(proj<0) mesesNeg++;
       if(tx.anexo==="V") mesesAnexoV++;
       if(mesLucro===null && proj>=0) mesLucro = k;
@@ -669,6 +669,20 @@ function simulate(p0, modelo){
   const reserva = Math.max(0, p.reservaMeses)*r.opex;
   return {...r, p, capexTotal, upfront, payback, paybackDesc, exposicao: Math.max(0,-minSoc), reserva, capitalRec: Math.max(0,-minSoc) + reserva, minMes, vpl, tir: irr(flowsR),
           il: upfront>0 ? pvFut/upfront : null, rows, H, mesLucro, mesesNeg, mesesAnexoV, residual, caucaoVal, dividasFim, cumFinal: cumSoc + residual + caucaoVal - dividasFim};
+}
+// D8: alunos e faturamento por ano, com anos contados da assinatura do contrato (o ano 1 inclui a obra).
+// Faturamento = mensalidades (já com descontos e inadimplência) + matrículas + outras receitas + salas, antes de impostos.
+function resumoAnual(s){
+  const anos = [];
+  for(let i=0; i<s.rows.length; i+=12){
+    const rs = s.rows.slice(i, i+12), abertos = rs.filter(r => r.k), fim = rs[rs.length-1];
+    const soma = k => rs.reduce((a, r) => a + r[k], 0);
+    anos.push({ano: i/12 + 1, de: rs[0].m, ate: fim.m, meses: rs.length, abertos: abertos.length,
+      alunosMedia: abertos.length ? abertos.reduce((a, r) => a + r.alunos, 0)/abertos.length : 0, alunosFim: fim.alunos === null ? 0 : fim.alunos,
+      studio: soma("recStudio"), salas: soma("recSalas"), total: soma("receita")});
+  }
+  const t = anos.reduce((a, y) => ({studio: a.studio + y.studio, salas: a.salas + y.salas, total: a.total + y.total, abertos: a.abertos + y.abertos}), {studio:0, salas:0, total:0, abertos:0});
+  return {anos, total: {...t, meses: s.rows.length, alunosFim: anos.length ? anos[anos.length-1].alunosFim : 0}};
 }
 // TIR mensal por bisseção, anualizada. null se não houver troca de sinal (ex.: fluxo nunca volta, ou duas trocas).
 function irr(flows){
@@ -1468,6 +1482,15 @@ function renderResults(){
         ${bal.rows.map((u,i)=>`<tr${i===2?' class="total"':''}><td>${u.nome}</td><td>${brl(u.ent)}</td><td>${brl(u.sai)}</td><td>${sgn(u.res)}</td><td>${u.ent>0?pct(u.res/u.ent,0):"—"}</td></tr>`).join("")}
       </table></div>
       <p class="note">Aluguel, condomínio e custos comuns (recepção, limpeza, contas, sistema, contador, seguro) são divididos pela área: ${pct(1-bal.share,0)} para o studio e ${pct(bal.share,0)} para as salas. Instrutores, aparelhos e divulgação ficam no studio.</p></div>`
+    + (() => { const ra = resumoAnual(s), porMes = y => y.abertos ? brl(y.total/y.abertos) : "—";
+      return `
+    <div class="card"><h3>Alunos e faturamento por ano</h3><p class="sub">Resumo dos ${anosTxt(s.H)} analisados, ano a ano a partir da assinatura do contrato${p.mesesObra>0?` (o ano 1 inclui ${num(p.mesesObra)} ${p.mesesObra===1?"mês":"meses"} de obra, sem faturamento)`:""}.</p>
+      <div class="scroll"><table class="anual">
+        <tr><th>Ano</th><th>Alunos (média)</th><th>Alunos no fim</th><th>Studio</th><th>Salas</th><th>Faturamento total</th><th>Por mês aberto</th></tr>
+        ${ra.anos.map(y => `<tr><td>Ano ${y.ano}${y.meses<12?` <small>(meses ${y.de}–${y.ate})</small>`:""}</td><td>${num(y.alunosMedia)}</td><td>${num(y.alunosFim)}</td><td>${brl(y.studio)}</td><td>${brl(y.salas)}</td><td>${brl(y.total)}</td><td>${porMes(y)}</td></tr>`).join("")}
+        <tr class="total"><td>Total</td><td></td><td>${num(ra.total.alunosFim)}</td><td>${brl(ra.total.studio)}</td><td>${brl(ra.total.salas)}</td><td>${brl(ra.total.total)}</td><td>${porMes(ra.total)}</td></tr>
+      </table></div>
+      <p class="note">Faturamento antes de impostos e cartão: mensalidades (já com descontos e inadimplência), matrículas, outras receitas do studio e aluguel das salas, com os reajustes anuais. Alunos ativos no mês; a média considera só os meses abertos. Mês a mês na aba "Caixa".</p></div>`; })()
     + `
     <div class="card"><h3>Caixa dos sócios ao longo do tempo</h3><p class="sub">Quanto dinheiro saiu (abaixo de zero) e quando volta (acima de zero). Passe o mouse para ver cada mês.</p>
       <div class="chartbox" id="chartbox">${ch.svg}<div class="tip"></div></div>
