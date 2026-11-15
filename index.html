@@ -252,7 +252,8 @@ const GROUPS = [
     ["capSim","Alunos treinando ao mesmo tempo","alunos",9,1,"Limite de alunos no salão em cada horário. Recomendado: 9 alunos, com 7 m² para cada um.",1],
     ["m2Aluno","Espaço por aluno","m² por aluno",7,0.5,"Espaço recomendado para cada aluno treinar com conforto. Serve para conferir se a área comporta a turma.",1],
     ["areaUtilTerreo","Área livre para treinar (planta)","m²",50,1,"Espaço só de treino que o térreo oferece, sem recepção, banheiros e escada. Estimativa até chegar a planta. Se for menor que alunos × espaço por aluno, aparece um alerta.",1],
-    ["aulasMes","Treinos por aluno no mês","treinos",10,0.5,"Quantas vezes, em média, cada aluno realmente vem no mês (faltas já descontadas).",1],
+    ["faltas","Taxa de faltas","% dos treinos",16.8,0.5,"Parte dos treinos contratados que o aluno não usa. Os treinos contratados vêm do mix de planos (2x, 3x e 4–5x por semana). Com 16,8%, cada aluno vem em média 10 vezes por mês.",1],
+    ["freq45","Vezes por semana no plano 4 a 5x","vezes",4.5,0.5,"Média de treinos semanais de quem tem o plano de 4 a 5 vezes.",0],
     ["fatorOcup","Aproveitamento dos horários","%",58,1,"Horários de pico lotam e os do meio do dia ficam vazios. 58% = em média 58% das vagas são usadas.",0],
   ]},
   {id:"planos", g:"Planos e receitas do studio", intro:"Quanto cada aluno paga e o que mais entra de dinheiro no térreo.", f:[
@@ -333,13 +334,17 @@ const GROUPS = [
   ]},
   {id:"fin", g:"Dinheiro dos sócios e empréstimo", intro:"De onde vem o dinheiro para abrir e aguentar os primeiros meses.", f:[
     ["capital","Dinheiro que os sócios têm para investir","R$",0,5000,"Comparado com o dinheiro necessário. 0 = ainda não definido.",1],
+    ["reservaMeses","Reserva de segurança","meses de custo fixo",3,1,"Dinheiro guardado além do necessário, para imprevistos. Somado ao 'dinheiro que vocês precisam ter' dá o capital recomendado.",1],
     ["empValor","Empréstimo","R$",0,5000,"Valor emprestado no banco para reforçar o caixa.",1],
     ["empTaxa","Juros do empréstimo","% ao mês",2,0.1,"Só conta se houver empréstimo.",0],
     ["empPrazo","Parcelas do empréstimo","meses",36,1,"",0],
     ["empCarencia","Meses pagando só juros","meses",0,1,"Período inicial sem pagar o valor principal.",0],
   ]},
   {id:"metas", g:"Metas e análise", intro:"O que vocês esperam alcançar e como comparar com outras aplicações.", f:[
+    ["modoCrescimento","Como os alunos chegam","","linear",null,"Linha reta: cresce igual todo mês até a meta. Curva em S: começa devagar, acelera e desacelera perto da meta. Por captação: você informa quantos alunos novos entram por mês; os cancelamentos tiram alunos e a base se estabiliza sozinha.",1],
     ["alunosAlvo","Meta de alunos","alunos",120,1,"Alunos ativos quando o studio estiver maduro.",1],
+    ["novosMes","Alunos novos por mês","alunos/mês",10,1,"Só no modo por captação. Use junto com a taxa de cancelamentos (grupo Planos).",1],
+    ["limitarVagas","Limitar alunos às vagas","","sim",null,"Sim: o número de alunos nunca passa das vagas do studio. Não: a simulação usa a meta mesmo que não caiba (só mostra alerta).",0],
     ["alunosIniciais","Alunos já na inauguração","alunos",0,1,"Quem comprou na pré-venda.",0],
     ["rampa","Meses até atingir a meta","meses",12,1,"Os alunos chegam aos poucos, em ritmo constante, até a meta.",1],
     ["horizonte","Período analisado","meses",60,12,"Quantos meses, a partir da assinatura do contrato, entram na conta. Padrão: igual ao prazo do contrato.",0],
@@ -357,7 +362,9 @@ const GROUPS = [
 ];
 const MODELS = {seminovos:"Comprar seminovos", novos:"Comprar novos à vista", leasing:"Alugar (leasing)", cdc:"Financiar novos (CDC)"};
 const SIMPLES_MODES = {auto:"Automático (tabela do Anexo III)", manual:"Manual (% fixo)"};
-const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES};
+const GROWTH_MODES = {linear:"Linha reta até a meta", curvaS:"Curva em S até a meta", captacao:"Por captação mensal (novos − cancelamentos)"};
+const YESNO = {sim:"Sim", nao:"Não"};
+const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES, modoCrescimento: GROWTH_MODES, limitarVagas: YESNO};
 const FIELDS = {}; GROUPS.forEach(g => g.f.forEach(f => FIELDS[f[0]] = {l:f[1], u:f[2], v:f[3], st:f[4], h:f[5], e:f[6], g:g.id}));
 const DEFAULTS = {}; Object.keys(FIELDS).forEach(k => DEFAULTS[k] = FIELDS[k].v);
 
@@ -385,7 +392,11 @@ function deriv(p){
   const capSim = Math.max(0, Math.round(p.capSim));
   const areaNec = capSim*p.m2Aluno; // área de treino necessária para a turma
   const vagas = horasOp*capSim;
-  const lotacao = p.aulasMes>0 ? Math.floor(vagas/p.aulasMes*p.fatorOcup/100) : 0;
+  // B4: treinos contratados pelo mix (semanas por mês = 52/12) menos as faltas
+  const freqSem = (p.m2*2 + p.m3*3 + p.m45*p.freq45)/100;
+  const aulasContratadas = freqSem*52/12;
+  const aulasMes = aulasContratadas*(1 - p.faltas/100);
+  const lotacao = aulasMes>0 ? Math.floor(vagas/aulasMes*p.fatorOcup/100) : 0;
   const mixSum = p.m2+p.m3+p.m45;
   const ticketBruto = (p.m2*p.p2+p.m3*p.p3+p.m45*p.p45)/100;
   const ticket = ticketBruto*(1-p.pctLongo/100*p.descLongo/100)*(1-p.inadimpl/100);
@@ -396,8 +407,8 @@ function deriv(p){
   const outrosFixos = p.condIptu+p.taxasPrediais+p.garantia+folha+p.utilidades+p.marketing+p.software+p.contador+p.seguro+p.residuos+p.outros;
   const horasSala = horasSalas(p);
   const capArea = p.m2Aluno>0 ? Math.floor(p.areaUtilTerreo/p.m2Aluno) : 0; // alunos que cabem na área estimada (A9)
-  const lotArea = p.aulasMes>0 ? Math.floor(horasOp*capArea/p.aulasMes*p.fatorOcup/100) : 0;
-  return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, ticketBruto, ticket, tecnica, folha, capexObra, outrosFixos, horasSala, capArea, lotArea};
+  const lotArea = aulasMes>0 ? Math.floor(horasOp*capArea/aulasMes*p.fatorOcup/100) : 0;
+  return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, ticketBruto, ticket, tecnica, folha, capexObra, outrosFixos, horasSala, capArea, lotArea, freqSem, aulasContratadas, aulasMes};
 }
 // Horas por mês em que cada sala pode ser alugada (A10): horário próprio das salas × dias do studio
 function horasSalas(p){
@@ -443,6 +454,29 @@ function loanPay(p, m){
   if(m<=p.empCarencia+p.empPrazo) return pmt(p.empValor, i, p.empPrazo);
   return 0;
 }
+// B1/B3: alunos em regime. Linha reta e curva em S: a meta. Captação: novos ÷ cancelamento (base estável);
+// sem cancelamento, a base cresce até o fim da análise. Com "limitar às vagas", nunca passa da lotação.
+function alunosRegime(p, d, limitar = p.limitarVagas==="sim"){
+  let A;
+  if(p.modoCrescimento==="captacao"){
+    const ch = p.churn/100, meses = Math.max(1, Math.round(p.horizonte) - Math.round(p.mesesObra));
+    A = ch>0 ? p.novosMes/ch : p.alunosIniciais + p.novosMes*meses;
+  } else A = p.alunosAlvo;
+  return limitar ? Math.min(A, d.lotacao) : A;
+}
+// B1/B2/B3: alunos no mês k de funcionamento
+function alunosNoMes(p, d, k, anterior){
+  const teto = p.limitarVagas==="sim" ? d.lotacao : Infinity;
+  if(p.modoCrescimento==="captacao"){
+    const base = k===1 ? p.alunosIniciais : anterior;
+    return Math.min(teto, base*(1 - p.churn/100) + p.novosMes);
+  }
+  const x = p.rampa>0 ? Math.min(1, k/p.rampa) : 1;
+  const f = p.modoCrescimento==="curvaS" ? x*x*(3 - 2*x) : x; // curva em S: começo e fim mais lentos
+  return Math.min(teto, Math.min(p.alunosAlvo, p.alunosIniciais + (p.alunosAlvo - p.alunosIniciais)*f));
+}
+// Usado nas tabelas que testam um nº de alunos específico
+function comAlunos(p, n, extra){ return {...p, ...(extra||{}), alunosAlvo: n, modoCrescimento: p.modoCrescimento==="captacao" ? "linear" : p.modoCrescimento}; }
 // Resultado de um mês "maduro" com A alunos (preços e custos do 1º ano)
 function regimeCore(p, modelo, A, d, eq){
   const ch = p.churn/100, novos = A*ch;
@@ -457,7 +491,7 @@ function regimeCore(p, modelo, A, d, eq){
 }
 function regime(p, modelo){
   const d = deriv(p), eq = equip(p, modelo);
-  const r = regimeCore(p, modelo, p.alunosAlvo, d, eq);
+  const r = regimeCore(p, modelo, alunosRegime(p, d), d, eq);
   d.tT = r.tx.tT; d.tC = r.tx.tC; d.tSimp = r.tx.simp;
   const ch = p.churn/100;
   const margAluno = d.ticket*(1-d.tT) - p.cvAluno + ch*(p.matricula*(1-d.tT) - p.cac);
@@ -497,8 +531,8 @@ function simulate(p0, modelo){
     } else {
       const k = m - p.mesesObra, y = Math.floor((k-1)/12);
       const fP = Math.pow(1+p.reajPreco/100, y), fC = Math.pow(1+p.inflCustos/100, y);
-      const A = p.rampa>0 ? Math.min(p.alunosAlvo, p.alunosIniciais + (p.alunosAlvo-p.alunosIniciais)*k/p.rampa) : p.alunosAlvo;
-      const novos = Math.max(0, A-prevA) + prevA*p.churn/100; prevA = A;
+      const A = alunosNoMes(p, d, k, prevA);
+      const novos = Math.max(0, A - prevA*(1 - p.churn/100)); prevA = A;
       const fCow = p.rampaCow>0 ? Math.min(1, k/p.rampaCow) : 1;
       const recT = A*d.ticket*fP + novos*p.matricula*fP + p.recExtra*fP;
       const c0 = cow(p, p.ocupCow*fCow, fP);
@@ -529,7 +563,8 @@ function simulate(p0, modelo){
   const flowsR = flows.slice(); flowsR[flowsR.length-1] += residual + caucaoVal;
   const vpl = flowsR.reduce((s,f,i)=> s + f/Math.pow(1+im,i), 0);
   const pvFut = flowsR.slice(1).reduce((s,f,i)=> s + f/Math.pow(1+im,i+1), 0);
-  return {...r, p, capexTotal, upfront, payback, paybackDesc, exposicao: Math.max(0,-minSoc), minMes, vpl, tir: irr(flowsR),
+  const reserva = Math.max(0, p.reservaMeses)*r.opex;
+  return {...r, p, capexTotal, upfront, payback, paybackDesc, exposicao: Math.max(0,-minSoc), reserva, capitalRec: Math.max(0,-minSoc) + reserva, minMes, vpl, tir: irr(flowsR),
           il: upfront>0 ? pvFut/upfront : null, rows, H, mesLucro, mesesNeg, residual, caucaoVal, cumFinal: cumProj + residual + caucaoVal};
 }
 function irr(flows){
@@ -542,6 +577,7 @@ function irr(flows){
 function scenario(p, sign){
   const q = {...p}, a = p.varAlunos/100*sign, o = p.varOcup/100*sign, pr = p.varPrecos/100*sign, c = -p.varCustos/100*sign, r = -p.varRampa/100*sign;
   q.alunosAlvo = Math.round(p.alunosAlvo*(1+a)); q.alunosIniciais = Math.min(q.alunosAlvo, p.alunosIniciais);
+  q.novosMes = p.novosMes*(1+a);
   q.ocupCow = p.ocupCow*(1+o);
   ["p2","p3","p45","precoHora","precoAvulsa","precoTurno","aluguelFixoSala","matricula"].forEach(k => q[k] = p[k]*(1+pr));
   ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = p[k]*(1+c));
@@ -553,9 +589,9 @@ function sensitivity(p){
   const base = regime(p, p.modelo), lot = q => deriv(q).lotacao;
   const items = [
     ["Preço dos planos", (q,f)=>{q.p2*=f;q.p3*=f;q.p45*=f;}],
-    ["Número de alunos", (q,f)=>{q.alunosAlvo=Math.round(q.alunosAlvo*f);}],
+    ["Número de alunos", (q,f)=>{ if(q.modoCrescimento==="captacao") q.novosMes*=f; else q.alunosAlvo=Math.round(q.alunosAlvo*f); }],
     ["Alunos ao mesmo tempo", (q,f)=>{q.capSim=Math.round(q.capSim*f);}],
-    ["Treinos por aluno no mês", (q,f)=>{q.aulasMes*=f;}],
+    ["Taxa de faltas", (q,f)=>{q.faltas*=f;}],
     ["Ocupação das salas", (q,f)=>{q.ocupCow*=f;}],
     ["Preço da hora das salas", (q,f)=>{q.precoHora*=f;q.precoAvulsa*=f;q.precoTurno*=f;}],
     ["Aluguel", (q,f)=>{q.aluguel*=f;}],
@@ -627,7 +663,9 @@ function applyFilter(){
       // Aparelhos: só os campos da forma escolhida, sempre visíveis (são poucos)
       // Simples automático: os percentuais manuais ficam escondidos
       const manualOnly = (id==="tSimples" || id==="tCow") && P.modoSimples!=="manual";
-      const vis = !manualOnly && (isEq
+      const capt = P.modoCrescimento==="captacao";
+      const growthHide = (id==="novosMes" && !capt) || ((id==="alunosAlvo" || id==="rampa") && capt);
+      const vis = !manualOnly && !growthHide && (isEq
         ? eqList.includes(id) && (!q || f.dataset.label.includes(q))
         : (q ? f.dataset.label.includes(q) : true) && (q || UI.modo==="todas" || f.dataset.ess==="1" || f.classList.contains("changed")));
       f.classList.toggle("hidden", !vis); any = any || vis;
@@ -641,7 +679,7 @@ function groupInfo(p, s){
     imovel:`${num(p.areaBrutaTerreo+p.areaBruta2)} m² · imóvel custa ${brl(p.aluguel+p.condIptu+p.taxasPrediais+p.garantia)}/mês`,
     capex:`Obra: ${brl(d.capexObra)} · total com aparelhos: ${brl(s.capexTotal)}`,
     horario:`${num(d.horasOp)} horas abertas por mês`,
-    capac:`${d.capSim} alunos ao mesmo tempo · precisam de ${num(d.areaNec)} m² · cabem até ${d.lotacao} alunos (na área estimada: ${d.capArea} ao mesmo tempo)`,
+    capac:`${num(d.aulasMes,1)} treinos/aluno/mês (contratados ${num(d.aulasContratadas,1)}) · ${d.capSim} alunos ao mesmo tempo · precisam de ${num(d.areaNec)} m² · cabem até ${d.lotacao} alunos (na área estimada: ${d.capArea} ao mesmo tempo)`,
     planos:`Mensalidade média: ${brl2(d.ticket)}`,
     cow:`${num(d.horasSala)} h/mês por sala · receita ${brl(s.c.rec)}/mês`,
     equipe:`Folha: ${brl(d.folha)}/mês`,
@@ -649,7 +687,7 @@ function groupInfo(p, s){
     impostos:`Simples ${p.modoSimples==="manual"?"manual":"automático"}: ${pct(d.tSimp)} em regime · studio ${pct(d.tT)} com cartão · salas ${pct(d.tC)}`,
     equip:`${MODELS[p.modelo]} · ${brl(s.eq.capex)} agora + ${brl(s.eqOp)}/mês`,
     fin:p.capital>0 ? `Capital: ${brl(p.capital)}` : `Capital ainda não informado`,
-    metas:`${p.alunosAlvo} alunos = ${pct(p.alunosAlvo/Math.max(1,d.lotacao),0)} das vagas`,
+    metas:`${p.modoCrescimento==="captacao"?"Base estável":"Meta"}: ${num(s.A)} alunos = ${pct(s.A/Math.max(1,d.lotacao),0)} das vagas`,
     cenarios:`Veja em "Riscos e cenários"`,
   };
   for(const k in info){ const e = document.getElementById("gi_"+k); if(e) e.textContent = info[k]; }
@@ -661,7 +699,7 @@ function groupInfo(p, s){
 function verdict(p, s){
   const d = s.d, beOk = Number.isFinite(s.be) && s.be <= d.lotacao;
   if(!beOk || s.resultado<=0) return ["bad","✕","Com estas premissas, o negócio não se sustenta.", Number.isFinite(s.be) ? `Precisaria de ${s.be} alunos para empatar, mas só cabem ${d.lotacao}.` : "Cada aluno custa mais do que paga."];
-  if(s.payback===null) return ["bad","✕","Dá lucro quando estiver cheio, mas o investimento não volta.", `Com lucro de ${brl(s.resultado)}/mês e ${p.alunosAlvo} alunos, os ${brl(s.exposicao)} que precisam ser colocados não voltam em ${num(s.H/12,0)} anos.`];
+  if(s.payback===null) return ["bad","✕","Dá lucro quando estiver cheio, mas o investimento não volta.", `Com lucro de ${brl(s.resultado)}/mês e ${num(s.A)} alunos, os ${brl(s.exposicao)} que precisam ser colocados não voltam em ${num(s.H/12,0)} anos.`];
   if(s.vpl<0) return ["warn","!","O investimento volta, mas rende menos do que outra aplicação.", `Recupera em ${tempo(s.payback)}, porém rende abaixo dos ${num(p.tma,1)}% ao ano desejados.`];
   if(s.be/d.lotacao>0.7 || (p.capital>0 && p.capital<s.exposicao)) return ["warn","!","Viável, mas com risco alto.", `Precisa de ${pct(s.be/d.lotacao,0)} das vagas ocupadas para empatar${p.capital>0 && p.capital<s.exposicao?` e faltam ${brl(s.exposicao-p.capital)} de capital`:""}.`];
   return ["ok","✓","Viável com estas premissas.", `Recupera o investimento em ${tempo(s.payback)} e rende ${s.tir===null?"—":pct(s.tir,0)} ao ano.`];
@@ -678,7 +716,14 @@ function alerts(p, s){
   const area = p.salaLarg*p.salaComp, menor = Math.min(p.salaLarg,p.salaComp);
   if(area < 7.5 || menor < 2.2) a.push(["warn",`Cada sala tem ${num(area,2)} m². A norma da Anvisa (RDC 50) pede 7,5 m² e lado mínimo de 2,2 m para consultório. O projeto prevê salas só de terapia; depende de aceite da Vigilância Sanitária.`]);
   if(p.salas*area > p.areaBruta2*0.7) a.push(["warn",`As salas ocupam ${pct(p.salas*area/p.areaBruta2,0)} do 2º andar. Sobra pouco para escada, corredor e espera.`]);
-  if(p.alunosAlvo > d.lotacao) a.push(["bad",`A meta de ${p.alunosAlvo} alunos é maior do que cabe no studio (${d.lotacao}). Reduza a meta ou aumente horário/área.`]);
+  const alvoBruto = alunosRegime(p, d, false);
+  if(alvoBruto > d.lotacao) a.push([p.limitarVagas==="sim"?"warn":"bad", p.modoCrescimento==="captacao"
+    ? `Com ${num(p.novosMes)} alunos novos por mês e ${num(p.churn,1)}% de cancelamento, a base chegaria a ${num(alvoBruto)} alunos, mais do que cabe no studio (${d.lotacao}).${p.limitarVagas==="sim"?" A simulação para nas vagas.":""}`
+    : `A meta de ${num(p.alunosAlvo)} alunos é maior do que cabe no studio (${d.lotacao}).${p.limitarVagas==="sim"?" A simulação limita às vagas.":" Reduza a meta ou aumente horário/área."}`]);
+  if(p.modoCrescimento==="captacao" && p.churn<=0) a.push(["warn","No modo por captação, informe a taxa de cancelamentos (grupo Planos). Sem ela, a base de alunos só cresce."]);
+  if(p.modoCrescimento==="captacao" && Number.isFinite(s.be) && s.A < s.be) a.push(["bad",`Com ${num(p.novosMes)} alunos novos por mês e ${num(p.churn,1)}% de cancelamento, a base se estabiliza em ${num(s.A)} alunos, abaixo dos ${s.be} necessários para empatar. Seriam precisos ~${num(Math.ceil(s.be*p.churn/100))} novos por mês.`]);
+  if(p.faltas<0 || p.faltas>=100) a.push(["bad","A taxa de faltas precisa ficar entre 0% e 99%."]);
+  if(p.capital>0 && p.capital >= s.exposicao && p.capital < s.capitalRec) a.push(["warn",`O capital dos sócios (${brl(p.capital)}) cobre o necessário, mas não a reserva de ${num(p.reservaMeses)} meses. Capital recomendado: ${brl(s.capitalRec)}.`]);
   if(Number.isFinite(s.be) && s.be <= d.lotacao && s.be/d.lotacao > 0.7) a.push(["warn",`Para empatar é preciso ocupar ${pct(s.be/d.lotacao,0)} das vagas. Pouca folga se os alunos demorarem a vir.`]);
   if(p.capital>0 && p.capital < s.exposicao) a.push(["bad",`O capital dos sócios (${brl(p.capital)}) não cobre o dinheiro necessário (${brl(s.exposicao)}). Faltam ${brl(s.exposicao-p.capital)}.`]);
   if(p.capital===0) a.push(["warn","O capital disponível dos sócios ainda não foi informado (grupo \"Dinheiro dos sócios\")."]);
@@ -689,8 +734,8 @@ function alerts(p, s){
   if([p.abreSalaSemana,p.fechaSalaSemana,p.abreSalaSab,p.fechaSalaSab,p.abreSalaDom,p.fechaSalaDom].some(v => v<0 || v>24)) a.push(["bad","Há horário das salas fora do intervalo de 0 a 24 h."]);
   if(p.prazoContrato>0 && p.horizonte > p.prazoContrato) a.push(["warn",`A análise vai até o mês ${num(p.horizonte)}, mas o contrato de locação termina no mês ${num(p.prazoContrato)}. Depois disso, o aluguel e a permanência dependem da renovação.`]);
   if(p.fatorOcup>100 || p.ocupCow>100) a.push(["bad","Aproveitamento dos horários ou ocupação das salas acima de 100%."]);
-  if(p.alunosIniciais > p.alunosAlvo) a.push(["warn","Há mais alunos na inauguração do que na meta. A simulação usa a meta."]);
-  if(p.alunosAlvo>0 && Number.isFinite(s.be) && p.alunosAlvo >= s.be && s.be <= d.lotacao) a.push(["ok",`A meta de ${p.alunosAlvo} alunos fica ${p.alunosAlvo-s.be} acima do ponto de equilíbrio.`]);
+  if(p.modoCrescimento!=="captacao" && p.alunosIniciais > p.alunosAlvo) a.push(["warn","Há mais alunos na inauguração do que na meta. A simulação usa a meta."]);
+  if(s.A>0 && Number.isFinite(s.be) && s.A >= s.be && s.be <= d.lotacao) a.push(["ok",`${p.modoCrescimento==="captacao"?"A base estável":"A meta"} de ${num(s.A)} alunos fica ${num(s.A-s.be)} acima do ponto de equilíbrio.`]);
   return a;
 }
 const ICON = {bad:"✕", warn:"!", ok:"✓"};
@@ -808,10 +853,10 @@ function renderResults(){
   document.getElementById("verdict").innerHTML = `<div class="verdict ${vt}"><div class="ic">${vi}</div><div><b>${vh}</b><span>${vd}</span></div></div>`;
   const meterCls = beFrac>1 ? "bad" : beFrac>0.7 ? "warn" : "";
   document.getElementById("bigs").innerHTML = `
-    <div class="big"><div class="q">Lucro por mês com ${p.alunosAlvo} alunos</div><div class="a">${sgn(s.resultado)}</div><div class="d">Depois de impostos e todos os custos, com o studio maduro.${s.resultadoPos!==null?` Depois de quitar os aparelhos: ${brl(s.resultadoPos)}/mês.`:""}</div></div>
+    <div class="big"><div class="q">Lucro por mês com ${num(s.A)} alunos</div><div class="a">${sgn(s.resultado)}</div><div class="d">Depois de impostos e todos os custos, com o studio maduro.${s.resultadoPos!==null?` Depois de quitar os aparelhos: ${brl(s.resultadoPos)}/mês.`:""}</div></div>
     <div class="big"><div class="q">Alunos para empatar</div><div class="a">${Number.isFinite(s.be)?s.be:"—"} <span style="font-size:15px;color:var(--muted)">de ${d.lotacao} vagas</span></div>
       <div class="meter ${meterCls}"><i style="width:${Math.min(100, fin(beFrac)*100).toFixed(0)}%"></i></div><div class="d">${Number.isFinite(beFrac)?pct(beFrac,0)+" do studio ocupado para não ter prejuízo.":""}</div></div>
-    <div class="big"><div class="q">Dinheiro que vocês precisam ter</div><div class="a">${brl(s.exposicao)}</div><div class="d">Obra, aparelhos e prejuízos até o negócio se pagar sozinho${p.capital>0?` · vocês têm ${brl(p.capital)}`:""}.</div></div>
+    <div class="big"><div class="q">Dinheiro que vocês precisam ter</div><div class="a">${brl(s.exposicao)}</div><div class="d">Obra, aparelhos e prejuízos até o negócio se pagar sozinho. Com reserva de ${num(p.reservaMeses)} meses: <b>${brl(s.capitalRec)}</b>${p.capital>0?` · vocês têm ${brl(p.capital)}`:""}.</div></div>
     <div class="big"><div class="q">Tempo para recuperar o investimento</div><div class="a">${s.payback?tempo(s.payback):"não volta"}</div><div class="d">${s.payback?"Contado a partir da inauguração.":`Não acontece em ${num(s.H/12,0)} anos.`}</div></div>`;
 
   // ----- Aba Resumo -----
@@ -838,10 +883,12 @@ function renderResults(){
         <tr><td>+ Prejuízo da operação até o mês ${dec.m1}</td><td>${brl(dec.op)}</td><td>${dec.op>=0?"Soma das perdas mensais depois da abertura, com a rampa de alunos.":"A operação já dá lucro nesse período; esse valor reduz o total."}</td></tr>
         <tr><td>+ Parcelas do empréstimo até o mês ${dec.m1}</td><td>${brl(dec.parc)}</td><td>${dec.parc>0?"Juros e amortizações pagos no período.":"Não há parcelas."}</td></tr>
         <tr class="total"><td>= Dinheiro que vocês precisam ter</td><td>${brl(dec.total)}</td><td>Pior saldo acumulado dos sócios.</td></tr>
+        <tr><td>+ Reserva de segurança (${num(p.reservaMeses)} meses de custo fixo)</td><td>${brl(s.reserva)}</td><td>Folga para imprevistos: atraso na obra, alunos chegando mais devagar.</td></tr>
+        <tr class="total"><td>= Capital recomendado</td><td>${brl(s.capitalRec)}</td><td>O que os sócios deveriam ter disponível.</td></tr>
       </table></div>
       <p class="note">Some os itens de cima para baixo; o resultado é igual ao indicador do topo. Os valores de obra e aparelhos mudam nos campos "Investimento para abrir" e "Aparelhos de musculação".</p></div>`;
   const resumo = `
-    <div class="card"><h3>Balanço do mês: studio, salas e negócio total</h3><p class="sub">Quanto entra, quanto sai e o que sobra por mês com o negócio maduro (${p.alunosAlvo} alunos e ${num(p.ocupCow,0)}% de ocupação das salas).</p>
+    <div class="card"><h3>Balanço do mês: studio, salas e negócio total</h3><p class="sub">Quanto entra, quanto sai e o que sobra por mês com o negócio maduro (${num(s.A)} alunos e ${num(p.ocupCow,0)}% de ocupação das salas).</p>
       <div class="legend"><span><i style="background:var(--s-in)"></i>Entradas</span><span><i style="background:var(--s-out)"></i>Saídas</span><span><i style="background:var(--s-res)"></i>Resultado (entradas − saídas)</span></div>
       <div class="chartbox">${balanceChart(bal)}</div>
       <div class="scroll"><table>
@@ -855,7 +902,7 @@ function renderResults(){
       <p class="note">Inclui a obra, os meses até os alunos chegarem${p.empValor>0?" e o empréstimo":""}.</p></div>
     ${decomp}
     <div class="card"><h3>Pontos de atenção</h3>${alerts(p,s).map(([t,m])=>`<div class="alert ${t}"><b>${ICON[t]}</b><span>${m}</span></div>`).join("")}</div>
-    <div class="card"><h3>Indicadores</h3><p class="sub">Todos os números para o studio maduro (${p.alunosAlvo} alunos), salvo indicação.</p><div class="indgrid">
+    <div class="card"><h3>Indicadores</h3><p class="sub">Todos os números para o studio maduro (${num(s.A)} alunos), salvo indicação.</p><div class="indgrid">
       ${indBox("Receitas", [
         ["Faturamento por mês", brl(s.receitaTotal), "Studio + salas"],
         ["Faturamento por ano", brl(s.receitaTotal*12)],
@@ -870,13 +917,13 @@ function renderResults(){
         ["Lucro contábil por mês", sgn(s.resultado-deprec), `Descontando o desgaste: obra ${brl(depObra)} + aparelhos ${brl(depAparelhos)} por mês`],
         ...(s.resultadoPos!==null?[["Lucro por mês depois de quitar os aparelhos", sgn(s.resultadoPos), `A partir do mês ${s.kPos} de funcionamento`]]:[]),
         ...(parcEmp?[["Sobra depois da parcela do empréstimo", sgn(s.resultado-parcEmp)]]:[]),
-        ["Lucro com o studio lotado", sgn(regime({...p, alunosAlvo:d.lotacao}, p.modelo).resultado), `${d.lotacao} alunos`],
+        ["Lucro com o studio lotado", sgn(regime(comAlunos(p, d.lotacao), p.modelo).resultado), `${d.lotacao} alunos`],
         [`Alunos para lucrar ${brl(p.lucroAlvo)}/mês`, Number.isFinite(alunosLucro)?`${alunosLucro} (${pct(alunosLucro/Math.max(1,d.lotacao),0)} das vagas)`:"—"],
       ])}
       ${indBox("Ponto de equilíbrio e folga", [
         ["Alunos para empatar", Number.isFinite(s.be)?s.be:"—", "Abaixo disso há prejuízo"],
         ["Faturamento do studio para empatar", Number.isFinite(s.be)?brl(s.be*d.ticket)+"/mês":"—"],
-        ["Folga acima do equilíbrio", Number.isFinite(s.be)&&p.alunosAlvo>0?pct((p.alunosAlvo-s.be)/p.alunosAlvo):"—", "Quanto os alunos podem cair antes do prejuízo"],
+        ["Folga acima do equilíbrio", Number.isFinite(s.be)&&s.A>0?pct((s.A-s.be)/s.A):"—", "Quanto os alunos podem cair antes do prejuízo"],
         ["Quanto cada aluno deixa por mês", brl2(s.margAluno), "Mensalidade menos impostos e custos do aluno"],
         ["Ocupação das salas que paga o aluguel", (()=>{ const un=s.c.precoMed*(1-d.tC-p.comissaoPlat/100)-p.custoVarHora, cap=s.c.sh*d.horasSala, falta=p.aluguel-s.c.recFixo*(1-d.tC); return falta<=0?"0%":(un>0&&cap>0?pct(falta/(un*cap),0):"—"); })()],
         ["Sensibilidade do lucro", s.resultado>0?num((s.A*s.margAluno+s.c.liq+p.recExtra*(1-d.tT))/s.resultado,1)+"×":"—", "Se o faturamento cai 1%, o lucro cai esse múltiplo"],
@@ -884,6 +931,7 @@ function renderResults(){
       ${indBox("Retorno do investimento", [
         ["Investimento inicial", brl(s.capexTotal), "Obra + aparelhos"],
         ["Dinheiro necessário no pior momento", brl(s.exposicao), `No mês ${s.minMes} após a assinatura`],
+        ["Capital recomendado (com reserva)", brl(s.capitalRec), `Necessário + ${num(p.reservaMeses)} meses de custo fixo`],
         ["Tempo para recuperar", s.payback?tempo(s.payback):"não volta", "A partir da inauguração"],
         ["Tempo para recuperar, corrigido", s.paybackDesc?tempo(s.paybackDesc):"não volta", `Considerando ${num(p.tma,1)}% ao ano de rendimento alternativo`],
         ["Valor do negócio hoje (VPL)", sgn(s.vpl), "Positivo = rende mais que a aplicação alternativa"],
@@ -896,7 +944,7 @@ function renderResults(){
       ${indBox("Pesos dos custos", [
         ["Imóvel ÷ faturamento", pct((p.aluguel+p.condIptu+p.taxasPrediais+p.garantia)/tot), "Aluguel, condomínio e taxas"],
         ["Equipe ÷ faturamento", pct(d.folha/tot)],
-        ["Custo fixo por aluno", p.alunosAlvo>0?brl2(s.opex/p.alunosAlvo):"—"],
+        ["Custo fixo por aluno", s.A>0?brl2(s.opex/s.A):"—"],
         ["Custo da equipe técnica", brl(d.tecnica)+"/mês", `${num(d.horasOp*p.instrBase+p.horasPico2)} horas de instrutor`],
       ])}
       ${indBox("Alunos", [
@@ -921,7 +969,7 @@ function renderResults(){
   const lucro = `
     <div class="card"><h3>Para onde vai o dinheiro</h3><p class="sub">Cada custo mensal comparado ao faturamento de ${brl(s.receitaTotal)}. O que sobra é o lucro: ${brl(s.resultado)} (${pct(s.resultado/tot)}).</p>
       ${custos.map(([l,v])=>`<div class="hbar"><span>${l}</span><div class="track"><i style="width:${(v/maxC*100).toFixed(1)}%"></i></div><span class="val">${brl(v)} · ${pct(v/tot,0)}</span></div>`).join("")}</div>
-    <div class="card"><h3>Demonstrativo do mês (DRE)</h3><p class="sub">Studio maduro com ${p.alunosAlvo} alunos e preços do 1º ano. Tíquete médio por aluno: <b>${brl2(d.ticket)}</b> por mês.</p><div class="scroll"><table>
+    <div class="card"><h3>Demonstrativo do mês (DRE)</h3><p class="sub">Studio maduro com ${num(s.A)} alunos e preços do 1º ano. Tíquete médio por aluno: <b>${brl2(d.ticket)}</b> por mês.</p><div class="scroll"><table>
       <tr><th>Linha</th><th>R$ por mês</th><th>% do faturamento</th></tr>
       ${row("Mensalidades do studio", s.recPlanos)}${s.recMat?row("Matrículas", s.recMat):""}${p.recExtra?row("Outras receitas do studio", p.recExtra):""}
       ${s.c.recHora?row("Aluguel das salas por hora", s.c.recHora):""}${s.c.recFixo?row("Salas em contrato mensal", s.c.recFixo):""}
@@ -949,7 +997,7 @@ function renderResults(){
   const sv = sensitivity(p), maxSw = Math.max(1, ...sv.rows.map(r=>r.swing));
   const fmtBe = o => Number.isFinite(o.be) ? `${o.be} (${pct(o.be/Math.max(1,o.lot),0)})` : "—";
   const precosF = [0.9,0.95,1,1.05,1.1,1.2], alunosF = [0.6,0.7,0.8,0.9,1,1.1].map(f=>Math.round(d.lotacao*f));
-  const pts = [...new Set([0.4,0.5,0.6,0.7,0.8,0.9,1].map(x=>Math.round(d.lotacao*x)).concat([s.be,p.alunosAlvo,alunosLucro]).filter(x=>Number.isFinite(x)&&x>=0))].sort((a,b)=>a-b);
+  const pts = [...new Set([0.4,0.5,0.6,0.7,0.8,0.9,1].map(x=>Math.round(d.lotacao*x)).concat([s.be,Math.round(s.A),alunosLucro]).filter(x=>Number.isFinite(x)&&x>=0))].sort((a,b)=>a-b);
   const riscos = `
     <div class="card"><h3>Cenários ruim, esperado e bom</h3><p class="sub">Ruim: ${p.varAlunos}% menos alunos, ${p.varOcup}% menos ocupação das salas, preços ${p.varPrecos}% menores, custos ${p.varCustos}% maiores e ${p.varRampa}% mais tempo para encher. Bom: o contrário.</p><div class="scroll"><table>
       <tr><th></th>${sc.map(([n])=>`<th>${n}</th>`).join("")}</tr>
@@ -968,11 +1016,11 @@ function renderResults(){
     </table></div><p class="note">Hoje: lucro de ${brl(sv.base.resultado)} e ${fmtBe({be:sv.base.be, lot:sv.lotBase})} alunos para empatar.</p></div>
     <div class="card"><h3>Lucro por mês: alunos × preço dos planos</h3><p class="sub">Linhas: número de alunos (e % das vagas). Colunas: preços mais baixos ou mais altos que os atuais.</p><div class="scroll"><table>
       <tr><th>Alunos</th>${precosF.map(f=>`<th>${f===1?"preço atual":(f>1?"+":"")+num((f-1)*100,0)+"%"}</th>`).join("")}</tr>
-      ${alunosF.map(n=>`<tr><td>${n} (${pct(n/Math.max(1,d.lotacao),0)})</td>${precosF.map(f=>`<td>${sgn(regime({...p, alunosAlvo:n, p2:p.p2*f, p3:p.p3*f, p45:p.p45*f},p.modelo).resultado)}</td>`).join("")}</tr>`).join("")}
+      ${alunosF.map(n=>`<tr><td>${n} (${pct(n/Math.max(1,d.lotacao),0)})</td>${precosF.map(f=>`<td>${sgn(regime(comAlunos(p, n, {p2:p.p2*f, p3:p.p3*f, p45:p.p45*f}),p.modelo).resultado)}</td>`).join("")}</tr>`).join("")}
     </table></div></div>
     <div class="card"><h3>Lucro por número de alunos</h3><div class="scroll"><table>
       <tr><th>Alunos</th><th>% das vagas</th><th>Faturamento do studio</th><th>Lucro por mês</th><th>Lucro por ano</th></tr>
-      ${pts.map(n=>{ const r=regime({...p, alunosAlvo:n},p.modelo); const tag=[n===s.be?"empata":"",n===p.alunosAlvo?"meta":"",n===alunosLucro?"lucro desejado":""].filter(Boolean).join(", ");
+      ${pts.map(n=>{ const r=regime(comAlunos(p, n),p.modelo); const tag=[n===s.be?"empata":"",n===Math.round(s.A)?(p.modoCrescimento==="captacao"?"base estável":"meta"):"",n===alunosLucro?"lucro desejado":""].filter(Boolean).join(", ");
         return `<tr${tag?' class="hl"':''}><td>${n}${tag?" · "+tag:""}</td><td>${pct(n/Math.max(1,d.lotacao),0)}</td><td>${brl(r.recT)}</td><td>${sgn(r.resultado)}</td><td>${sgn(r.resultado*12)}</td></tr>`;}).join("")}
     </table></div></div>`;
 
@@ -1019,7 +1067,10 @@ function renderResults(){
       <li>Horas abertas = (fecha − abre) × dias, somando semana, sábado e domingo.</li>
       <li>Alunos ao mesmo tempo: informado (recomendado 9). Área de treino necessária = alunos ao mesmo tempo × espaço por aluno; comparada com a área livre da planta.</li>
       <li>Balanço por área: custos do imóvel e custos comuns (recepção, limpeza, contas, sistema, contador, seguro, outros) divididos entre studio e salas pela área de cada andar; instrutores, aparelhos, divulgação e custos dos alunos ficam no studio; impostos, custos por hora e lixo hospitalar das salas ficam nas salas.</li>
+      <li>Treinos por aluno = vezes por semana do mix (2x, 3x, 4–5x) × 52 ÷ 12 × (1 − taxa de faltas).</li>
       <li>Vagas = horas abertas × alunos ao mesmo tempo ÷ treinos por aluno × aproveitamento.</li>
+      <li>Alunos no tempo: linha reta ou curva em S até a meta (curva em S = 3x² − 2x³, com x = mês ÷ meses até a meta); ou por captação: alunos do mês = alunos do mês anterior × (1 − cancelamento) + novos. A base estável da captação é novos ÷ cancelamento. Com "limitar às vagas", nunca passa da lotação.</li>
+      <li>Capital recomendado = dinheiro que vocês precisam ter + reserva (meses × custos fixos do mês).</li>
       <li>Mensalidade média = soma de (preço × % dos alunos) × (1 − % plano longo × desconto) × (1 − não pagas).</li>
       <li>Instrutores = (horas abertas × instrutores + horas extras de pico) × custo da hora + adicional do RT.</li>
       <li>Horas das salas = (fecha − abre) × dias, com o horário próprio das salas e os mesmos dias do studio.</li>
