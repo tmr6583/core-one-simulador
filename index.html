@@ -26,7 +26,7 @@
   --border:#dedcd3; --brand:#0b2636; --accent:#3f7f66; --accent-weak:#e4efe9; --gold:#a08a5a;
   --ok:#2e7d4f; --ok-weak:#e6f3eb; --warn:#9a6a00; --warn-weak:#fdf4dc; --bad:#b3261e; --bad-weak:#fbeae8;
   --chart-line:#3f7f66; --chart-fill:rgba(63,127,102,.12); --grid:#e7e5dd;
-  --s-in:#2f8c64; --s-res:#3f6fb5; --s-out:#c0832a;
+  --s-in:#2f8c64; --s-res:#3f6fb5; --s-out:#c0832a; --s4:#8a5cb8;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -34,7 +34,7 @@
     --border:#243a57; --accent:#7fbfa3; --accent-weak:#173a33; --gold:#c9a96e;
     --ok:#5cc08a; --ok-weak:#123326; --warn:#e0ae3c; --warn-weak:#33290f; --bad:#f2786d; --bad-weak:#3a1a1a;
     --chart-line:#7fbfa3; --chart-fill:rgba(127,191,163,.14); --grid:#22364f;
-    --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028;
+    --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028; --s4:#a07fd6;
   }
 }
 :root[data-theme="dark"]{
@@ -42,7 +42,7 @@
   --border:#243a57; --accent:#7fbfa3; --accent-weak:#173a33; --gold:#c9a96e;
   --ok:#5cc08a; --ok-weak:#123326; --warn:#e0ae3c; --warn-weak:#33290f; --bad:#f2786d; --bad-weak:#3a1a1a;
   --chart-line:#7fbfa3; --chart-fill:rgba(127,191,163,.14); --grid:#22364f;
-  --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028;
+  --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028; --s4:#a07fd6;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -831,6 +831,92 @@ function balanceChart(b){
 
 let LAST = null;
 
+// ================= Gráficos genéricos (C1–C9) =================
+function niceScale(mn, mx, n=5){
+  if(!(mx>mn)) mx = mn + 1;
+  const raw = (mx-mn)/n, mag = Math.pow(10, Math.floor(Math.log10(raw))), nr = raw/mag;
+  const step = (nr<=1?1:nr<=2?2:nr<=2.5?2.5:nr<=5?5:10)*mag;
+  return {mn: Math.floor(mn/step)*step, mx: Math.ceil(mx/step)*step, step};
+}
+const kR = v => Math.abs(v)<0.5 ? "R$ 0" : "R$ " + num(v/1000, Math.abs(v)<10000?1:0) + " mil";
+function legendHTML(items){ return `<div class="legend">${items.map(([n,c,dash])=>`<span><i style="background:${c};${dash?"height:3px;border-radius:0":""}"></i>${n}</span>`).join("")}</div>`; }
+// Linhas: o = {xs, series:[{name,color,vals}], yfmt, xfmt, xticks, refs:[{y,label}], vrefs:[{x,label}], marks:[{x,y,label,color}], tip(i,x), aria, H}
+function lineChart(o){
+  const W = 800, H = o.H || 260, L = 72, R = 16, T = 18, B = 32;
+  const vals = o.series.flatMap(se => se.vals).concat((o.refs||[]).map(r => r.y)).filter(Number.isFinite);
+  const sc = niceScale(Math.min(0, ...vals), Math.max(0, ...vals));
+  const x0 = o.xs[0], x1 = o.xs[o.xs.length-1];
+  const X = x => L + (x-x0)*(W-L-R)/Math.max(1e-9, x1-x0), Y = v => T + (sc.mx-v)*(H-T-B)/(sc.mx-sc.mn);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria}">`;
+  for(let v = sc.mn; v <= sc.mx + sc.step/2; v += sc.step)
+    svg += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L-8}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="var(--muted)">${o.yfmt(v)}</text>`;
+  svg += `<line x1="${L}" x2="${W-R}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--muted)" stroke-width="1.2"/>`;
+  (o.xticks || []).forEach((x, i, arr) => { const anc = i===0 ? "start" : (i===arr.length-1 ? "end" : "middle");
+    svg += `<text x="${X(x)}" y="${H-10}" font-size="11" text-anchor="${anc}" fill="var(--muted)">${o.xfmt(x)}</text>`; });
+  (o.refs || []).forEach(r => { svg += `<line x1="${L}" x2="${W-R}" y1="${Y(r.y)}" y2="${Y(r.y)}" stroke="var(--muted)" stroke-dasharray="5 4"/><text x="${W-R-4}" y="${Y(r.y)-5}" font-size="11.5" text-anchor="end" fill="var(--text)">${r.label}</text>`; });
+  (o.vrefs || []).forEach(r => { svg += `<line x1="${X(r.x)}" x2="${X(r.x)}" y1="${T}" y2="${H-B}" stroke="var(--muted)" stroke-dasharray="5 4"/><text x="${X(r.x)+5}" y="${T+12}" font-size="11.5" fill="var(--text)">${r.label}</text>`; });
+  o.series.forEach(se => {
+    const pts = se.vals.map((v,i) => `${X(o.xs[i]).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+    svg += `<polyline points="${pts}" fill="none" stroke="${se.color}" stroke-width="2" stroke-linejoin="round"${se.dash?' stroke-dasharray="6 4"':""}/>`;
+  });
+  // pontos invisíveis com dica (passe o mouse)
+  if(o.tip) o.xs.forEach((x,i) => { svg += `<rect x="${X(x)-((W-L-R)/o.xs.length)/2}" y="${T}" width="${(W-L-R)/o.xs.length}" height="${H-T-B}" fill="transparent"><title>${o.tip(i,x)}</title></rect>`; });
+  (o.marks || []).forEach(m => { const right = X(m.x) > W*0.65;
+    svg += `<circle cx="${X(m.x)}" cy="${Y(m.y)}" r="5" fill="${m.color}" stroke="var(--surface)" stroke-width="2"/><text x="${X(m.x)+(right?-8:8)}" y="${Y(m.y)+(m.dy||-9)}" font-size="12" text-anchor="${right?"end":"start"}" fill="var(--text)">${m.label}</text>`; });
+  return svg + `</svg>`;
+}
+// Cascata (C4): steps = [{label, v, tipo:"ent"|"sai"|"res"}]
+function waterfallChart(steps, aria){
+  const W = 800, H = 300, L = 72, R = 16, T = 22, B = 46;
+  let acc = 0; const bars = steps.map(st => { let y0, y1;
+    if(st.tipo==="ent"){ y0 = 0; y1 = st.v; acc = st.v; }
+    else if(st.tipo==="sai"){ y0 = acc; y1 = acc - st.v; acc = y1; }
+    else { y0 = 0; y1 = st.v; }
+    return {...st, y0, y1}; });
+  const sc = niceScale(Math.min(0, ...bars.map(b => Math.min(b.y0,b.y1))), Math.max(0, ...bars.map(b => Math.max(b.y0,b.y1))));
+  const Y = v => T + (sc.mx-v)*(H-T-B)/(sc.mx-sc.mn), gw = (W-L-R)/bars.length, bw = Math.min(64, gw*0.62);
+  const col = {ent:"var(--s-in)", sai:"var(--s-out)", res:"var(--s-res)"};
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${aria}">`;
+  for(let v = sc.mn; v <= sc.mx + sc.step/2; v += sc.step)
+    svg += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${L-8}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="var(--muted)">${kR(v)}</text>`;
+  svg += `<line x1="${L}" x2="${W-R}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--muted)" stroke-width="1.2"/>`;
+  bars.forEach((b,i) => {
+    const x = L + i*gw + (gw-bw)/2, top = Math.min(Y(b.y0), Y(b.y1)), h = Math.max(1, Math.abs(Y(b.y0)-Y(b.y1)));
+    svg += `<rect x="${x}" y="${top}" width="${bw}" height="${h}" rx="3" fill="${col[b.tipo]}"><title>${b.label}: ${brl(b.tipo==="sai"?-b.v:b.v)}</title></rect>`;
+    if(i < bars.length-1 && b.tipo!=="res") svg += `<line x1="${x+bw}" x2="${x+gw}" y1="${Y(b.y1)}" y2="${Y(b.y1)}" stroke="var(--muted)" stroke-dasharray="2 3"/>`;
+    svg += `<text x="${x+bw/2}" y="${top-5}" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="${b.tipo==="res"?700:500}">${b.tipo==="sai"?"−":""}${kR(Math.abs(b.v))}</text>`;
+    const words = b.label.split(" "), half = Math.ceil(words.length/2);
+    const l1 = words.length>2 ? words.slice(0,half).join(" ") : b.label, l2 = words.length>2 ? words.slice(half).join(" ") : "";
+    svg += `<text x="${x+bw/2}" y="${H-B+16}" font-size="11" text-anchor="middle" fill="var(--text)">${l1}</text>${l2?`<text x="${x+bw/2}" y="${H-B+30}" font-size="11" text-anchor="middle" fill="var(--text)">${l2}</text>`:""}`;
+  });
+  return svg + `</svg>`;
+}
+// Tornado (C5): rows = [{l, lo, hi}] (lucro com −10% e +10%), base = lucro atual
+function tornadoChart(rows, base, aria){
+  const W = 800, rowH = 26, T = 24, B = 26, L = 190, R = 70, H = T + B + rows.length*rowH;
+  const vals = rows.flatMap(r => [r.lo, r.hi]).concat([base]);
+  const sc = niceScale(Math.min(...vals), Math.max(...vals), 4);
+  const X = v => L + (v - sc.mn)*(W-L-R)/(sc.mx-sc.mn);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${aria}">`;
+  for(let v = sc.mn; v <= sc.mx + sc.step/2; v += sc.step)
+    svg += `<line x1="${X(v)}" x2="${X(v)}" y1="${T-6}" y2="${H-B}" stroke="var(--grid)"/><text x="${X(v)}" y="${H-8}" font-size="11" text-anchor="middle" fill="var(--muted)">${kR(v)}</text>`;
+  rows.forEach((r,i) => {
+    const y = T + i*rowH + 4, h = rowH - 9;
+    svg += `<text x="${L-8}" y="${y+h-3}" font-size="12" text-anchor="end" fill="var(--text)">${r.l}</text>`;
+    [["lo","var(--s-out)","−10%"],["hi","var(--s-res)","+10%"]].forEach(([k,c,n]) => {
+      const v = r[k], x0 = Math.min(X(base), X(v)), w = Math.max(1, Math.abs(X(v)-X(base)));
+      svg += `<rect x="${x0}" y="${y}" width="${w}" height="${h}" rx="2" fill="${c}"><title>${r.l} ${n}: lucro ${brl(v)} (${v>=base?"+":""}${brl(v-base)})</title></rect>`;
+    });
+  });
+  svg += `<line x1="${X(base)}" x2="${X(base)}" y1="${T-6}" y2="${H-B}" stroke="var(--text)" stroke-width="1.5"/><text x="${X(base)}" y="${T-10}" font-size="11.5" text-anchor="middle" fill="var(--text)">hoje: ${kR(base)}</text>`;
+  return svg + `</svg>`;
+}
+// Mapa de calor (C6): fundo por faixa de lucro (vermelho = prejuízo, verde = lucro, neutro perto de zero)
+function heatStyle(v, maxAbs){
+  const a = Math.min(1, Math.abs(v)/Math.max(1, maxAbs))*0.5;
+  return `background:${v<0 ? `rgba(179,38,30,${a.toFixed(2)})` : `rgba(46,125,79,${a.toFixed(2)})`}`;
+}
+
 function indBox(title, items){
   return `<div class="indbox"><h4>${title}</h4>${items.map(([l,v,hint])=>`<div class="ind"><div class="l">${l}${hint?`<small>${hint}</small>`:""}</div><div class="v">${v}</div></div>`).join("")}</div>`;
 }
@@ -969,6 +1055,18 @@ function renderResults(){
   const lucro = `
     <div class="card"><h3>Para onde vai o dinheiro</h3><p class="sub">Cada custo mensal comparado ao faturamento de ${brl(s.receitaTotal)}. O que sobra é o lucro: ${brl(s.resultado)} (${pct(s.resultado/tot)}).</p>
       ${custos.map(([l,v])=>`<div class="hbar"><span>${l}</span><div class="track"><i style="width:${(v/maxC*100).toFixed(1)}%"></i></div><span class="val">${brl(v)} · ${pct(v/tot,0)}</span></div>`).join("")}</div>
+    <div class="card"><h3>Do faturamento ao lucro (cascata)</h3><p class="sub">Começa no faturamento do mês e tira cada grupo de custos até chegar ao lucro.</p>
+      ${legendHTML([["Faturamento","var(--s-in)"],["Custos","var(--s-out)"],["Lucro do mês","var(--s-res)"]])}
+      <div class="chartbox">${waterfallChart([
+        {label:"Faturamento", v:s.receitaTotal, tipo:"ent"},
+        {label:"Impostos e cartão", v:s.impT + s.c.imp, tipo:"sai"},
+        {label:"Equipe", v:d.folha, tipo:"sai"},
+        {label:"Imóvel", v:p.aluguel+p.condIptu+p.taxasPrediais+p.garantia, tipo:"sai"},
+        {label:"Contas e serviços", v:p.utilidades+p.software+p.contador+p.seguro+p.residuos+p.outros, tipo:"sai"},
+        {label:"Divulgação", v:p.marketing, tipo:"sai"},
+        {label:"Aparelhos", v:s.eqOp, tipo:"sai"},
+        {label:"Custos variáveis", v:s.c.vari + s.c.plat + s.cvar, tipo:"sai"},
+        {label:"Lucro do mês", v:s.resultado, tipo:"res"}].filter(st => st.tipo!=="sai" || st.v>=0.5), "Cascata do faturamento ao lucro do mês")}</div></div>
     <div class="card"><h3>Demonstrativo do mês (DRE)</h3><p class="sub">Studio maduro com ${num(s.A)} alunos e preços do 1º ano. Tíquete médio por aluno: <b>${brl2(d.ticket)}</b> por mês.</p><div class="scroll"><table>
       <tr><th>Linha</th><th>R$ por mês</th><th>% do faturamento</th></tr>
       ${row("Mensalidades do studio", s.recPlanos)}${s.recMat?row("Matrículas", s.recMat):""}${p.recExtra?row("Outras receitas do studio", p.recExtra):""}
@@ -996,7 +1094,7 @@ function renderResults(){
   const scRow = (l, f) => `<tr><td>${l}</td>${sc.map(([,x])=>`<td>${f(x)}</td>`).join("")}</tr>`;
   const sv = sensitivity(p), maxSw = Math.max(1, ...sv.rows.map(r=>r.swing));
   const fmtBe = o => Number.isFinite(o.be) ? `${o.be} (${pct(o.be/Math.max(1,o.lot),0)})` : "—";
-  const precosF = [0.9,0.95,1,1.05,1.1,1.2], alunosF = [0.6,0.7,0.8,0.9,1,1.1].map(f=>Math.round(d.lotacao*f));
+  const precosF = [0.9,0.95,1,1.05,1.1,1.2], alunosF = [0.6,0.7,0.8,0.9,1,1.1].filter(f => f<=1 || p.limitarVagas!=="sim").map(f=>Math.round(d.lotacao*f));
   const pts = [...new Set([0.4,0.5,0.6,0.7,0.8,0.9,1].map(x=>Math.round(d.lotacao*x)).concat([s.be,Math.round(s.A),alunosLucro]).filter(x=>Number.isFinite(x)&&x>=0))].sort((a,b)=>a-b);
   const riscos = `
     <div class="card"><h3>Cenários ruim, esperado e bom</h3><p class="sub">Ruim: ${p.varAlunos}% menos alunos, ${p.varOcup}% menos ocupação das salas, preços ${p.varPrecos}% menores, custos ${p.varCustos}% maiores e ${p.varRampa}% mais tempo para encher. Bom: o contrário.</p><div class="scroll"><table>
@@ -1010,15 +1108,36 @@ function renderResults(){
       ${scRow("Valor do negócio hoje (VPL)", x=>sgn(x.vpl))}
       ${scRow("Rentabilidade anual (TIR)", x=>x.tir===null?"—":pct(x.tir))}
     </table></div></div>
-    <div class="card"><h3>O que mais mexe no lucro</h3><p class="sub">Cada premissa 10% menor e 10% maior, uma de cada vez. As do topo são as que mais merecem atenção.</p><div class="scroll"><table>
+    <div class="card"><h3>Caixa dos sócios nos três cenários</h3><p class="sub">Quanto falta ou sobra de dinheiro acumulado, mês a mês, em cada cenário.</p>
+      ${legendHTML([["Ruim","var(--s-out)"],["Esperado","var(--s-res)"],["Bom","var(--s-in)"]])}
+      <div class="chartbox">${(()=>{ const ser = sc.map(([n,x]) => ({name:n, color:{Ruim:"var(--s-out)",Esperado:"var(--s-res)",Bom:"var(--s-in)"}[n], vals:[-x.upfront + x.p.empValor, ...x.rows.map(r => r.cumSoc)]}));
+        const xs = ser[0].vals.map((_,i) => i);
+        return lineChart({xs, series:ser, yfmt:kR, xfmt:x => x===0?"assinatura":"mês "+x, xticks:xs.filter(x => x%12===0), aria:"Caixa acumulado dos sócios nos cenários ruim, esperado e bom",
+          tip:(i) => `Mês ${i}: ` + ser.map(se => `${se.name} ${brl(se.vals[i])}`).join(" · ")}); })()}</div></div>
+    <div class="card"><h3>O que mais mexe no lucro</h3><p class="sub">Cada premissa 10% menor e 10% maior, uma de cada vez. As do topo são as que mais merecem atenção.</p>
+      ${legendHTML([["Premissa 10% menor","var(--s-out)"],["Premissa 10% maior","var(--s-res)"]])}
+      <div class="chartbox">${tornadoChart(sv.rows.filter(r => r.swing>=1).map(r => ({l:r.l, lo:r.lo.res, hi:r.hi.res})), sv.base.resultado, "Lucro do mês com cada premissa 10% menor e 10% maior")}</div>
+      <div class="scroll"><table>
       <tr><th>Premissa</th><th>Lucro com −10%</th><th>Lucro com +10%</th><th>Alunos p/ empatar (−10% / +10%)</th><th>Peso</th></tr>
       ${sv.rows.map(r=>`<tr><td>${r.l}</td><td>${sgn(r.lo.res)}</td><td>${sgn(r.hi.res)}</td><td>${fmtBe(r.lo)} / ${fmtBe(r.hi)}</td><td style="min-width:90px"><div class="meter" style="margin:0"><i style="width:${(r.swing/maxSw*100).toFixed(0)}%"></i></div></td></tr>`).join("")}
     </table></div><p class="note">Hoje: lucro de ${brl(sv.base.resultado)} e ${fmtBe({be:sv.base.be, lot:sv.lotBase})} alunos para empatar.</p></div>
     <div class="card"><h3>Lucro por mês: alunos × preço dos planos</h3><p class="sub">Linhas: número de alunos (e % das vagas). Colunas: preços mais baixos ou mais altos que os atuais.</p><div class="scroll"><table>
       <tr><th>Alunos</th>${precosF.map(f=>`<th>${f===1?"preço atual":(f>1?"+":"")+num((f-1)*100,0)+"%"}</th>`).join("")}</tr>
-      ${alunosF.map(n=>`<tr><td>${n} (${pct(n/Math.max(1,d.lotacao),0)})</td>${precosF.map(f=>`<td>${sgn(regime(comAlunos(p, n, {p2:p.p2*f, p3:p.p3*f, p45:p.p45*f}),p.modelo).resultado)}</td>`).join("")}</tr>`).join("")}
-    </table></div></div>
-    <div class="card"><h3>Lucro por número de alunos</h3><div class="scroll"><table>
+      ${(()=>{ const M = alunosF.map(n => precosF.map(f => regime(comAlunos(p, n, {p2:p.p2*f, p3:p.p3*f, p45:p.p45*f}),p.modelo).resultado));
+        const mx = Math.max(1, ...M.flat().map(Math.abs));
+        return alunosF.map((n,i)=>`<tr><td>${n} (${pct(n/Math.max(1,d.lotacao),0)})</td>${M[i].map(v=>`<td style="${heatStyle(v,mx)}">${sgn(v)}</td>`).join("")}</tr>`).join(""); })()}
+    </table></div><p class="note">Cores: verde = lucro, vermelho = prejuízo; quanto mais forte, maior o valor.</p></div>
+    <div class="card"><h3>Lucro por número de alunos</h3><p class="sub">Lucro do mês (studio maduro) para cada número de alunos. A linha cruza o zero no ponto de equilíbrio.</p>
+      <div class="chartbox">${(()=>{ const nmax = Math.ceil(Math.max(d.lotacao, s.A)*1.2), stp = Math.max(1, Math.round(nmax/60));
+        const xs = []; for(let n=0; n<=nmax; n+=stp) xs.push(n);
+        const vals = xs.map(n => regime(comAlunos(p, n, {limitarVagas:"nao"}), p.modelo).resultado);
+        const at = n => regime(comAlunos(p, n, {limitarVagas:"nao"}), p.modelo).resultado;
+        const marks = [];
+        if(Number.isFinite(s.be)) marks.push({x:s.be, y:at(s.be), label:`empata: ${s.be}`, color:"var(--s-out)", dy:18});
+        marks.push({x:Math.round(s.A), y:at(Math.round(s.A)), label:`${p.modoCrescimento==="captacao"?"base":"meta"}: ${num(s.A)} → ${brl(at(Math.round(s.A)))}`, color:"var(--s-res)"});
+        return lineChart({xs, series:[{name:"Lucro", color:"var(--chart-line)", vals}], yfmt:kR, xfmt:x => x+" alunos", xticks:xs.filter((x,i) => i%Math.ceil(xs.length/6)===0),
+          vrefs:[{x:d.lotacao, label:`vagas: ${d.lotacao}`}], marks, aria:"Lucro do mês por número de alunos", tip:(i,x) => `${x} alunos: ${brl(vals[i])}/mês`}); })()}</div>
+      <div class="scroll"><table>
       <tr><th>Alunos</th><th>% das vagas</th><th>Faturamento do studio</th><th>Lucro por mês</th><th>Lucro por ano</th></tr>
       ${pts.map(n=>{ const r=regime(comAlunos(p, n),p.modelo); const tag=[n===s.be?"empata":"",n===Math.round(s.A)?(p.modoCrescimento==="captacao"?"base estável":"meta"):"",n===alunosLucro?"lucro desejado":""].filter(Boolean).join(", ");
         return `<tr${tag?' class="hl"':''}><td>${n}${tag?" · "+tag:""}</td><td>${pct(n/Math.max(1,d.lotacao),0)}</td><td>${brl(r.recT)}</td><td>${sgn(r.resultado)}</td><td>${sgn(r.resultado*12)}</td></tr>`;}).join("")}
@@ -1030,7 +1149,19 @@ function renderResults(){
       <tr><th>Opção</th><th>Paga agora</th><th>Investimento total</th><th>Custo por mês</th><th>Alunos p/ empatar</th><th>Lucro/mês</th><th>Recupera em</th><th>Dinheiro necessário</th><th>VPL</th></tr>
       ${Object.keys(MODELS).map(m=>{ const x=simulate(p,m); return `<tr${m===p.modelo?' class="hl"':''}><td>${MODELS[m]}</td><td>${brl(x.eq.capex)}</td><td>${brl(x.capexTotal)}</td><td>${brl(x.eqOp)}</td><td>${Number.isFinite(x.be)?x.be:"—"}</td><td>${sgn(x.resultado)}</td><td>${x.payback?x.payback+" meses":"não volta"}</td><td>${brl(x.exposicao)}</td><td>${sgn(x.vpl)}</td></tr>`;}).join("")}
     </table></div><p class="note">Financiamento: parcela de ${brl2(equip(p,"cdc").parcela)} por ${p.cdcPrazo} meses, mais manutenção. Leasing: ${p.leasingPrazo>0?`${p.leasingPrazo} meses e ${num(p.leasingVRG,0)}% do preço novo para ficar com os aparelhos`:"aluguel contínuo, com manutenção inclusa"}.</p></div>
-    <div class="card"><h3>Salas: quanto rende cada nível de ocupação</h3><p class="sub">${p.salas} salas a ${brl(s.c.precoMed)}/hora em média.</p><div class="scroll"><table>
+    <div class="card"><h3>Caixa dos sócios em cada forma de conseguir os aparelhos</h3><p class="sub">Mesmas premissas; muda só a forma de pagar os aparelhos.</p>
+      ${(()=>{ const cor = {seminovos:"var(--s-in)", novos:"var(--s-res)", leasing:"var(--s-out)", cdc:"var(--s4)"};
+        const ser = Object.keys(MODELS).map(m => { const x = simulate(p, m); return {name:MODELS[m], color:cor[m], vals:[-x.upfront + x.p.empValor, ...x.rows.map(r => r.cumSoc)]}; });
+        const xs = ser[0].vals.map((_,i) => i);
+        return legendHTML(ser.map(se => [se.name, se.color])) + `<div class="chartbox">` + lineChart({xs, series:ser, yfmt:kR, xfmt:x => x===0?"assinatura":"mês "+x, xticks:xs.filter(x => x%12===0),
+          aria:"Caixa acumulado dos sócios para cada forma de conseguir os aparelhos", tip:(i) => `Mês ${i}: ` + ser.map(se => `${se.name} ${brl(se.vals[i])}`).join(" · ")}) + `</div>`; })()}</div>
+    <div class="card"><h3>Salas: quanto rende cada nível de ocupação</h3><p class="sub">${p.salas} salas a ${brl(s.c.precoMed)}/hora em média. A linha mostra o lucro do negócio para cada ocupação das salas.</p>
+      <div class="chartbox">${(()=>{ const xs = []; for(let o=0; o<=100; o+=5) xs.push(o);
+        const vals = xs.map(o => regime({...p, ocupCow:o}, p.modelo).resultado);
+        return lineChart({xs, series:[{name:"Lucro", color:"var(--chart-line)", vals}], yfmt:kR, xfmt:x => x+"%", xticks:[0,20,40,60,80,100], H:220,
+          marks:[{x:p.ocupCow, y:regime(p, p.modelo).resultado, label:`hoje: ${num(p.ocupCow,0)}% → ${brl(regime(p, p.modelo).resultado)}`, color:"var(--s-res)"}],
+          aria:"Lucro do negócio por ocupação das salas", tip:(i,x) => `${x}% de ocupação: ${brl(vals[i])}/mês`}); })()}</div>
+      <div class="scroll"><table>
       <tr><th>Ocupação</th><th>Horas por sala</th><th>Receita por sala</th><th>Receita total</th><th>Sobra (sem impostos e custos)</th><th>Paga do aluguel</th><th>Lucro do negócio</th></tr>
       ${[...new Set([10,15,20,25,30,45,60,p.ocupCow])].sort((a,b)=>a-b).map(o=>{ const c=cow(p,o,1,d.tC); const r=regime({...p, ocupCow:o},p.modelo); return `<tr${o===p.ocupCow?' class="hl"':''}><td>${num(o,0)}%</td><td>${c.horas} h</td><td>${brl(c.recSala)}</td><td>${brl(c.rec)}</td><td>${brl(c.liq)}</td><td>${pct(c.liq/Math.max(1,p.aluguel),0)}</td><td>${sgn(r.resultado)}</td></tr>`;}).join("")}
       <tr class="sub"><td>Todas em contrato mensal de ${brl(p.aluguelFixoSala)}</td><td>—</td><td>${brl(p.aluguelFixoSala)}</td><td>${brl(p.aluguelFixoSala*p.salas)}</td><td>${brl(p.aluguelFixoSala*p.salas*(1-d.tC))}</td><td>${pct(p.aluguelFixoSala*p.salas*(1-d.tC)/Math.max(1,p.aluguel),0)}</td><td>${sgn(regime({...p, salasFixas:p.salas},p.modelo).resultado)}</td></tr>
@@ -1040,6 +1171,20 @@ function renderResults(){
   const years = {};
   s.rows.forEach(r => { const key = r.k ? "Ano "+(Math.floor((r.k-1)/12)+1) : "Obra"; (years[key] ||= {rec:0,res:0,cumS:0,alunos:0,n:0}); const y=years[key]; y.rec+=r.receita; y.res+=r.soc; y.cumS=r.cumSoc; y.n++; if(r.alunos!=null) y.alunos=r.alunos; });
   const caixa = `
+    <div class="card"><h3>Alunos ao longo do tempo</h3><p class="sub">Alunos ativos em cada mês (contados da assinatura do contrato), comparados com o ponto de equilíbrio e com as vagas do studio.</p>
+      <div class="chartbox">${(()=>{ const xs = [0, ...s.rows.map(r => r.m)], vals = [0, ...s.rows.map(r => r.alunos ?? 0)];
+        const refs = [{y:d.lotacao, label:`vagas: ${d.lotacao}`}]; if(Number.isFinite(s.be)) refs.push({y:s.be, label:`empata: ${s.be}`});
+        const kBE = s.rows.find(r => r.k && r.alunos >= s.be);
+        return lineChart({xs, series:[{name:"Alunos", color:"var(--s-res)", vals}], yfmt:v => num(v), xfmt:x => x===0?"assinatura":"mês "+x, xticks:xs.filter(x => x%12===0),
+          refs, marks: kBE ? [{x:kBE.m, y:kBE.alunos, label:`passa do equilíbrio no mês ${kBE.m}`, color:"var(--s-out)", dy:18}] : [],
+          aria:"Alunos ativos por mês", tip:(i,x) => `Mês ${x}: ${num(vals[i])} alunos`}); })()}</div></div>
+    <div class="card"><h3>Faturamento e custos mês a mês</h3><p class="sub">Meses contados da assinatura do contrato. Quando a linha do faturamento passa a de custos, o mês fecha no azul.</p>
+      ${legendHTML([["Faturamento","var(--s-in)"],["Custos (com impostos)","var(--s-out)"]])}
+      <div class="chartbox">${(()=>{ const xs = s.rows.map(r => r.m), fat = s.rows.map(r => r.receita), cus = s.rows.map(r => r.receita - r.proj);
+        const k1 = s.rows.find(r => r.k && r.proj >= 0);
+        return lineChart({xs, series:[{name:"Faturamento", color:"var(--s-in)", vals:fat}, {name:"Custos", color:"var(--s-out)", vals:cus}], yfmt:kR, xfmt:x => "mês "+x,
+          xticks:xs.filter(x => x===1 || x%12===0), marks: k1 ? [{x:k1.m, y:k1.receita, label:`1º mês no azul: ${k1.m}`, color:"var(--s-res)"}] : [],
+          aria:"Faturamento e custos por mês", tip:(i,x) => `Mês ${x}: faturamento ${brl(fat[i])} · custos ${brl(cus[i])}`}); })()}</div></div>
     <div class="card"><h3>Ano a ano</h3><p class="sub">Contando a partir da assinatura do contrato. "Ano 1" começa na inauguração.</p><div class="scroll"><table>
       <tr><th>Período</th><th>Meses</th><th>Alunos no fim</th><th>Faturamento</th><th>Resultado</th><th>Caixa acumulado</th></tr>
       <tr class="sub"><td>Assinatura</td><td>—</td><td>—</td><td>—</td><td>${sgn(-s.upfront+p.empValor)}</td><td>${sgn(-s.upfront+p.empValor)}</td></tr>
@@ -1117,7 +1262,7 @@ document.getElementById("btnExport").onclick = () => {
 // Cores fixas do tema claro: o PDF sai sempre igual, mesmo com o site em modo escuro.
 const LIGHT = {bg:"#ffffff", surface:"#ffffff", "surface-2":"#f1f0ea", text:"#12263f", muted:"#5b6676", border:"#dedcd3", brand:"#0b2636",
   accent:"#3f7f66", "accent-weak":"#e4efe9", gold:"#a08a5a", ok:"#2e7d4f", "ok-weak":"#e6f3eb", warn:"#9a6a00", "warn-weak":"#fdf4dc",
-  bad:"#b3261e", "bad-weak":"#fbeae8", "chart-line":"#3f7f66", "chart-fill":"rgba(63,127,102,.12)", grid:"#e7e5dd", "s-in":"#2f8c64", "s-res":"#3f6fb5", "s-out":"#c0832a"};
+  bad:"#b3261e", "bad-weak":"#fbeae8", "chart-line":"#3f7f66", "chart-fill":"rgba(63,127,102,.12)", grid:"#e7e5dd", "s-in":"#2f8c64", "s-res":"#3f6fb5", "s-out":"#c0832a", "s4":"#8a5cb8"};
 const PDF_LIB = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
 function loadScript(src){
   return new Promise((ok, fail) => {
