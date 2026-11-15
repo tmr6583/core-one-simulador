@@ -120,6 +120,14 @@ details.grp[open]>summary::after{content:"－"}
 :root[data-theme="dark"] .tabs button.on{background:var(--accent);color:#0b1726}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tabs button.on{background:var(--accent);border-color:var(--accent);color:#0b1726}}
 .tab{display:none}.tab.on{display:block}
+/* Teclado (E3): contorno visível em tudo que recebe foco pelo teclado */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.brandbar :focus-visible{outline-color:#7fbfa3}
+.tabs button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tab:focus-visible{outline:2px dashed var(--accent);outline-offset:4px;border-radius:14px}
+/* Rodapé com a versão (E1) */
+.rodape{color:var(--muted);font-size:12.5px;padding-bottom:28px}
+.rodape p{margin:0;border-top:1px solid var(--border);padding-top:12px}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px}
 .card h3{margin:0 0 2px;font-size:16px}
@@ -200,17 +208,18 @@ tr.sub td{color:var(--muted);font-size:13px}
 <main class="wrap">
   <aside id="inputs"></aside>
   <section>
-    <div class="tabs" id="tabs">
-      <button data-tab="resumo">Resumo</button>
-      <button data-tab="lucro">Lucro do mês</button>
-      <button data-tab="riscos">Riscos e cenários</button>
-      <button data-tab="comparar">Comparar opções</button>
-      <button data-tab="caixa">Caixa ao longo do tempo</button>
-      <button data-tab="como">Como calculamos</button>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Resultados da simulação">
+      <button role="tab" id="aba-resumo" aria-controls="painel-resumo" data-tab="resumo">Resumo</button>
+      <button role="tab" id="aba-lucro" aria-controls="painel-lucro" data-tab="lucro">Lucro do mês</button>
+      <button role="tab" id="aba-riscos" aria-controls="painel-riscos" data-tab="riscos">Riscos e cenários</button>
+      <button role="tab" id="aba-comparar" aria-controls="painel-comparar" data-tab="comparar">Comparar opções</button>
+      <button role="tab" id="aba-caixa" aria-controls="painel-caixa" data-tab="caixa">Caixa ao longo do tempo</button>
+      <button role="tab" id="aba-como" aria-controls="painel-como" data-tab="como">Como calculamos</button>
     </div>
     <div id="results"></div>
   </section>
 </main>
+<footer class="wrap rodape"><p id="rodape"></p></footer>
 
 <script>
 "use strict";
@@ -381,6 +390,15 @@ const VINCULOS = {clt:"CLT ou autônomo (pessoa física)", pj:"MEI ou empresa (P
 const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES, modoCrescimento: GROWTH_MODES, limitarVagas: YESNO, vinculoInstr: VINCULOS};
 const FIELDS = {}; GROUPS.forEach(g => g.f.forEach(f => FIELDS[f[0]] = {l:f[1], u:f[2], v:f[3], st:f[4], h:f[5], e:f[6], g:g.id}));
 const DEFAULTS = {}; Object.keys(FIELDS).forEach(k => DEFAULTS[k] = FIELDS[k].v);
+// Versão (E1). Ao mudar qualquer valor padrão: atualize "padroes" com a data, registre no Contexto.md e no teste do código.
+// Ao publicar uma versão nova do simulador: atualize "app". O código muda sozinho quando algum padrão muda.
+function assinaturaPadroes(){
+  const t = JSON.stringify(Object.keys(DEFAULTS).sort().map(k => [k, DEFAULTS[k]]));
+  let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
+}
+const VERSAO = {app:"1.1.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
+const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
 let P = load();
@@ -700,7 +718,7 @@ function equipFields(p){
 }
 function applyFilter(){
   const el = document.getElementById("inputs"), q = (document.getElementById("search").value||"").trim().toLowerCase();
-  el.querySelectorAll(".seg button").forEach(b => b.classList.toggle("on", b.dataset.modo===UI.modo));
+  el.querySelectorAll(".seg button").forEach(b => { b.classList.toggle("on", b.dataset.modo===UI.modo); b.setAttribute("aria-pressed", b.dataset.modo===UI.modo ? "true" : "false"); });
   el.querySelectorAll("details.grp").forEach(d => {
     let any = false;
     const eqList = equipFields(P);
@@ -961,7 +979,7 @@ let MC = null; // último resultado da simulação de risco + premissas usadas
 const CEN_KEY = STORE_KEY + "-cenarios";
 function lerCenarios(){ try{ return JSON.parse(localStorage.getItem(CEN_KEY) || "[]"); }catch(e){ return []; } }
 function gravarCenarios(l){ try{ localStorage.setItem(CEN_KEY, JSON.stringify(l)); return true; }catch(e){ return false; } }
-function cenarioArquivo(nome, p){ return {app:"Core One — Simulador", versao:1, nome: nome || "Cenário sem nome", data: new Date().toISOString(), premissas: {...p}}; }
+function cenarioArquivo(nome, p){ return {app:"Core One — Simulador", versao:1, simulador: VERSAO.app, padroes: VERSAO.padroes, nome: nome || "Cenário sem nome", data: new Date().toISOString(), premissas: {...p}}; }
 // Aceita o formato novo ({nome, premissas}) e o antigo (premissas soltas)
 function lerArquivoCenario(o){
   if(o && typeof o === "object" && o.premissas && typeof o.premissas === "object") return {nome: o.nome || "Cenário importado", data: o.data || null, premissas: sanitize(o.premissas)};
@@ -1415,9 +1433,9 @@ function renderResults(){
     </ul></div>`;
 
   LAST = {p:{...p}, s, verdictHTML: document.getElementById("verdict").innerHTML, bigsHTML: document.getElementById("bigs").innerHTML, resumo, lucro, riscos, comparar, caixa, como};
-  document.getElementById("results").innerHTML =
-    `<div class="tab" data-tab="resumo">${resumo}</div><div class="tab" data-tab="lucro">${lucro}</div><div class="tab" data-tab="riscos">${riscos}</div>
-     <div class="tab" data-tab="comparar">${comparar}</div><div class="tab" data-tab="caixa">${caixa}</div><div class="tab" data-tab="como">${como}</div>`;
+  const painel = {resumo, lucro, riscos, comparar, caixa, como};
+  document.getElementById("results").innerHTML = ABAS.map(t =>
+    `<div class="tab" data-tab="${t}" role="tabpanel" id="painel-${t}" aria-labelledby="aba-${t}" tabindex="0">${painel[t]}</div>`).join("");
   showTab(UI.tab);
   bindChart(ch, s);
   const bmc = document.getElementById("btnMC");
@@ -1426,12 +1444,30 @@ function renderResults(){
     setTimeout(() => { MC = {key: JSON.stringify(P), res: monteCarlo(P)}; renderResults(); }, 30);
   });
 }
-function showTab(t){
+// Abas (E3): papéis ARIA, só a aba ativa entra na ordem do Tab; setas esquerda/direita (com volta), Home e End trocam de aba
+const ABAS = ["resumo","lucro","riscos","comparar","caixa","como"];
+function proximaAba(atual, tecla){
+  const i = Math.max(0, ABAS.indexOf(atual)), n = ABAS.length;
+  if(tecla==="ArrowRight") return ABAS[(i+1)%n];
+  if(tecla==="ArrowLeft") return ABAS[(i-1+n)%n];
+  if(tecla==="Home") return ABAS[0];
+  if(tecla==="End") return ABAS[n-1];
+  return null;
+}
+function showTab(t, foco){
+  if(!ABAS.includes(t)) t = ABAS[0];
   UI.tab = t; saveUI();
-  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab===t));
+  document.querySelectorAll("#tabs [role=tab]").forEach(b => { const on = b.dataset.tab===t;
+    b.classList.toggle("on", on); b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1;
+    if(on && foco) b.focus(); });
   document.querySelectorAll("#results .tab").forEach(d => d.classList.toggle("on", d.dataset.tab===t));
 }
-document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+document.querySelectorAll("#tabs [role=tab]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+document.getElementById("tabs").addEventListener("keydown", e => {
+  const b = e.target && e.target.closest ? e.target.closest("[role=tab]") : null; if(!b) return;
+  const t = proximaAba(b.dataset.tab, e.key); if(!t) return;
+  e.preventDefault(); showTab(t, true);
+});
 
 function rerender(){ save(); renderInputs(); renderResults(); }
 // Enquanto a pessoa digita, recalcula só depois de uma pausa curta (a tela tem muitos cálculos)
@@ -1504,8 +1540,8 @@ function svgToPng(svg){
 async function svgsToImages(html){
   for(const sv of (html.match(/<svg[\s\S]*?<\/svg>/g) || [])){
     // largura/altura explícitas: a quebra de página precisa saber a altura antes de a imagem carregar
-    const im = await svgToPng(sv);
-    html = html.replace(sv, `<img src="${im.url}" width="${im.w}" height="${im.h}" style="width:100%;height:auto;aspect-ratio:${im.w}/${im.h};display:block">`);
+    const im = await svgToPng(sv), alt = (/aria-label="([^"]*)"/.exec(sv) || [, "Gráfico"])[1];
+    html = html.replace(sv, `<img src="${im.url}" alt="${alt}" width="${im.w}" height="${im.h}" style="width:100%;height:auto;aspect-ratio:${im.w}/${im.h};display:block">`);
   }
   return html;
 }
@@ -1568,24 +1604,29 @@ function repSection(title, body){ return `<div class="rep">${REP_STYLE}${title?`
 // Monta as 7 seções do relatório (usadas no PDF e na versão para impressão)
 async function buildSections(){
   if(!LAST) throw new Error("Sem simulação calculada");
+  // E2: o PDF sempre traz a simulação de risco; se ainda não rodou com estas premissas, roda agora
+  if(!(MC && MC.key === JSON.stringify(P))){
+    await new Promise(r => setTimeout(r, 30)); // deixa a tela mostrar "Gerando PDF…" antes do cálculo
+    MC = {key: JSON.stringify(P), res: monteCarlo(P)}; renderResults();
+  }
   const L = LAST, p = L.p, agora = new Date();
   const quando = agora.toLocaleDateString("pt-BR") + " às " + agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
   const nAlt = Object.keys(DEFAULTS).filter(k => p[k]!==DEFAULTS[k]).length;
   const capa = `<div class="cover"><img src="${document.querySelector(".logo").src}" alt="Core One"><div><h1>Core One · Simulação de viabilidade</h1>
     <p>Studio de movimento + salas de atendimento · Rua Real Grandeza, 190 — Botafogo, Rio de Janeiro</p>
-    ${UI.cenario ? `<p>Cenário: <b>${escHtml(UI.cenario)}</b></p>` : ""}<p>Gerado em ${quando} · ${nAlt ? nAlt + " premissa(s) diferente(s) do padrão (destacadas na seção 1)" : "premissas padrão"} · aparelhos: ${MODELS[p.modelo]}</p></div></div>
+    ${UI.cenario ? `<p>Cenário: <b>${escHtml(UI.cenario)}</b></p>` : ""}<p>Gerado em ${quando} · ${nAlt ? nAlt + " premissa(s) diferente(s) do padrão (destacadas na seção 1)" : "premissas padrão"} · aparelhos: ${MODELS[p.modelo]}</p><p>${textoVersao()}</p></div></div>
     <p class="note">Valores estimados a partir das premissas da seção 1. Não substituem orçamento de obra, parecer contábil ou validação da Vigilância Sanitária.</p>`;
   const tirarBotoes = h => h.replace(/<button[\s\S]*?<\/button>/g, "");
-  const resumo = (await svgsToImages(L.resumo)).replace(" Passe o mouse para ver cada mês.", "");
+  const resumo = tirarBotoes(await svgsToImages(L.resumo)).replace(" Passe o mouse para ver cada mês.", "");
   const caixaHtml = L.caixa.replace(/<details>/g,"<div>").replace(/<\/details>/g,"</div>").replace(/<summary[^>]*>[\s\S]*?<\/summary>/, "<h3>Mês a mês</h3>");
   const secoes = [
     repSection("", capa + `<h2 class="sec">1. Premissas</h2>` + premissasCompactas(p, L.s)),
     repSection("2. Resultado", L.verdictHTML + `<div class="bigs">${L.bigsHTML}</div>` + resumo.replace(/^\s*/, "")),
-    repSection("3. Lucro do mês", await svgsToImages(L.lucro)),
+    repSection("3. Lucro do mês", tirarBotoes(await svgsToImages(L.lucro))),
     repSection("4. Riscos e cenários", tirarBotoes(await svgsToImages(L.riscos))),
-    repSection("5. Comparar opções", await svgsToImages(L.comparar)),
-    repSection("6. Caixa ao longo do tempo", await svgsToImages(caixaHtml)),
-    repSection("7. Como calculamos", L.como),
+    repSection("5. Comparar opções", tirarBotoes(await svgsToImages(L.comparar))),
+    repSection("6. Caixa ao longo do tempo", tirarBotoes(await svgsToImages(caixaHtml))),
+    repSection("7. Como calculamos", tirarBotoes(L.como)),
   ];
   return {secoes, agora, quando};
 }
@@ -1604,7 +1645,7 @@ async function buildPdf(){
   // devolvido dentro de um objeto: o "worker" do html2pdf é thenable e seria consumido pelo await
   return {worker: w.get("pdf").then(pdf => {
     const n = pdf.internal.getNumberOfPages(), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
-    for(let i=1;i<=n;i++){ pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(110); pdf.text(`Core One · Simulação de ${quando} · página ${i} de ${n}`, W/2, H-6, {align:"center"}); }
+    for(let i=1;i<=n;i++){ pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(110); pdf.text(`Core One · Simulação de ${quando} · Simulador ${VERSAO.app} · padrões de ${VERSAO.padroes} · página ${i} de ${n}`, W/2, H-6, {align:"center"}); }
   })};
 }
 document.getElementById("btnPdf").onclick = async () => {
@@ -1647,6 +1688,7 @@ document.getElementById("fileImport").onchange = e => {
   e.target.value = "";
 };
 
+document.getElementById("rodape").textContent = `Core One · ${textoVersao()} · Estimativas: não substituem orçamento de obra, parecer contábil ou validação da Vigilância Sanitária.`;
 renderInputs(); renderResults();
 </script>
 </body>
