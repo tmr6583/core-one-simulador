@@ -432,7 +432,7 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.2.1", padroes:"15-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.3.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
@@ -844,7 +844,7 @@ function verdict(p, s){
   const d = s.d, beOk = Number.isFinite(s.be) && s.be <= d.lotacao;
   if(!beOk || s.resultado<=0) return ["bad","✕","Com estas premissas, o negócio não se sustenta.",
     !Number.isFinite(s.be) ? "Nenhum número de alunos cobre os custos."
-    : s.be > d.lotacao ? `Precisaria de ${s.be} alunos para empatar, mas só cabem ${d.lotacao}.`
+    : s.be > d.lotacao ? `Precisaria de ${s.be} alunos para empatar, mas só cabem ${d.lotacao}.${s.resultado>0?` O lucro de ${brl(s.resultado)}/mês da simulação conta alunos que não cabem no studio.`:""}`
     : s.A < s.be ? `Com ${num(s.A)} alunos o resultado é de ${brl(s.resultado)}/mês. Para empatar são precisos ${s.be} alunos.`
     : `Com ${num(s.A)} alunos o resultado é de ${brl(s.resultado)}/mês, embora ${s.be} alunos já empatem: com mais faturamento o Simples fica mais caro (faixa ou Anexo V pelo Fator R).`];
   if(s.payback===null) return ["bad","✕","Dá lucro quando estiver cheio, mas o investimento não volta.", `Com lucro de ${brl(s.resultado)}/mês e ${num(s.A)} alunos, os ${brl(s.exposicao)} que precisam ser colocados não voltam em ${anosTxt(s.H)}.`];
@@ -862,14 +862,16 @@ function alerts(p, s){
   if(areaTreino > p.areaBrutaTerreo) a.push(["bad",`A área de treino (${num(areaTreino)} m²) é maior que o térreo inteiro (${p.areaBrutaTerreo} m²).`]);
   else if(areaTreino > p.areaBrutaTerreo*0.8) a.push(["warn",`A área de treino (${num(areaTreino)} m²) ocupa ${pct(areaTreino/p.areaBrutaTerreo,0)} do térreo. Sobra pouco para recepção, escada e banheiros.`]);
   const area = p.salaLarg*p.salaComp, menor = Math.min(p.salaLarg,p.salaComp);
-  if(area < 7.5 || menor < 2.2) a.push(["warn",`Cada sala tem ${num(area,2)} m². A norma da Anvisa (RDC 50) pede 7,5 m² e lado mínimo de 2,2 m para consultório. O projeto prevê salas só de terapia; depende de aceite da Vigilância Sanitária.`]);
+  if(p.salas>0 && (area < 7.5 || menor < 2.2)) a.push(["warn",`Cada sala tem ${num(area,2)} m². A norma da Anvisa (RDC 50) pede 7,5 m² e lado mínimo de 2,2 m para consultório. O projeto prevê salas só de terapia; depende de aceite da Vigilância Sanitária.`]);
   if(p.salas*area > p.areaBruta2*0.7) a.push(["warn",`As salas ocupam ${pct(p.salas*area/p.areaBruta2,0)} do 2º andar. Sobra pouco para escada, corredor e espera.`]);
   const alvoBruto = alunosRegime(p, d, false);
   if(alvoBruto > d.lotacao) a.push([p.limitarVagas==="sim"?"warn":"bad", p.modoCrescimento==="captacao"
     ? `Com ${num(p.novosMes)} alunos novos por mês e ${num(p.churn,1)}% de cancelamento, a base chegaria a ${num(alvoBruto)} alunos, mais do que cabe no studio (${d.lotacao}).${p.limitarVagas==="sim"?" A simulação para nas vagas.":""}`
     : `A meta de ${num(p.alunosAlvo)} alunos é maior do que cabe no studio (${d.lotacao}).${p.limitarVagas==="sim"?" A simulação limita às vagas.":" Reduza a meta ou aumente horário/área."}`]);
   if(p.modoCrescimento==="captacao" && p.churn<=0) a.push(["warn","No modo por captação, informe a taxa de cancelamentos (grupo Planos). Sem ela, a base de alunos só cresce."]);
-  if(p.modoCrescimento==="captacao" && Number.isFinite(s.be) && s.A < s.be) a.push(["bad",`Com ${num(p.novosMes)} alunos novos por mês e ${num(p.churn,1)}% de cancelamento, a base se estabiliza em ${num(s.A)} alunos, abaixo dos ${s.be} necessários para empatar. Seriam precisos ~${num(Math.ceil(s.be*p.churn/100))} novos por mês.`]);
+  if(p.modoCrescimento==="captacao" && Number.isFinite(s.be) && s.A < s.be) a.push(["bad", p.churn>0
+    ? `Com ${num(p.novosMes)} alunos novos por mês e ${num(p.churn,1)}% de cancelamento, a base se estabiliza em ${num(s.A)} alunos, abaixo dos ${s.be} necessários para empatar. Seriam precisos ~${num(Math.ceil(s.be*p.churn/100))} novos por mês.`
+    : `Com ${num(p.novosMes)} alunos novos por mês e sem cancelamentos, a base chega a ${num(s.A)} alunos no fim do período, abaixo dos ${s.be} necessários para empatar.`]);
   if(p.modoSimples!=="manual"){
     if(d.anexo==="V") a.push(["bad",`Fator R de ${pct(d.fatorR,0)}: a folha (${brl(d.folhaR)}/mês) fica abaixo de 28% do faturamento, e o Simples passa para o Anexo V (${pct(d.tSimp)} em vez de ~${pct(simplesEfetivo(12*s.receitaTotal,"III"))}). Instrutores como CLT/autônomo ou pró-labore aumentam a folha.`]);
     else if(d.fatorR < 0.32) a.push(["warn",`Fator R de ${pct(d.fatorR,0)}, perto do limite de 28%. Se o faturamento crescer sem aumentar a folha, o Simples passa para o Anexo V (bem mais caro).`]);
@@ -912,7 +914,7 @@ function cashChart(s){
   tv.forEach(v => { svg += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/><text x="${L-8}" y="${y(v)+4}" font-size="11" text-anchor="end" fill="var(--muted)">R$ ${kfmt(v)}</text>`; });
   for(let i=0;i<vals.length;i+=12){ const anc = i===0?"start":(i>=vals.length-1?"end":"middle"); svg += `<text x="${x(i)}" y="${Hh-10}" font-size="11" text-anchor="${anc}" fill="var(--muted)">${i===0?"assinatura":"mês "+i}</text>`; }
   svg += `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-width="1.2"/>`;
-  if(cap !== null) svg += `<line x1="${L}" x2="${W-R}" y1="${y(cap)}" y2="${y(cap)}" stroke="var(--bad)" stroke-dasharray="6 4"/><text x="${W-R-4}" y="${y(cap)-6}" font-size="12" text-anchor="end" fill="var(--text)">capital dos sócios: ${brl(-cap)}</text>`;
+  if(cap !== null) svg += `<line x1="${L}" x2="${W-R}" y1="${y(cap)}" y2="${y(cap)}" stroke="var(--bad)" stroke-dasharray="6 4"/><text x="${W-R-4}" y="${y(cap)-6}" font-size="12" text-anchor="end" fill="var(--text)">${s.p.aporteInv>0?"capital + aporte do investidor":"capital dos sócios"}: ${brl(-cap)}</text>`;
   svg += `<polygon points="${x(0)},${y(0)} ${pts.join(" ")} ${x(vals.length-1)},${y(0)}" fill="var(--chart-fill)"/>`;
   svg += `<polyline points="${pts.join(" ")}" fill="none" stroke="var(--chart-line)" stroke-width="2" stroke-linejoin="round"/>`;
   // rótulos dos marcos: à direita do ponto, ou à esquerda quando o ponto está perto da borda direita
@@ -1397,9 +1399,9 @@ function investidorHTML(p, s, iv, rs, rem, cen){
         <tr><td>Investidor (${pct(iv.part,0)})</td><td>${brl(mt.aportado)}</td><td>${brl(mt.recebido)}</td><td>${x(mt.moic)}</td><td>${pct(mt.tir,1)}</td><td>${pb(mt.payback)}</td></tr>
         <tr><td>Sócios operadores (${pct(1-iv.part,0)})</td><td>${brl(ms.aportado)}</td><td>${brl(ms.recebido)}</td><td>${x(ms.moic)}</td><td>${pct(ms.tir,1)}</td><td>${pb(ms.payback)}</td></tr></table></div>
       <p class="note">IR do investidor (a confirmar com o contador): lucros distribuídos isentos até R$ 50 mil por mês; acima, 10% retidos (Lei 15.270/2025); 15% sobre o ganho na venda. Sócios operadores sem IR na tabela.</p></div>
-    <div class="card"><h3>Venda do negócio</h3><p class="sub">Se o negócio for vendido ao fim de cada ano, por ${num(iv.multEx,1)} vezes o lucro dos 12 meses anteriores${iv.exemploMult?' <small class="ex">exemplo: informe "Valor de venda do negócio"</small>':""}. Antes da venda, o caixa é distribuído.</p>
+    <div class="card"><h3>Venda do negócio</h3><p class="sub">Se o negócio for vendido ao fim de cada ano, a partir do 2º, por ${num(iv.multEx,1)} vezes o lucro dos 12 meses anteriores${iv.exemploMult?' <small class="ex">exemplo: informe "Valor de venda do negócio"</small>':""}. Antes da venda, o caixa é distribuído.</p>
       <div class="scroll"><table><tr><th>Venda no fim do ano</th><th>Lucro dos 12 meses</th><th>Valor de venda</th><th>Parte do investidor</th><th>Ganho de capital (depois de 15% de IR)</th><th>TIR do investidor</th><th>Múltiplo</th></tr>
-        ${iv.saidas.map(v => `<tr><td>Ano ${v.ano} (mês ${v.T})</td><td>${sgn(v.lucro12)}</td><td>${brl(v.venda)}</td><td>${brl(v.vendaInv)}</td><td>${sgn(v.ganho)}</td><td>${pct(v.tir,1)}</td><td>${x(v.moic)}</td></tr>`).join("")}</table></div>
+        ${iv.saidas.map(v => `<tr><td>Ano ${v.ano} (mês ${v.T})</td><td>${sgn(v.lucro12)}</td><td>${brl(v.venda)}</td><td>${brl(v.vendaInv)}</td><td>${sgn(v.ganho)}</td><td>${pct(v.tir,1)}</td><td>${x(v.moic)}</td></tr>`).join("") || `<tr><td colspan="7">O período analisado (${num(s.H)} meses) não chega ao fim do 2º ano.</td></tr>`}</table></div>
       <p class="note">Ganho de capital = parte do investidor na venda − o que ele aportou. A TIR e o múltiplo somam os lucros recebidos até a venda.</p></div>
     <div class="card"><h3>Se precisar fechar</h3><p class="sub">Resultado de sócios e investidor juntos se o negócio fechar no mês indicado: caixa acumulado até lá, mais a revenda dos aparelhos (${num(p.revendaAparelhos)}% do valor, caindo com o uso) e a caução, menos a multa do aluguel e as dívidas em aberto. A obra (${brl(s.d.capexObra)}) fica no imóvel e é perdida.</p>
       <div class="scroll"><table><tr><th>Fecha no mês</th><th>Caixa acumulado</th><th>+ Revenda dos aparelhos</th><th>+ Caução</th><th>− Multa do aluguel</th><th>− Dívidas</th><th>= Resultado</th></tr>
@@ -1431,6 +1433,9 @@ function renderResults(){
   const depObra = p.prazoContrato>0 ? s.d.capexObra/p.prazoContrato : 0;
   const depAparelhos = p.vidaAparelhos>0 ? valAparelhos/(p.vidaAparelhos*12) : 0;
   const deprec = depObra + depAparelhos;
+  // CDC: a parcela já está no lucro de caixa; a parte que paga o principal não é despesa (média do financiamento)
+  const amortCdc = p.modelo==="cdc" && p.cdcPrazo>0 ? (p.novosValor - Math.min(p.cdcEntrada, p.novosValor))/p.cdcPrazo : 0;
+  const lucroContabil = s.resultado + amortCdc - deprec;
   const parcEmp = p.empValor>0 ? pmt(p.empValor,p.empTaxa/100,p.empPrazo) : 0;
   const beFrac = Number.isFinite(s.be) ? s.be/Math.max(1,d.lotacao) : Infinity;
 
@@ -1486,7 +1491,7 @@ function renderResults(){
       return `
     <div class="card"><h3>Alunos e faturamento por ano</h3><p class="sub">Resumo dos ${anosTxt(s.H)} analisados, ano a ano a partir da assinatura do contrato${p.mesesObra>0?` (o ano 1 inclui ${num(p.mesesObra)} ${p.mesesObra===1?"mês":"meses"} de obra, sem faturamento)`:""}.</p>
       <div class="scroll"><table class="anual">
-        <tr><th>Ano</th><th>Alunos (média)</th><th>Alunos no fim</th><th>Studio</th><th>Salas</th><th>Faturamento total</th><th>Por mês aberto</th></tr>
+        <tr><th>Ano do contrato</th><th>Alunos (média)</th><th>Alunos no fim</th><th>Studio</th><th>Salas</th><th>Faturamento total</th><th>Por mês aberto</th></tr>
         ${ra.anos.map(y => `<tr><td>Ano ${y.ano}${y.meses<12?` <small>(meses ${y.de}–${y.ate})</small>`:""}</td><td>${num(y.alunosMedia)}</td><td>${num(y.alunosFim)}</td><td>${brl(y.studio)}</td><td>${brl(y.salas)}</td><td>${brl(y.total)}</td><td>${porMes(y)}</td></tr>`).join("")}
         <tr class="total"><td>Total</td><td></td><td>${num(ra.total.alunosFim)}</td><td>${brl(ra.total.studio)}</td><td>${brl(ra.total.salas)}</td><td>${brl(ra.total.total)}</td><td>${porMes(ra.total)}</td></tr>
       </table></div>
@@ -1517,7 +1522,7 @@ function renderResults(){
         ["Lucro por mês", sgn(s.resultado), "Sobra de caixa depois de tudo (≈ EBITDA)"],
         ["Margem de lucro", pct(s.resultado/tot), "De cada R$ 100 faturados, quanto sobra"],
         ["Lucro por ano", sgn(s.resultado*12)],
-        ["Lucro contábil por mês", sgn(s.resultado-deprec), `Descontando o desgaste: obra ${brl(depObra)} + aparelhos ${brl(depAparelhos)} por mês`],
+        ["Lucro contábil por mês", sgn(lucroContabil), `Descontando o desgaste: obra ${brl(depObra)} + aparelhos ${brl(depAparelhos)} por mês${amortCdc?`; somando de volta ${brl(amortCdc)} da parcela que paga o principal do financiamento (média)`:""}`],
         ...(s.resultadoPos!==null?[["Lucro por mês depois de quitar os aparelhos", sgn(s.resultadoPos), `A partir do mês ${s.kPos} de funcionamento`]]:[]),
         ...(parcEmp?[["Sobra depois da parcela do empréstimo", sgn(s.resultado-parcEmp)]]:[]),
         ["Lucro com o studio lotado", sgn(regime(comAlunos(p, d.lotacao), p.modelo).resultado), `${d.lotacao} alunos`],
@@ -1525,7 +1530,7 @@ function renderResults(){
       ])}
       ${indBox("Ponto de equilíbrio e folga", [
         ["Alunos para empatar", Number.isFinite(s.be)?s.be:"—", "Abaixo disso há prejuízo"],
-        ["Faturamento do studio para empatar", Number.isFinite(s.be)?brl(s.be*d.ticket)+"/mês":"—"],
+        ["Faturamento do studio para empatar", Number.isFinite(s.be)?brl(s.be*d.ticket + s.be*p.churn/100*p.matricula + p.recExtra)+"/mês":"—", "Mensalidades, matrículas e outras receitas do studio"],
         ["Folga acima do equilíbrio", Number.isFinite(s.be)&&s.A>0?pct((s.A-s.be)/s.A):"—", "Quanto os alunos podem cair antes do prejuízo"],
         ["Quanto cada aluno deixa por mês", brl2(s.margAluno), "Mensalidade menos impostos e custos do aluno"],
         ["Ocupação das salas que paga o aluguel", (()=>{ const un=s.c.precoMed*(1-d.tC-p.comissaoPlat/100)-p.custoVarHora, cap=s.c.sh*d.horasSala, falta=p.aluguel-s.c.recFixo*(1-d.tC); return falta<=0?"0%":(un>0&&cap>0?pct(falta/(un*cap),0):"—"); })()],
@@ -1595,7 +1600,8 @@ function renderResults(){
       <tr class="total"><td>Total de custos</td><td>${brl(-totCustos)}</td><td>${pct(totCustos/tot)}</td></tr>
       <tr class="total"><td>Lucro do mês (caixa)</td><td>${sgn(s.resultado)}</td><td>${pct(s.resultado/tot)}</td></tr>
       ${row(`(−) Desgaste do investimento: obra ${brl(depObra)} (${num(p.prazoContrato)} meses) + aparelhos ${brl(depAparelhos)} (${num(p.vidaAparelhos)} anos)`, -deprec, "sub")}
-      <tr class="total"><td>Lucro contábil</td><td>${sgn(s.resultado-deprec)}</td><td>${pct((s.resultado-deprec)/tot)}</td></tr>
+      ${amortCdc?row("(+) Parte da parcela do financiamento que paga o principal (média; não é despesa)", amortCdc, "sub"):""}
+      <tr class="total"><td>Lucro contábil</td><td>${sgn(lucroContabil)}</td><td>${pct(lucroContabil/tot)}</td></tr>
       ${s.resultadoPos!==null?`<tr class="sub"><td>Lucro do mês depois de quitar os aparelhos (a partir do mês ${s.kPos} de funcionamento)</td><td>${sgn(s.resultadoPos)}</td><td>${pct(s.resultadoPos/tot)}</td></tr>`:""}
       ${parcEmp?`<tr class="sub"><td>(−) Parcela do empréstimo</td><td>${brl(-parcEmp)}</td><td></td></tr><tr class="total"><td>Sobra depois do empréstimo</td><td>${sgn(s.resultado-parcEmp)}</td><td></td></tr>`:""}
     </table></div><p class="note">Imposto de renda fora do Simples não está incluído.</p></div>
@@ -1606,7 +1612,7 @@ function renderResults(){
       <tr><td>= O que os alunos precisam cobrir</td><td>${brl2(s.fixoLiq)}</td></tr>
       <tr><td>÷ Quanto cada aluno deixa por mês</td><td>${brl2(s.margAluno)}</td></tr>
       <tr><td>= Conta aproximada (com o Simples de ${pct(d.tSimp)} do regime)</td><td>${s.margAluno>0?num(s.fixoLiq/s.margAluno,1):"—"}</td></tr>
-      <tr class="total"><td>= Alunos para empatar <small>(conta exata: o Simples é recalculado para o faturamento de cada nº de alunos, que é menor que o do regime)</small></td><td>${Number.isFinite(s.be)?s.be:"—"}</td></tr>
+      <tr class="total"><td>= Alunos para empatar <small>(conta exata: testa cada nº de alunos e recalcula o Simples para o faturamento de cada um)</small></td><td>${Number.isFinite(s.be)?s.be:"—"}</td></tr>
     </table></div></div>`;
 
   // ----- Aba Riscos e cenários -----
@@ -1627,10 +1633,10 @@ function renderResults(){
       <tr><td>Lucro de ${brl(p.lucroAlvo)} por mês</td><td>${fmtA(mi.lucro.alunos)}</td><td>${fmtP(mi.lucro.preco)}</td><td>${fmtO(mi.lucro.ocup)}</td></tr>
       <tr><td>Recuperar o investimento em até ${num(p.paybackAlvo)} meses</td><td>${fmtA(mi.payback.alunos)}</td><td>${fmtP(mi.payback.preco)}</td><td>${fmtO(mi.payback.ocup)}</td></tr>
       <tr class="sub"><td>Hoje</td><td>${num(s.A)} alunos</td><td>preços atuais</td><td>${num(p.ocupCow,0)}%</td></tr>
-    </table></div><p class="note">Valores abaixo dos atuais significam folga: o objetivo já é atingido e a alavanca ainda pode piorar até ali. Preço: variação aplicada aos três planos (entre parênteses, como ficaria o plano 2x). "Não alcança": nem com 3.000 alunos, preços 3× maiores ou 100% de ocupação.</p></div>
-    <div class="card"><h3>Cenários ruim, esperado e bom</h3><p class="sub">Ruim: ${p.varAlunos}% menos alunos, ${p.varOcup}% menos ocupação das salas, preços ${p.varPrecos}% menores, custos ${p.varCustos}% maiores e ${p.varRampa}% mais tempo para encher. Bom: o contrário.</p><div class="scroll"><table>
+    </table></div><p class="note">Valores abaixo dos atuais significam folga: o objetivo já é atingido e a alavanca ainda pode piorar até ali. Preço: variação aplicada aos três planos (entre parênteses, como ficaria o plano 2x). "Não alcança": nem com o máximo testado (20.000 alunos para o lucro, 3.000 para o prazo), preços 3× maiores ou 100% de ocupação.</p></div>
+    <div class="card"><h3>Cenários ruim, esperado e bom</h3><p class="sub">Ruim: ${num(p.varAlunos,1)}% menos alunos, ${num(p.varOcup,1)}% menos ocupação das salas, preços ${num(p.varPrecos,1)}% menores, custos ${num(p.varCustos,1)}% maiores e ${num(p.varRampa,1)}% mais tempo para encher. Bom: o contrário.</p><div class="scroll"><table>
       <tr><th></th>${sc.map(([n])=>`<th>${n}</th>`).join("")}</tr>
-      ${scRow("Alunos", x=>x.A)}
+      ${scRow("Alunos", x=>num(x.A))}
       ${scRow("Faturamento por mês", x=>brl(x.receitaTotal))}
       ${scRow("Lucro por mês", x=>sgn(x.resultado))}
       ${scRow("Alunos para empatar", x=>Number.isFinite(x.be)?`${x.be} (${pct(x.be/Math.max(1,x.d.lotacao),0)})`:"—")}
@@ -1675,7 +1681,7 @@ function renderResults(){
         return alunosF.map((n,i)=>`<tr><td>${n} (${pct(n/Math.max(1,d.lotacao),0)})</td>${M[i].map(v=>`<td style="${heatStyle(v,mx)}">${sgn(v)}</td>`).join("")}</tr>`).join(""); })()}
     </table></div><p class="note">Cores: verde = lucro, vermelho = prejuízo; quanto mais forte, maior o valor.</p></div>
     <div class="card"><h3>Lucro por número de alunos</h3><p class="sub">Lucro do mês (studio maduro) para cada número de alunos. A linha cruza o zero no ponto de equilíbrio.</p>
-      <div class="chartbox">${(()=>{ const nmax = Math.ceil(Math.max(d.lotacao, s.A)*1.2), stp = Math.max(1, Math.round(nmax/60));
+      <div class="chartbox">${(()=>{ const nmax = Math.ceil(Math.max(d.lotacao, s.A, Number.isFinite(s.be) ? s.be : 0)*1.2), stp = Math.max(1, Math.round(nmax/60));
         const xs = []; for(let n=0; n<=nmax; n+=stp) xs.push(n);
         const vals = xs.map(n => regime(comAlunos(p, n, {limitarVagas:"nao"}), p.modelo).resultado);
         const at = n => regime(comAlunos(p, n, {limitarVagas:"nao"}), p.modelo).resultado;
@@ -1695,7 +1701,7 @@ function renderResults(){
     <div class="card"><h3>Aparelhos: comprar, alugar ou financiar?</h3><p class="sub">Mesmas premissas para as quatro opções. A linha destacada é a escolhida.</p><div class="scroll"><table>
       <tr><th>Opção</th><th>Paga agora</th><th>Investimento total</th><th>Custo por mês</th><th>Alunos p/ empatar</th><th>Lucro/mês</th><th>Recupera em</th><th>Dinheiro necessário</th><th>VPL</th></tr>
       ${Object.keys(MODELS).map(m=>{ const x=simulate(p,m); return `<tr${m===p.modelo?' class="hl"':''}><td>${MODELS[m]}</td><td>${brl(x.eq.capex)}</td><td>${brl(x.capexTotal)}</td><td>${brl(x.eqOp)}</td><td>${Number.isFinite(x.be)?x.be:"—"}</td><td>${sgn(x.resultado)}</td><td>${x.payback?x.payback+" meses":"não volta"}</td><td>${brl(x.exposicao)}</td><td>${sgn(x.vpl)}</td></tr>`;}).join("")}
-    </table></div><p class="note">Financiamento: parcela de ${brl2(equip(p,"cdc").parcela)} por ${p.cdcPrazo} meses, mais manutenção. Leasing: ${p.leasingPrazo>0?`${p.leasingPrazo} meses e ${num(p.leasingVRG,0)}% do preço novo para ficar com os aparelhos`:"aluguel contínuo, com manutenção inclusa"}.</p></div>
+    </table></div><p class="note">Financiamento: ${p.cdcPrazo>0 && equip(p,"cdc").parcela>0 ? `parcela de ${brl2(equip(p,"cdc").parcela)} por ${num(p.cdcPrazo)} meses, mais manutenção` : "sem parcelas (equivale à compra à vista), mais manutenção"}. Leasing: ${p.leasingPrazo>0?`${p.leasingPrazo} meses e ${num(p.leasingVRG,0)}% do preço novo para ficar com os aparelhos`:"aluguel contínuo, com manutenção inclusa"}.</p></div>
     <div class="card"><h3>Caixa dos sócios em cada forma de conseguir os aparelhos</h3><p class="sub">Mesmas premissas; muda só a forma de pagar os aparelhos.</p>
       ${(()=>{ const cor = {seminovos:"var(--s-in)", novos:"var(--s-res)", leasing:"var(--s-out)", cdc:"var(--s4)"};
         const ser = Object.keys(MODELS).map(m => { const x = simulate(p, m); return {name:MODELS[m], color:cor[m], vals:[-x.upfront + x.p.empValor, ...x.rows.map(r => r.cumSoc)]}; });
@@ -1732,11 +1738,13 @@ function renderResults(){
         return lineChart({xs, series:[{name:"Faturamento", color:"var(--s-in)", vals:fat}, {name:"Custos", color:"var(--s-out)", vals:cus}], yfmt:kR, xfmt:x => "mês "+x,
           xticks:xs.filter(x => x===1 || x%12===0), marks: k1 ? [{x:k1.m, y:k1.receita, label:`1º mês no azul: ${k1.m}`, color:"var(--s-res)"}] : [],
           aria:"Faturamento e custos por mês", tip:(i,x) => `Mês ${x}: faturamento ${brl(fat[i])} · custos ${brl(cus[i])}`}); })()}</div></div>
-    <div class="card"><h3>Ano a ano</h3><p class="sub">Contando a partir da assinatura do contrato. "Ano 1" começa na inauguração.</p><div class="scroll"><table>
+    <div class="card"><h3>Ano a ano</h3><p class="sub">Obra e anos de funcionamento: "Ano 1" começa na inauguração. (Na tabela "Alunos e faturamento por ano", da aba Resumo, os anos contam da assinatura do contrato.)</p><div class="scroll"><table>
       <tr><th>Período</th><th>Meses</th><th>Alunos no fim</th><th>Faturamento</th><th>Resultado</th><th>Caixa acumulado</th></tr>
       <tr class="sub"><td>Assinatura</td><td>—</td><td>—</td><td>—</td><td>${sgn(-s.upfront+p.empValor)}</td><td>${sgn(-s.upfront+p.empValor)}</td></tr>
       ${Object.entries(years).map(([k,y])=>`<tr><td>${k}</td><td>${y.n}</td><td>${k==="Obra"?"—":num(y.alunos)}</td><td>${brl(y.rec)}</td><td>${sgn(y.res)}</td><td>${sgn(y.cumS)}</td></tr>`).join("")}
       ${s.residual||s.caucaoVal?`<tr class="sub"><td>No fim: venda do negócio + caução devolvida</td><td></td><td></td><td></td><td>${sgn(s.residual+s.caucaoVal)}</td><td></td></tr>`:""}
+      ${s.dividasFim>0.5?`<tr class="sub"><td>No fim: dívidas em aberto (empréstimo e financiamento dos aparelhos)</td><td></td><td></td><td></td><td>${sgn(-s.dividasFim)}</td><td></td></tr>`:""}
+      ${s.residual||s.caucaoVal||s.dividasFim>0.5?`<tr class="total"><td>= Caixa dos sócios no fim</td><td></td><td></td><td></td><td></td><td>${sgn(s.cumFinal)}</td></tr>`:""}
     </table></div></div>
     <div class="card"><details><summary style="cursor:pointer;font-weight:650">Ver mês a mês</summary><div class="scroll" style="margin-top:8px"><table>
       <tr><th>Mês</th><th>Situação</th><th>Alunos</th><th>Faturamento</th><th>Resultado</th><th>Caixa acumulado</th></tr>
@@ -1764,7 +1772,7 @@ function renderResults(){
       <li>Alunos no tempo: linha reta ou curva em S até a meta (curva em S = 3x² − 2x³, com x = mês ÷ meses até a meta); ou por captação: alunos do mês = alunos do mês anterior × (1 − cancelamento) + novos. A base estável da captação é novos ÷ cancelamento. Com "limitar às vagas", nunca passa da lotação.</li>
       <li>Capital recomendado = dinheiro que vocês precisam ter + reserva (meses × custos fixos do mês).</li>
       <li>Meta inversa: busca o menor nº de alunos, aumento de preço ou ocupação das salas que atinge o lucro desejado ou o prazo desejado, mudando uma alavanca de cada vez.</li>
-      <li>Fôlego de caixa: primeiro mês em que o caixa acumulado dos sócios fica abaixo de −(capital informado).</li>
+      <li>Fôlego de caixa: primeiro mês em que o caixa acumulado dos sócios fica abaixo de −(capital dos sócios + aporte do investidor).</li>
       <li>Simulação de risco: 500 sorteios uniformes e independentes dentro das faixas dos cenários (alunos, ocupação das salas, preços, custos, tempo para encher), com semente fixa.</li>
       <li>Mensalidade média = soma de (preço × % dos alunos) × (1 − % plano longo × desconto) × (1 − não pagas).</li>
       <li>Instrutores = (horas abertas × instrutores + horas extras de pico) × custo da hora + adicional do RT.</li>
@@ -1775,7 +1783,7 @@ function renderResults(){
       <li>Alunos para empatar: menor nº de alunos com lucro ≥ 0, testando cada nº de alunos e recalculando o Simples para o faturamento de cada um (o lucro nem sempre cresce com os alunos: o Fator R pode levar ao Anexo V). "Alunos para lucrar" usa a mesma conta. Aproximação: (custos fixos − sobra das salas − outras receitas) ÷ quanto cada aluno deixa.</li>
       <li>Caixa mês a mês: alunos crescem como escolhido em "Como os alunos chegam" (linha reta, curva em S ou captação) e a ocupação das salas em linha reta; preços, custos e aluguel sobem a cada 12 meses; carência conta da assinatura.</li>
       <li>VPL e TIR usam o caixa do negócio sem o empréstimo; "dinheiro necessário" inclui o empréstimo. No fim do período, o saldo ainda devido do financiamento dos aparelhos é descontado (e, no caixa dos sócios, também o do empréstimo). A TIR aparece como "—" quando o fluxo não tem uma única virada de negativo para positivo.</li>
-      <li>Investidor: participação de exemplo = aporte ÷ (aporte + dinheiro dos sócios + VPL). Post-money = aporte ÷ participação; pre-money = post-money − aporte. Caixa da empresa = sócios + investidor + empréstimo + caixa do mês; depois do pior momento, a sobra acima da reserva × % distribuído vai para sócios e investidor pela participação. Se o caixa ficar negativo, aporte extra no pior mês, dividido pela participação.</li>
+      <li>Investidor: participação de exemplo = aporte ÷ (aporte + dinheiro dos sócios + VPL). Post-money = aporte ÷ participação; pre-money = post-money − aporte. Caixa da empresa = sócios + investidor + empréstimo + caixa do mês; depois do pior momento, a sobra acima da reserva × % distribuído vai para sócios e investidor pela participação. Se o caixa da empresa ficar negativo, entra um aporte extra no mês em que falta (só o que falta), dividido pela participação.</li>
       <li>Retorno do investidor: TIR e múltiplo dos fluxos líquidos (lucros recebidos, caixa final e venda, menos IR). Aplicação: rendimento bruto = "Rendimento mínimo desejado", com IR regressivo (22,5% até 6 meses, 20% até 12, 17,5% até 24, 15% acima).</li>
       <li>Se fechar no mês N: caixa acumulado + revenda dos aparelhos (% × valor × (1 − meses de uso ÷ durabilidade)) + caução − multa (meses de aluguel × meses que faltam ÷ prazo) − saldo do empréstimo e do financiamento.</li>
       <li>Matriz de riscos: impacto alto se o lucro cair mais de 30%, se o investimento deixar de voltar ou se recuperar demorar 12 meses a mais; médio acima de 10% ou 4 meses.</li>
@@ -2092,9 +2100,9 @@ async function buildResumoInvestidor(){
       return lineChart({xs, series: ser, H: 190, yfmt: kR, xfmt: v => v===0 ? "assinatura" : "mês " + v, xticks: xs.filter(v => v%12===0), aria: "Caixa acumulado do investidor por cenário", tip: () => ""}); })()}</div>`;
   const top = L.rs.filter(r => !r.semEfeito).sort((a,b) => b.sev - a.sev || a.dLucro - b.dLucro).slice(0, 5);
   const riscosT = `<div class="card"><h3>Principais riscos</h3><table class="txt"><tr><th>Risco</th><th>Prob.</th><th>Impacto</th><th>Efeito</th><th>Como reduzir</th></tr>
-    ${top.map(r => `<tr><td>${r.nome}</td><td>${r.prob}</td><td>${r.imp}</td><td>${Math.abs(r.dLucro)>=1?`lucro ${sgn(r.dLucro)}/mês; `:""}recupera ${r.payback?`em ${r.payback} meses`:"não volta"}</td><td>${r.mitig}</td></tr>`).join("")}</table></div>`;
+    ${top.map(r => `<tr><td>${r.nome}</td><td>${r.prob}</td><td>${r.imp}</td><td>${Math.abs(r.dLucro)>=1?`lucro ${sgn(r.resultado)}/mês (${r.dLucro>=0?"+":""}${brl(r.dLucro)}); `:""}recupera ${r.payback?`em ${r.payback} meses`:"não volta"}</td><td>${r.mitig}</td></tr>`).join("")}</table></div>`;
   const venda = `<div class="card"><h3>Venda do negócio${iv.exemploMult?" (exemplo: 2× o lucro anual)":` (${num(iv.multEx,1)}× o lucro anual)`}</h3><table><tr><th>Vende no</th><th>Valor</th><th>Parte do investidor</th><th>TIR</th><th>Múltiplo</th></tr>
-    ${iv.saidas.map(v => `<tr><td>ano ${v.ano}</td><td>${brl(v.venda)}</td><td>${brl(v.vendaInv)}</td><td>${pct(v.tir,0)}</td><td>${x(v.moic)}</td></tr>`).join("")}</table></div>`;
+    ${iv.saidas.map(v => `<tr><td>ano ${v.ano}</td><td>${brl(v.venda)}</td><td>${brl(v.vendaInv)}</td><td>${pct(v.tir,0)}</td><td>${x(v.moic)}</td></tr>`).join("") || `<tr><td colspan="5">Período analisado menor que 2 anos.</td></tr>`}</table></div>`;
   const fecha = `<div class="card"><h3>Se precisar fechar</h3><table><tr><th>Fecha no mês</th><th>Resultado de todos</th></tr>
     ${iv.encerrar.filter(e => [6,12,24,36].includes(e.m) || e.m===s.H).map(e => `<tr><td>${e.m}</td><td>${sgn(e.res)}</td></tr>`).join("")}</table><p class="note">Caixa acumulado + revenda dos aparelhos + caução − multa − dívidas. A obra fica no imóvel.</p></div>`;
   const rd = resumoDilig(lerDilig());
