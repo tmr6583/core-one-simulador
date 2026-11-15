@@ -80,7 +80,8 @@ button,select,input{font:inherit;color:inherit}
 
 /* Layout principal */
 main.wrap{display:grid;grid-template-columns:minmax(320px,440px) minmax(0,1fr);gap:16px;align-items:start;margin-top:16px;padding-bottom:48px}
-@media (max-width:1000px){main.wrap{grid-template-columns:1fr}}
+main.wrap>*{min-width:0}
+@media (max-width:1000px){main.wrap{grid-template-columns:minmax(0,1fr)}}
 #inputs{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;padding-right:4px}
 @media (max-width:1000px){#inputs{position:static;max-height:none;overflow:visible}}
 .side-head{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:12px}
@@ -125,6 +126,16 @@ details.grp[open]>summary::after{content:"－"}
 .brandbar :focus-visible{outline-color:#7fbfa3}
 .tabs button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .tab:focus-visible{outline:2px dashed var(--accent);outline-offset:4px;border-radius:14px}
+/* Aba Investidor (F1–F10) */
+small.ex{color:var(--gold);font-weight:500;font-size:11.5px}
+.rmat{display:grid;grid-template-columns:110px repeat(3,minmax(0,1fr));gap:4px;font-size:12.5px;margin:6px 0 12px}
+.rmat>div{border-radius:8px;padding:6px 8px;min-height:36px}
+.rmat .h{color:var(--muted);font-weight:600;display:flex;align-items:center}
+.rmat .c1{background:var(--ok-weak)}.rmat .c2{background:var(--warn-weak)}.rmat .c3{background:var(--bad-weak)}
+.rmat b{display:inline-block;min-width:24px;text-align:center;border-radius:999px;background:var(--surface);border:1px solid var(--border);margin:2px;font-size:12px}
+.dil select{min-width:140px}
+table.txt td,table.txt th{text-align:left;white-space:normal}table.txt td.n{white-space:nowrap}
+.indbox table td{padding:5px 6px}
 /* Rodapé com a versão (E1) */
 .rodape{color:var(--muted);font-size:12.5px;padding-bottom:28px}
 .rodape p{margin:0;border-top:1px solid var(--border);padding-top:12px}
@@ -192,6 +203,7 @@ tr.sub td{color:var(--muted);font-size:13px}
     </div>
     <div class="actions">
       <button class="btn primary" id="btnPdf" title="Baixa um PDF com todas as premissas, resultados e gráficos desta simulação">Exportar Simulação</button>
+      <button class="btn" id="btnInvPdf" title="Baixa um PDF de 2 páginas para apresentar o negócio a um investidor">Resumo para investidor</button>
       <button class="btn" id="btnReset" title="Volta todos os campos para os valores padrão do projeto">Restaurar Valores Padrão</button>
       <button class="btn" id="btnExport" title="Baixa um arquivo com o cenário atual (nome, data e todas as premissas) para guardar ou enviar ao sócio">Baixar cenário</button>
       <button class="btn" id="btnImport" title="Carrega um arquivo de cenário baixado antes">Abrir cenário</button>
@@ -213,6 +225,7 @@ tr.sub td{color:var(--muted);font-size:13px}
       <button role="tab" id="aba-lucro" aria-controls="painel-lucro" data-tab="lucro">Lucro do mês</button>
       <button role="tab" id="aba-riscos" aria-controls="painel-riscos" data-tab="riscos">Riscos e cenários</button>
       <button role="tab" id="aba-comparar" aria-controls="painel-comparar" data-tab="comparar">Comparar opções</button>
+      <button role="tab" id="aba-investidor" aria-controls="painel-investidor" data-tab="investidor">Investidor</button>
       <button role="tab" id="aba-caixa" aria-controls="painel-caixa" data-tab="caixa">Caixa ao longo do tempo</button>
       <button role="tab" id="aba-como" aria-controls="painel-como" data-tab="como">Como calculamos</button>
     </div>
@@ -372,7 +385,14 @@ const GROUPS = [
     ["tma","Rendimento mínimo desejado","% ao ano",15,0.5,"Quanto o dinheiro renderia em outra aplicação (ex.: CDI). O negócio só compensa se render mais que isso.",1],
     ["lucroAlvo","Lucro mensal desejado","R$/mês",10000,500,"Calcula quantos alunos seriam necessários para chegar a esse lucro.",1],
     ["paybackAlvo","Prazo desejado para recuperar o investimento","meses",36,1,"Usado na meta inversa e na simulação de risco (aba Riscos e cenários).",1],
-    ["multSaida","Valor de venda do negócio no fim","× lucro anual",0,0.5,"Se venderem o negócio no fim do período, por quantas vezes o lucro de um ano. 0 = não considerar venda.",0],
+  ]},
+  {id:"invest", g:"Investidor", intro:"Para avaliar a entrada de um investidor (aba \"Investidor\"). Com aporte e participação em 0, a aba mostra um exemplo.", f:[
+    ["aporteInv","Aporte do investidor","R$",0,5000,"Dinheiro que o investidor coloca no negócio. Soma-se ao dinheiro dos sócios no fôlego de caixa. 0 = exemplo: o investidor cobre o que falta para o capital recomendado.",1],
+    ["partInv","Participação do investidor","% do negócio",0,1,"Parte dos lucros distribuídos e do valor de venda que fica com o investidor. 0 = exemplo: participação pelo valor do negócio calculado pelo fluxo de caixa.",1],
+    ["distribLucro","Sobra de caixa distribuída","% por mês",100,5,"Quanto da sobra de caixa é dividida entre sócios e investidor todo mês, depois do pior momento do caixa e mantendo a reserva de segurança. O resto fica na empresa.",0],
+    ["multSaida","Valor de venda do negócio","× lucro anual",0,0.5,"Por quantas vezes o lucro de um ano o negócio seria vendido no fim do período. Pequenos negócios de serviço costumam valer de 1 a 3 vezes o lucro anual (a confirmar). 0 = sem venda: no fim, só a sobra de caixa.",0],
+    ["revendaAparelhos","Revenda dos aparelhos se fechar","% do valor pago",50,5,"Quanto se recupera vendendo os aparelhos se o negócio fechar, antes do desgaste. O valor cai ao longo da durabilidade dos aparelhos. Estimativa a confirmar.",0],
+    ["multaAluguel","Multa por sair antes do fim do contrato","meses de aluguel",3,1,"Multa usual em contratos comerciais, cobrada proporcional ao tempo que falta (Lei 8.245/91, art. 4º). Confirmar na minuta do contrato.",0],
   ]},
   {id:"cenarios", g:"Cenários bom e ruim", intro:"Quanto cada premissa piora no cenário ruim e melhora no cenário bom.", f:[
     ["varAlunos","Alunos","± %",15,1,"",0],
@@ -397,7 +417,7 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.1.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.2.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
@@ -415,6 +435,7 @@ const num = (v,d=0) => fin(v).toLocaleString("pt-BR",{minimumFractionDigits:d,ma
 const pct = (v,d=1) => Number.isFinite(v) ? num(v*100,d)+"%" : "—";
 const sgn = v => `<span class="${v<0?'neg':'pos'}">${brl(v)}</span>`;
 const pmt = (pv,i,n) => n<=0 ? 0 : (!i ? pv/n : pv*i/(1-Math.pow(1+i,-n)));
+const anosTxt = H => H%12===0 ? (H===12 ? "1 ano" : `${H/12} anos`) : `${num(H/12,1)} anos`;
 const tempo = m => m===null ? "não se paga" : (m===1 ? "1 mês" : m<12 ? `${m} meses` : `${m} meses (${num(m/12,1)} anos)`);
 
 // ================= Motor de cálculo =================
@@ -474,8 +495,9 @@ function equip(p, m){
     case "leasing": return {capex:0,
       opex:k => (p.leasingPrazo>0 && k>p.leasingPrazo) ? p.novosManut : p.leasingAluguel,
       oneoff:k => (p.leasingPrazo>0 && k===p.leasingPrazo+1) ? p.novosValor*p.leasingVRG/100 : 0, label:"aluguel dos aparelhos"};
-    case "cdc": { const parc = pmt(p.novosValor-p.cdcEntrada, p.cdcTaxa/100, p.cdcPrazo);
-      return {capex:p.cdcEntrada, opex:k => (k<=p.cdcPrazo ? parc : 0) + p.novosManut, oneoff:()=>0, parcela:parc, label:"parcela + manutenção dos aparelhos"}; }
+    case "cdc": { if(!(p.cdcPrazo>0)) return {capex:p.novosValor, opex:()=>p.novosManut, oneoff:()=>0, parcela:0, label:"manutenção dos aparelhos (sem parcelas: à vista)"};
+      const ent = Math.min(p.cdcEntrada, p.novosValor), parc = pmt(p.novosValor-ent, p.cdcTaxa/100, p.cdcPrazo);
+      return {capex:ent, opex:k => (k<=p.cdcPrazo ? parc : 0) + p.novosManut, oneoff:()=>0, parcela:parc, label:"parcela + manutenção dos aparelhos"}; }
     default: return {capex:p.seminovosValor, opex:()=>p.seminovosManut, oneoff:()=>0, label:"manutenção dos aparelhos"};
   }
 }
@@ -492,6 +514,7 @@ function loanPay(p, m){
   if(p.empValor<=0) return 0;
   const i = p.empTaxa/100;
   if(m<=p.empCarencia) return p.empValor*i;
+  if(p.empPrazo<=0) return m===p.empCarencia+1 ? p.empValor*(1+i) : 0; // sem parcelas: devolve tudo de uma vez
   if(m<=p.empCarencia+p.empPrazo) return pmt(p.empValor, i, p.empPrazo);
   return 0;
 }
@@ -500,7 +523,7 @@ function loanPay(p, m){
 function alunosRegime(p, d, limitar = p.limitarVagas==="sim"){
   let A;
   if(p.modoCrescimento==="captacao"){
-    const ch = p.churn/100, meses = Math.max(1, Math.round(p.horizonte) - Math.round(p.mesesObra));
+    const ch = p.churn/100, meses = Math.max(1, Math.max(12, Math.round(p.horizonte)) - Math.round(p.mesesObra));
     A = ch>0 ? p.novosMes/ch : p.alunosIniciais + p.novosMes*meses;
   } else A = p.alunosAlvo;
   return limitar ? Math.min(A, d.lotacao) : A;
@@ -611,7 +634,7 @@ function simulate(p0, modelo){
   const pvFut = flowsR.slice(1).reduce((s,f,i)=> s + f/Math.pow(1+im,i+1), 0);
   const reserva = Math.max(0, p.reservaMeses)*r.opex;
   return {...r, p, capexTotal, upfront, payback, paybackDesc, exposicao: Math.max(0,-minSoc), reserva, capitalRec: Math.max(0,-minSoc) + reserva, minMes, vpl, tir: irr(flowsR),
-          il: upfront>0 ? pvFut/upfront : null, rows, H, mesLucro, mesesNeg, mesesAnexoV, residual, caucaoVal, cumFinal: cumProj + residual + caucaoVal};
+          il: upfront>0 ? pvFut/upfront : null, rows, H, mesLucro, mesesNeg, mesesAnexoV, residual, caucaoVal, cumFinal: cumSoc + residual + caucaoVal};
 }
 function irr(flows){
   const npv = rate => flows.reduce((s,f,i)=> s + f/Math.pow(1+rate,i), 0);
@@ -751,6 +774,7 @@ function groupInfo(p, s){
     impostos: p.modoSimples==="manual" ? `Simples manual: studio ${pct(d.tT)} com cartão · salas ${pct(d.tC)}` : `Anexo ${d.anexo} (Fator R ${pct(d.fatorR,0)}) · Simples ${pct(d.tSimp)} em regime · studio ${pct(d.tT)} com cartão`,
     equip:`${MODELS[p.modelo]} · ${brl(s.eq.capex)} agora + ${brl(s.eqOp)}/mês`,
     fin:p.capital>0 ? `Capital: ${brl(p.capital)}` : `Capital ainda não informado`,
+    invest:(()=>{ const iv = investidor(p, s); return `${p.aporteInv>0?"Aporte":"Exemplo: aporte"} de ${brl(iv.aporte)} por ${pct(iv.part,0)} · TIR do investidor ${pct(iv.met.tir,0)}`; })(),
     metas:`${p.modoCrescimento==="captacao"?"Base estável":"Meta"}: ${num(s.A)} alunos = ${pct(s.A/Math.max(1,d.lotacao),0)} das vagas`,
     cenarios:`Veja em "Riscos e cenários"`,
   };
@@ -763,9 +787,9 @@ function groupInfo(p, s){
 function verdict(p, s){
   const d = s.d, beOk = Number.isFinite(s.be) && s.be <= d.lotacao;
   if(!beOk || s.resultado<=0) return ["bad","✕","Com estas premissas, o negócio não se sustenta.", Number.isFinite(s.be) ? `Precisaria de ${s.be} alunos para empatar, mas só cabem ${d.lotacao}.` : "Cada aluno custa mais do que paga."];
-  if(s.payback===null) return ["bad","✕","Dá lucro quando estiver cheio, mas o investimento não volta.", `Com lucro de ${brl(s.resultado)}/mês e ${num(s.A)} alunos, os ${brl(s.exposicao)} que precisam ser colocados não voltam em ${num(s.H/12,0)} anos.`];
+  if(s.payback===null) return ["bad","✕","Dá lucro quando estiver cheio, mas o investimento não volta.", `Com lucro de ${brl(s.resultado)}/mês e ${num(s.A)} alunos, os ${brl(s.exposicao)} que precisam ser colocados não voltam em ${anosTxt(s.H)}.`];
   if(s.vpl<0) return ["warn","!","O investimento volta, mas rende menos do que outra aplicação.", `Recupera em ${tempo(s.payback)}, porém rende abaixo dos ${num(p.tma,1)}% ao ano desejados.`];
-  if(s.be/d.lotacao>0.7 || (p.capital>0 && p.capital<s.exposicao)) return ["warn","!","Viável, mas com risco alto.", `Precisa de ${pct(s.be/d.lotacao,0)} das vagas ocupadas para empatar${p.capital>0 && p.capital<s.exposicao?` e faltam ${brl(s.exposicao-p.capital)} de capital`:""}.`];
+  if(s.be/d.lotacao>0.7 || (capDisp(p)>0 && capDisp(p)<s.exposicao)) return ["warn","!","Viável, mas com risco alto.", `Precisa de ${pct(s.be/d.lotacao,0)} das vagas ocupadas para empatar${capDisp(p)>0 && capDisp(p)<s.exposicao?` e faltam ${brl(s.exposicao-capDisp(p))} de capital`:""}.`];
   return ["ok","✓","Viável com estas premissas.", `Recupera o investimento em ${tempo(s.payback)} e rende ${s.tir===null?"—":pct(s.tir,0)} ao ano.`];
 }
 function alerts(p, s){
@@ -792,10 +816,10 @@ function alerts(p, s){
     if(s.mesesAnexoV>0 && d.anexo!=="V") a.push(["warn",`Em ${s.mesesAnexoV} mês(es) da simulação o Fator R ficou abaixo de 28% e o Simples foi pelo Anexo V.`]);
   }
   if(p.faltas<0 || p.faltas>=100) a.push(["bad","A taxa de faltas precisa ficar entre 0% e 99%."]);
-  if(p.capital>0 && p.capital >= s.exposicao && p.capital < s.capitalRec) a.push(["warn",`O capital dos sócios (${brl(p.capital)}) cobre o necessário, mas não a reserva de ${num(p.reservaMeses)} meses. Capital recomendado: ${brl(s.capitalRec)}.`]);
+  if(capDisp(p)>0 && capDisp(p) >= s.exposicao && capDisp(p) < s.capitalRec) a.push(["warn",`${capNome(p)} (${brl(capDisp(p))}) cobre o necessário, mas não a reserva de ${num(p.reservaMeses)} meses. Capital recomendado: ${brl(s.capitalRec)}.`]);
   if(Number.isFinite(s.be) && s.be <= d.lotacao && s.be/d.lotacao > 0.7) a.push(["warn",`Para empatar é preciso ocupar ${pct(s.be/d.lotacao,0)} das vagas. Pouca folga se os alunos demorarem a vir.`]);
-  if(p.capital>0 && p.capital < s.exposicao) a.push(["bad",`O capital dos sócios (${brl(p.capital)}) não cobre o dinheiro necessário (${brl(s.exposicao)}). Faltam ${brl(s.exposicao-p.capital)}.`]);
-  if(p.capital===0) a.push(["warn","O capital disponível dos sócios ainda não foi informado (grupo \"Dinheiro dos sócios\")."]);
+  if(capDisp(p)>0 && capDisp(p) < s.exposicao) a.push(["bad",`${capNome(p)} (${brl(capDisp(p))}) não cobre o dinheiro necessário (${brl(s.exposicao)}). Faltam ${brl(s.exposicao-capDisp(p))}.`]);
+  if(capDisp(p)===0) a.push(["warn","O capital disponível dos sócios ainda não foi informado (grupo \"Dinheiro dos sócios\")."]);
   if(Math.max(0,p.fechaSemana-p.abreSemana)===0 && Math.max(0,p.fechaSab-p.abreSab)===0) a.push(["bad","O studio está sem horário de funcionamento."]);
   if([p.abreSemana,p.fechaSemana,p.abreSab,p.fechaSab,p.abreDom,p.fechaDom].some(v => v<0 || v>24)) a.push(["bad","Há horário de abertura ou fechamento fora do intervalo de 0 a 24 h."]);
   if(p.horasPico2 > d.horasOp) a.push(["warn",`As horas com instrutor extra (${num(p.horasPico2)}) passam das horas abertas no mês (${num(d.horasOp)}).`]);
@@ -812,7 +836,7 @@ const ICON = {bad:"✕", warn:"!", ok:"✓"};
 function cashChart(s){
   const rows = s.rows, W = 800, Hh = 260, L = 64, R = 16, T = 16, B = 30;
   const vals = [-s.upfront + s.p.empValor, ...rows.map(r=>r.cumSoc)];
-  const cap = s.p.capital > 0 ? -s.p.capital : null;
+  const cap = capDisp(s.p) > 0 ? -capDisp(s.p) : null;
   let mn = Math.min(0, ...vals, cap ?? 0), mx = Math.max(0, ...vals); if(mx===mn) mx = mn+1;
   // escala com valores "redondos" no eixo
   const raw = (mx-mn)/5, mag = Math.pow(10, Math.floor(Math.log10(raw))), nrm = raw/mag;
@@ -950,6 +974,164 @@ function folego(s, capital){
   return {acaba, sobra: capital - s.exposicao, sobraRec: capital - s.capitalRec};
 }
 
+// ================= Visão do investidor (F1–F6, F8–F10) =================
+// Dinheiro disponível para o negócio: sócios + investidor (o empréstimo já entra no caixa dos sócios)
+const capDisp = p => p.capital + p.aporteInv;
+const capNome = p => p.aporteInv>0 ? "O capital dos sócios e do investidor" : "O capital dos sócios";
+// Saldo devedor de um financiamento de parcelas fixas depois de "pagas" parcelas
+function saldoDevedor(pv, i, n, pagas){
+  if(!(pv>0) || pagas>=n) return 0;
+  if(!i) return pv*(1 - pagas/n);
+  return pmt(pv, i, n)*(1 - Math.pow(1+i, -(n-pagas)))/i;
+}
+// Dívidas em aberto no fim do mês m (contado da assinatura): empréstimo e CDC dos aparelhos
+function dividasNoMes(p, m){
+  const emp = p.empValor>0 ? (m<=p.empCarencia ? p.empValor : p.empPrazo<=0 ? 0 : saldoDevedor(p.empValor, p.empTaxa/100, p.empPrazo, m - p.empCarencia)) : 0;
+  const k = Math.max(0, m - p.mesesObra);
+  const cdc = p.modelo==="cdc" && p.cdcPrazo>0 ? saldoDevedor(p.novosValor - Math.min(p.cdcEntrada, p.novosValor), p.cdcTaxa/100, p.cdcPrazo, Math.min(k, p.cdcPrazo)) : 0;
+  return emp + cdc;
+}
+// IR do investidor pessoa física (a confirmar com o contador): lucros distribuídos isentos até R$ 50 mil por mês por empresa;
+// acima disso, 10% retidos sobre o total do mês (Lei 15.270/2025). Ganho na venda da participação: 15%.
+const IR_DIV_LIMITE = 50000, IR_DIV = 0.10, IR_GANHO = 0.15;
+const irDividendo = v => v > IR_DIV_LIMITE ? v*IR_DIV : 0;
+// Aplicação financeira (CDI/Tesouro): IR regressivo pelo prazo
+const irAplicacao = meses => meses<=6 ? 0.225 : meses<=12 ? 0.20 : meses<=24 ? 0.175 : 0.15;
+function metricasFluxo(f){
+  const aportado = Math.max(0, -f.filter(v => v<0).reduce((a,b)=>a+b,0)), recebido = f.filter(v => v>0).reduce((a,b)=>a+b,0);
+  let cum = 0, payback = null;
+  f.forEach((v,i) => { cum += v; if(payback===null && i>0 && cum >= -1e-6 && aportado>0) payback = i; });
+  return {aportado, recebido, moic: aportado>0 ? recebido/aportado : null, tir: aportado>0 ? irr(f) : null, payback};
+}
+// fixo = {aporte, part}: usa o mesmo acordo em outro cenário
+function investidor(p, s, fixo){
+  const q = s.p, H = s.H;
+  const exemploAporte = !fixo && !(p.aporteInv>0);
+  const aporte = fixo ? fixo.aporte : (exemploAporte ? Math.max(0, s.capitalRec - p.capital) : p.aporteInv);
+  // F1: valor do negócio antes do aporte pelo fluxo de caixa = dinheiro dos sócios + valor criado pelo plano (VPL)
+  const preFluxo = Math.max(0, s.vpl) + p.capital;
+  const exemploPart = !fixo && !(p.partInv>0);
+  const part = fixo ? fixo.part : (exemploPart ? (aporte>0 ? aporte/(aporte + preFluxo) : 0) : Math.min(1, p.partInv/100));
+  const postMoney = part>0 ? aporte/part : 0, preMoney = Math.max(0, postMoney - aporte);
+  const fD = Math.min(1, Math.max(0, p.distribLucro/100));
+  // Caixa da empresa mês a mês: distribui a sobra acima da reserva depois do pior momento; se faltar, aporte extra
+  // Aportes extras: entram no mês em que o caixa da empresa ficaria negativo, só o que falta (divididos pela participação)
+  const aportes = {}, cx = [], dist = [];
+  let caixa = p.capital + aporte - s.upfront + q.empValor;
+  if(caixa < 0){ aportes[0] = -caixa; caixa = 0; }
+  cx.push(caixa); dist.push(0);
+  s.rows.forEach(r => { caixa += r.soc; if(caixa < -0.005){ aportes[r.m] = -caixa; caixa = 0; }
+    let dm = 0; if(r.m > s.minMes && caixa > s.reserva){ dm = (caixa - s.reserva)*fD; caixa -= dm; }
+    cx.push(caixa); dist.push(dm); });
+  const run = {cx, dist};
+  const mesesExtra = Object.keys(aportes).map(Number).sort((a,b) => a-b);
+  const extra = mesesExtra.reduce((a,m) => a + aportes[m], 0), mesMin = mesesExtra.length ? mesesExtra[0] : 0;
+  // Fluxos do investidor e dos sócios com saída no mês T (venda por "mult" vezes o lucro dos 12 meses anteriores)
+  const fluxos = (T, mult) => {
+    const inv = [-aporte], soc = [-p.capital];
+    for(let m=1; m<=T; m++){ const di = run.dist[m]*part; inv.push(m<T ? di - irDividendo(di) : di); soc.push(run.dist[m]*(1-part)); }
+    mesesExtra.forEach(m => { if(m<=T){ inv[m] -= aportes[m]*part; soc[m] -= aportes[m]*(1-part); } });
+    const lucro12 = s.rows.filter(r => r.m>T-12 && r.m<=T).reduce((a,r) => a + r.proj, 0);
+    const venda = mult>0 ? Math.max(0, lucro12)*mult : 0;
+    const caixaFim = run.cx[T] + s.caucaoVal - dividasNoMes(q, T);
+    const vendaInv = venda*part, custo = aporte + mesesExtra.filter(m => m<=T).reduce((a,m) => a + aportes[m]*part, 0);
+    const irGanho = Math.max(0, vendaInv - custo)*IR_GANHO;
+    const cfInv = caixaFim*part;
+    // IR sobre lucros: o limite de R$ 50 mil vale para o total do mês (distribuição do mês + caixa final)
+    inv[T] += cfInv - irDividendo(run.dist[T]*part + Math.max(0, cfInv)) + vendaInv - irGanho;
+    soc[T] += caixaFim*(1-part) + venda*(1-part);
+    return {inv, soc, lucro12, venda, vendaInv, irGanho, custo, caixaFim};
+  };
+  const base = fluxos(H, p.multSaida), met = metricasFluxo(base.inv), metSoc = metricasFluxo(base.soc);
+  // F3: aplicação com o mesmo dinheiro, nas mesmas datas, com IR regressivo pelo prazo da análise
+  const irA = irAplicacao(H), fb = Math.pow(1 + p.tma/100, H/12);
+  const taxaAplicLiq = Math.pow(1 + (fb - 1)*(1 - irA), 12/H) - 1, iml = Math.pow(1 + taxaAplicLiq, 1/12) - 1;
+  const aplicFinal = base.inv.reduce((a,v,i) => v<0 ? a - v*Math.pow(1+iml, H-i) : a, 0);
+  const invFinal = base.inv.reduce((a,v,i) => v>0 ? a + v*Math.pow(1+iml, H-i) : a, 0);
+  const vplAplic = base.inv.reduce((a,v,i) => a + v/Math.pow(1+iml, i), 0);
+  const ult12 = run.dist.slice(-12), distMes = ult12.reduce((a,b)=>a+b,0)/Math.max(1, ult12.length);
+  // F6: fontes e usos até o pior momento do caixa, mais a reserva
+  let obraP = 0, opP = 0, parc = 0;
+  s.rows.forEach(r => { if(r.m<=s.minMes){ if(r.fase==="Obra") obraP += r.proj; else opP += r.proj; parc += loanPay(q, r.m); } });
+  const usos = [["Obra e instalações", s.d.capexObra], [`Aparelhos (${MODELS[p.modelo]})`, s.eq.capex], ["Luvas e caução", q.luvas + s.caucaoVal],
+    ["Aluguel e custos durante a obra", -obraP], [`Prejuízo da operação até o mês ${s.minMes}`, -opP], [`Parcelas do empréstimo até o mês ${s.minMes}`, parc],
+    ["Reserva de segurança", s.reserva]];
+  const fontes = [["Sócios operadores", p.capital], [exemploAporte ? "Investidor (exemplo)" : "Investidor", aporte], ["Empréstimo", q.empValor]];
+  const totU = usos.reduce((a,[,v])=>a+v,0), totF = fontes.reduce((a,[,v])=>a+v,0);
+  // F4: resultado de sócios e investidor juntos se o negócio fechar no mês m
+  const valAp = p.modelo==="seminovos" ? p.seminovosValor : (p.modelo==="leasing" ? 0 : p.novosValor);
+  const mesesF = [...new Set([6,12,18,24,36,48,60,72,84,96,120].filter(m => m<H).concat([H]))];
+  const encerrar = mesesF.map(m => { const r = s.rows[m-1], k = Math.max(0, m - q.mesesObra);
+    const valApM = p.modelo==="leasing" && q.leasingPrazo>0 && k>q.leasingPrazo ? p.novosValor : valAp;
+    const revenda = valApM*p.revendaAparelhos/100*Math.max(0, 1 - k/(Math.max(1, p.vidaAparelhos)*12));
+    const alugM = q.aluguel*Math.pow(1 + p.reajAluguel/100, Math.floor((m-1)/12));
+    const multa = m < q.prazoContrato ? alugM*p.multaAluguel*(q.prazoContrato - m)/q.prazoContrato : 0;
+    const dividas = dividasNoMes(q, m);
+    return {m, k, caixa: r.cumSoc, revenda, caucao: s.caucaoVal, multa, dividas, res: r.cumSoc + revenda + s.caucaoVal - multa - dividas}; });
+  // F5: venda do negócio ao fim de cada ano
+  const multEx = p.multSaida>0 ? p.multSaida : 2, exemploMult = !(p.multSaida>0);
+  const saidas = [];
+  for(let y=2; y*12<=H; y++){ const T = y*12, f = fluxos(T, multEx), mt = metricasFluxo(f.inv);
+    saidas.push({ano: y, T, lucro12: f.lucro12, venda: f.venda, vendaInv: f.vendaInv, irGanho: f.irGanho, ganho: f.vendaInv - f.irGanho - f.custo, tir: mt.tir, moic: mt.moic}); }
+  return {aporte, part, exemploAporte, exemploPart, preFluxo, preMoney, postMoney, extra, mesMin, aportesExtra: mesesExtra.map(m => [m, aportes[m]]), dist: run.dist, caixa: run.cx,
+    fluxoInv: base.inv, fluxoSoc: base.soc, met, metSoc, venda: base.venda, irA, taxaAplicLiq, aplicFinal, invFinal, vplAplic, distMes,
+    usos, fontes, totU, totF, encerrar, saidas, multEx, exemploMult, valAp};
+}
+// F10: lucro e retorno com pró-labore dos sócios (RN-010 mantida: o padrão continua sem pró-labore)
+function remuneracaoSocios(p){
+  const vals = [...new Set([0, 3000, 6000, 10000, 15000, p.proLabore])].sort((a,b) => a-b);
+  return vals.map(v => { const q = {...p, proLabore: v}, x = simulate(q, q.modelo);
+    return {v, resultado: x.resultado, be: x.be, payback: x.payback, exposicao: x.exposicao, anexo: x.d.anexo, fatorR: x.d.fatorR, tSimp: x.d.tSimp, total: x.resultado + v}; });
+}
+// F8: matriz de riscos. Probabilidade: avaliação inicial (a revisar). Impacto: calculado pelo simulador.
+const PROB_N = {Baixa:1, "Média":2, Alta:3}, IMP_N = {Baixo:1, "Médio":2, Alto:3};
+function matrizRiscos(p, s){
+  const d = s.d, precos = f => ({p2: p.p2*f, p3: p.p3*f, p45: p.p45*f}), custos = {};
+  ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => custos[k] = p[k]*1.1);
+  const lista = [
+    {nome:"Condomínio + IPTU não é zero (R$ 3.200/mês)", prob: p.condIptu>=3200 ? "Baixa" : "Média", mud:{condIptu: Math.max(p.condIptu, 3200)}, mitig:"Confirmar por escrito com o proprietário antes de assinar; negociar teto no contrato."},
+    {nome: p.modoCrescimento==="captacao" ? "Metade dos alunos novos por mês" : "Alunos chegam no dobro do tempo", prob:"Média", mud: p.modoCrescimento==="captacao" ? {novosMes: p.novosMes/2} : {rampa: Math.max(1,p.rampa)*2, rampaCow: Math.max(1,p.rampaCow)*2}, mitig:"Pré-venda antes da inauguração; meta mínima de alunos para abrir."},
+    {nome:"Salas alugam um terço a menos", prob:"Média", mud:{ocupCow: p.ocupCow*2/3}, mitig:"Cartas de intenção de terapeutas antes da obra; 1 ou 2 salas em contrato mensal fixo."},
+    {nome:"Preços dos planos 10% abaixo", prob:"Média", mud: precos(0.9), mitig:"Validar preços com pesquisa ou pré-venda (preços ainda não validados, RN-002)."},
+    {nome:"Obra custa 20% a mais", prob:"Alta", mud:{contingencia: p.contingencia + 20}, mitig:"Três orçamentos fechados; contrato de empreitada com preço global."},
+    {nome:"Área de treino menor que a estimada", prob: d.capArea < d.capSim ? "Alta" : "Baixa", mud: d.capArea < d.capSim ? {capSim: d.capArea} : {}, semEfeito: !(d.capArea < d.capSim), mitig:"Conferir com a planta; ajustar leiaute ou capacidade (RN-013)."},
+    {nome:"Custos mensais 10% maiores", prob:"Média", mud: custos, mitig:"Orçamentos de contas e serviços; revisar contratos a cada ano."},
+    {nome:"Inadimplência de 5% dos alunos", prob:"Média", mud:{inadimpl: Math.max(p.inadimpl, 5)}, mitig:"Cobrança recorrente no cartão; acesso bloqueado na fechadura em caso de atraso."},
+    {nome:"Simples no Anexo V (instrutores MEI/PJ)", prob: p.vinculoInstr==="pj" ? "Alta" : "Baixa", mud:{vinculoInstr:"pj"}, semEfeito: p.vinculoInstr==="pj" || p.modoSimples==="manual", mitig:"Contratar instrutores CLT ou autônomos pessoa física; acompanhar o Fator R com o contador."},
+    {nome:"Vigilância exige salas de 7,5 m²", prob:"Média", mud:{}, semEfeito:true, mitig:"Consulta prévia à SUBVISA-RJ antes da obra; se exigir, manter 4 salas e restringir a terapia (RN-005)."},
+  ];
+  return lista.map((r, i) => {
+    const q = sanitize({...p, ...r.mud}), x = simulate(q, q.modelo);
+    const queda = (s.resultado - x.resultado)/Math.max(1, Math.abs(s.resultado));
+    const dpb = s.payback===null ? 0 : (x.payback===null ? Infinity : x.payback - s.payback);
+    const imp = r.semEfeito ? "Baixo" : ((x.payback===null && s.payback!==null) || queda>0.3 || dpb>=12) ? "Alto" : (queda>0.1 || dpb>=4 ? "Médio" : "Baixo");
+    return {...r, n: i+1, resultado: x.resultado, dLucro: x.resultado - s.resultado, payback: x.payback, exposicao: x.exposicao, imp, sev: PROB_N[r.prob]*IMP_N[imp]};
+  });
+}
+// F9: checklist de diligência (status guardado neste navegador)
+const DILIG_KEY = STORE_KEY + "-diligencia";
+const DILIG = [
+  ["contrato","Minuta do contrato de locação","com cláusula que autoriza sublocar as salas (Lei 8.245/91, art. 13), prazo, reajuste, carência e multa"],
+  ["condominio","Condomínio e IPTU por escrito","a viabilidade depende de serem zero ou baixos"],
+  ["planta","Planta do imóvel","áreas reais dos dois andares e área livre de treino"],
+  ["vistoria","Vistoria técnica","elétrica trifásica, hidráulica no 2º andar, laje e pé-direito"],
+  ["obra","Orçamentos da obra","três orçamentos fechados com o mesmo escopo"],
+  ["aparelhos","Orçamento dos aparelhos","na forma escolhida (seminovos, novos, leasing ou financiamento)"],
+  ["contador","Parecer do contador","Simples e Fator R, CNAEs, ISS das salas, tributação de lucros"],
+  ["subvisa","Consulta à Vigilância Sanitária (SUBVISA-RJ)","salas de 6 m² para terapia manual"],
+  ["licencas","Licenças e registros","alvará, Corpo de Bombeiros, CREF1 e responsável técnico, plano de resíduos"],
+  ["precos","Validação dos preços","pesquisa com clientes ou pré-venda dos planos"],
+  ["salas","Demanda pelas salas","cartas de intenção de terapeutas"],
+  ["socios","Acordo de sócios","participações, aportes extras, distribuição de lucros, saída e pró-labore"],
+];
+const DILIG_ST = {pend:"Pendente", and:"Em andamento", ok:"Recebido", na:"Não se aplica"};
+function lerDilig(){ try{ const o = JSON.parse(localStorage.getItem(DILIG_KEY) || "{}"); return o && typeof o === "object" ? o : {}; }catch(e){ return {}; } }
+function gravarDilig(o){ try{ localStorage.setItem(DILIG_KEY, JSON.stringify(o)); }catch(e){} }
+function resumoDilig(st){
+  const c = {pend:0, and:0, ok:0, na:0}; DILIG.forEach(([id]) => c[DILIG_ST[st[id]] ? st[id] : "pend"]++);
+  return {...c, total: DILIG.length, pendentes: DILIG.filter(([id]) => !st[id] || st[id]==="pend" || st[id]==="and").map(([,n]) => n)};
+}
+
 // ================= Simulação de risco — Monte Carlo (D7) =================
 function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function monteCarlo(p, n = 500, seed = 20261115){
@@ -1076,6 +1258,89 @@ function indBox(title, items){
   return `<div class="indbox"><h4>${title}</h4>${items.map(([l,v,hint])=>`<div class="ind"><div class="l">${l}${hint?`<small>${hint}</small>`:""}</div><div class="v">${v}</div></div>`).join("")}</div>`;
 }
 
+// Aba "Investidor" (F1–F6, F8–F10)
+function investidorHTML(p, s, iv, rs, rem, cen){
+  const ex = (cond, txt) => cond ? ` <small class="ex">${txt}</small>` : "";
+  const mt = iv.met, ms = iv.metSoc, x = v => v===null ? "—" : num(v,2) + "×";
+  const pb = v => v===null ? "não recupera" : `mês ${v}`;
+  const tabFU = (t, rows, tot) => `<div class="indbox"><h4>${t}</h4><table>${rows.map(([l,v]) => `<tr><td>${l}</td><td>${brl(v)}</td></tr>`).join("")}<tr class="total"><td>Total</td><td>${brl(tot)}</td></tr></table></div>`;
+  const dif = iv.totF - iv.totU;
+  const finAparelhos = p.modelo==="cdc" ? `Além disso, os aparelhos são financiados: ${brl(p.novosValor - p.cdcEntrada)} pagos em ${num(p.cdcPrazo)} parcelas.` : p.modelo==="leasing" ? "Além disso, os aparelhos são alugados (leasing) e não entram no investimento." : "";
+  const melhor = mt.tir!==null && mt.tir > iv.taxaAplicLiq;
+  const cumInv = f => { let c = 0; return f.map(v => c += v); };
+  const ser = cen.map(c => ({name: c.n, color: {Ruim:"var(--s-out)", Esperado:"var(--s-res)", Bom:"var(--s-in)"}[c.n], vals: cumInv(c.iv.fluxoInv)}));
+  const xs = ser[1].vals.map((_, i) => i);
+  const st = lerDilig(), rd = resumoDilig(st);
+  const ordemP = ["Alta","Média","Baixa"], ordemI = ["Baixo","Médio","Alto"];
+  return `
+    <div class="card"><h3>Para quem vai investir</h3><p class="sub">Estrutura do aporte, retorno do investidor, saída, custo de encerrar, riscos e documentos. Ajuste os valores no grupo "Investidor" das premissas.</p>
+      <button class="btn" id="btnInvPdf2">Baixar resumo para investidor (PDF de 2 páginas)</button></div>
+    <div class="card"><h3>Estrutura do aporte</h3><p class="sub">Quanto o investidor coloca, que parte do negócio recebe e o que isso diz sobre o valor do negócio.${iv.exemploAporte||iv.exemploPart?" Itens marcados como exemplo mudam quando você informa os valores.":""}</p>
+      <div class="scroll"><table>
+        <tr><td>Aporte do investidor${ex(iv.exemploAporte,"exemplo: o que falta para o capital recomendado")}</td><td>${brl(iv.aporte)}</td></tr>
+        <tr><td>Dinheiro dos sócios operadores</td><td>${brl(p.capital)}</td></tr>
+        <tr><td>Participação do investidor${ex(iv.exemploPart,"exemplo: pelo valor do negócio no fluxo de caixa")}</td><td>${pct(iv.part,1)}</td></tr>
+        <tr><td>Valor do negócio antes do aporte (pre-money)</td><td>${brl(iv.preMoney)}</td></tr>
+        <tr class="total"><td>Valor do negócio depois do aporte (post-money)</td><td>${brl(iv.postMoney)}</td></tr>
+        <tr><td>Valor pelo fluxo de caixa <small>(dinheiro dos sócios + VPL a ${num(p.tma,1)}% ao ano)</small></td><td>${brl(iv.preFluxo)}</td></tr>
+        <tr><td>Aportes extras, se o dinheiro não bastar</td><td>${iv.extra>0 ? `${brl(iv.extra)} (${iv.aportesExtra.map(([m,v]) => `mês ${m}: ${brl(v)}`).join("; ")}); investidor ${brl(iv.extra*iv.part)}, sócios ${brl(iv.extra*(1-iv.part))}` : "nenhum"}</td></tr>
+      </table></div>
+      <p class="note">Post-money = aporte ÷ participação. Pre-money acima do valor pelo fluxo de caixa: o investidor paga mais do que o plano justifica; abaixo: paga menos. Aportes extras são divididos pela participação.</p></div>
+    <div class="card"><h3>De onde vem e para onde vai o dinheiro</h3><p class="sub">Fontes e usos até o pior momento do caixa (mês ${s.minMes} após a assinatura), mais a reserva de segurança.</p>
+      <div class="indgrid">${tabFU("De onde vem (fontes)", iv.fontes, iv.totF)}${tabFU("Para onde vai (usos)", iv.usos, iv.totU)}</div>
+      <div class="alert ${dif>-1 ? "ok" : "bad"}"><b>${dif>-1?"✓":"✕"}</b><span>${Math.abs(dif)<1 ? "Fontes e usos fecham." : dif>0 ? `Sobram ${brl(dif)} além do capital recomendado.` : `Faltam ${brl(-dif)} para o capital recomendado.`}</span></div>
+      ${finAparelhos?`<p class="note">${finAparelhos}</p>`:""}</div>
+    <div class="card"><h3>Retorno do investidor</h3><p class="sub">Todo mês, a partir do mês ${s.minMes+1}, ${num(p.distribLucro)}% da sobra de caixa acima da reserva é dividida pela participação. No fim de ${num(s.H)} meses, o caixa que sobra também é dividido${p.multSaida>0?`, e o negócio é vendido por ${num(p.multSaida,1)} vezes o lucro anual`:" (sem venda do negócio; veja a venda abaixo)"}. Valores depois do IR do investidor.</p>
+      <div class="indgrid">${indBox("Investidor", [
+          ["Total aportado", brl(mt.aportado)],
+          ["Total recebido (líquido)", brl(mt.recebido)],
+          ["Múltiplo do capital", x(mt.moic), "Recebido ÷ aportado"],
+          ["Rentabilidade anual (TIR)", pct(mt.tir,1)],
+          ["Recupera o aporte", pb(mt.payback), "Contado da assinatura do contrato"],
+          ["Lucro recebido por mês (último ano)", brl(iv.distMes*iv.part)]])}
+        ${indBox("Comparação com aplicação (CDI ou Tesouro)", [
+          ["Aplicação: rendimento bruto", pct(p.tma/100,1) + " ao ano", 'Campo "Rendimento mínimo desejado"'],
+          ["IR da aplicação", pct(iv.irA,1), `Tabela regressiva, prazo de ${num(s.H)} meses`],
+          ["Aplicação: rendimento líquido", pct(iv.taxaAplicLiq,1) + " ao ano"],
+          ["Negócio: rentabilidade líquida (TIR)", pct(mt.tir,1) + " ao ano"],
+          [`Daqui a ${num(s.H)} meses, na aplicação`, brl(iv.aplicFinal)],
+          [`Daqui a ${num(s.H)} meses, no negócio`, brl(iv.invFinal), "Reaplicando o que recebe na mesma aplicação"]])}</div>
+      ${mt.aportado<=0 ? `<div class="alert warn"><b>!</b><span>Sem aporte do investidor neste cenário: o capital dos sócios já cobre o capital recomendado.</span></div>` : `<div class="alert ${melhor?"ok":"bad"}"><b>${melhor?"✓":"✕"}</b><span>${melhor ? `O negócio rende ${pct(mt.tir - iv.taxaAplicLiq,1)} ao ano a mais que a aplicação, já descontado o IR dos dois lados. Em dinheiro de hoje, ${brl(iv.vplAplic)} a mais.` : `O negócio rende menos que a aplicação depois do IR (${pct(mt.tir,1)} contra ${pct(iv.taxaAplicLiq,1)} ao ano). Em dinheiro de hoje, ${brl(-iv.vplAplic)} a menos.`}</span></div>`}
+      <div class="pl" style="margin-top:12px">Caixa acumulado do investidor</div>
+      ${legendHTML([["Ruim","var(--s-out)"],["Esperado","var(--s-res)"],["Bom","var(--s-in)"]])}
+      <div class="chartbox">${lineChart({xs, series: ser, yfmt: kR, xfmt: v => v===0 ? "assinatura" : "mês " + v, xticks: xs.filter(v => v%12===0), aria: "Caixa acumulado do investidor nos cenários ruim, esperado e bom",
+        tip: i => `Mês ${i}: ` + ser.map(se => `${se.name} ${brl(se.vals[i])}`).join(" · ")})}</div>
+      <div class="scroll"><table><tr><th></th><th>Ruim</th><th>Esperado</th><th>Bom</th></tr>
+        <tr><td>Rentabilidade anual do investidor (TIR)</td>${cen.map(c => `<td>${pct(c.iv.met.tir,1)}</td>`).join("")}</tr>
+        <tr><td>Múltiplo do capital</td>${cen.map(c => `<td>${x(c.iv.met.moic)}</td>`).join("")}</tr>
+        <tr><td>Recupera o aporte</td>${cen.map(c => `<td>${pb(c.iv.met.payback)}</td>`).join("")}</tr></table></div>
+      <div class="scroll"><table><tr><th>Quem</th><th>Coloca</th><th>Recebe</th><th>Múltiplo</th><th>TIR</th><th>Recupera</th></tr>
+        <tr><td>Investidor (${pct(iv.part,0)})</td><td>${brl(mt.aportado)}</td><td>${brl(mt.recebido)}</td><td>${x(mt.moic)}</td><td>${pct(mt.tir,1)}</td><td>${pb(mt.payback)}</td></tr>
+        <tr><td>Sócios operadores (${pct(1-iv.part,0)})</td><td>${brl(ms.aportado)}</td><td>${brl(ms.recebido)}</td><td>${x(ms.moic)}</td><td>${pct(ms.tir,1)}</td><td>${pb(ms.payback)}</td></tr></table></div>
+      <p class="note">IR do investidor (a confirmar com o contador): lucros distribuídos isentos até R$ 50 mil por mês; acima, 10% retidos (Lei 15.270/2025); 15% sobre o ganho na venda. Sócios operadores sem IR na tabela.</p></div>
+    <div class="card"><h3>Venda do negócio</h3><p class="sub">Se o negócio for vendido ao fim de cada ano, por ${num(iv.multEx,1)} vezes o lucro dos 12 meses anteriores${iv.exemploMult?' <small class="ex">exemplo: informe "Valor de venda do negócio"</small>':""}. Antes da venda, o caixa é distribuído.</p>
+      <div class="scroll"><table><tr><th>Venda no fim do ano</th><th>Lucro dos 12 meses</th><th>Valor de venda</th><th>Parte do investidor</th><th>Ganho de capital (depois de 15% de IR)</th><th>TIR do investidor</th><th>Múltiplo</th></tr>
+        ${iv.saidas.map(v => `<tr><td>Ano ${v.ano} (mês ${v.T})</td><td>${sgn(v.lucro12)}</td><td>${brl(v.venda)}</td><td>${brl(v.vendaInv)}</td><td>${sgn(v.ganho)}</td><td>${pct(v.tir,1)}</td><td>${x(v.moic)}</td></tr>`).join("")}</table></div>
+      <p class="note">Ganho de capital = parte do investidor na venda − o que ele aportou. A TIR e o múltiplo somam os lucros recebidos até a venda.</p></div>
+    <div class="card"><h3>Se precisar fechar</h3><p class="sub">Resultado de sócios e investidor juntos se o negócio fechar no mês indicado: caixa acumulado até lá, mais a revenda dos aparelhos (${num(p.revendaAparelhos)}% do valor, caindo com o uso) e a caução, menos a multa do aluguel e as dívidas em aberto. A obra (${brl(s.d.capexObra)}) fica no imóvel e é perdida.</p>
+      <div class="scroll"><table><tr><th>Fecha no mês</th><th>Caixa acumulado</th><th>+ Revenda dos aparelhos</th><th>+ Caução</th><th>− Multa do aluguel</th><th>− Dívidas</th><th>= Resultado</th></tr>
+        ${iv.encerrar.map(e => `<tr><td>${e.m}${e.k?` (${e.k}º mês aberto)`:" (obra)"}</td><td>${sgn(e.caixa)}</td><td>${brl(e.revenda)}</td><td>${brl(e.caucao)}</td><td>${brl(e.multa)}</td><td>${brl(e.dividas)}</td><td>${sgn(e.res)}</td></tr>`).join("")}</table></div>
+      <p class="note">Não inclui rescisões trabalhistas nem custos de desmontagem. Multa proporcional ao tempo que falta do contrato (Lei 8.245/91, art. 4º).</p></div>
+    <div class="card"><h3>Lucro com remuneração dos sócios</h3><p class="sub">Pela regra RN-010 os sócios não têm pró-labore e ganham só pelo lucro (padrão mantido). A tabela mostra o efeito de pagar um pró-labore total aos sócios que operam.</p>
+      <div class="scroll"><table><tr><th>Pró-labore total</th><th>Lucro do negócio</th><th>Pró-labore + lucro</th><th>Alunos p/ empatar</th><th>Recupera em</th><th>Dinheiro necessário</th><th>Simples</th></tr>
+        ${rem.map(r => `<tr${r.v===p.proLabore?' class="hl"':""}><td>${brl(r.v)}/mês</td><td>${sgn(r.resultado)}</td><td>${brl(r.total)}</td><td>${Number.isFinite(r.be)?r.be:"—"}</td><td>${r.payback?r.payback+" meses":"não volta"}</td><td>${brl(r.exposicao)}</td><td>${p.modoSimples==="manual"?"manual":`${pct(r.tSimp)} · Anexo ${r.anexo}`}</td></tr>`).join("")}</table></div>
+      <p class="note">O pró-labore entra na folha do Fator R (ajuda a ficar no Anexo III). O INSS de 11% sai do pró-labore de cada sócio; o INSS da empresa já está no Simples. Linha destacada: valor atual do campo "Retirada fixa dos sócios" (grupo Equipe).</p></div>
+    <div class="card"><h3>Matriz de riscos</h3><p class="sub">Probabilidade: avaliação inicial, a revisar. Impacto: calculado pelo simulador (alto = lucro cai mais de 30% ou recuperar demora 12 meses a mais).</p>
+      <div class="rmat"><div class="h"></div>${ordemI.map(i => `<div class="h">Impacto ${i.toLowerCase()}</div>`).join("")}
+        ${ordemP.map(pr => `<div class="h">Probabilidade ${pr.toLowerCase()}</div>` + ordemI.map(im => { const sc = PROB_N[pr]*IMP_N[im];
+          return `<div class="c${sc>=6?3:sc>=3?2:1}">${rs.filter(r => r.prob===pr && r.imp===im).map(r => `<b title="${r.nome}">${r.n}</b>`).join("")}</div>`; }).join("")).join("")}</div>
+      <div class="scroll"><table class="txt"><tr><th>#</th><th>Risco</th><th>Prob.</th><th>Impacto</th><th>Efeito no simulador</th><th>Como reduzir</th></tr>
+        ${rs.map(r => `<tr><td>${r.n}</td><td>${r.nome}</td><td>${r.prob}</td><td>${r.imp}</td><td class="n">${r.semEfeito ? "sem efeito direto nos números" : `lucro ${sgn(r.resultado)}/mês (${r.dLucro>=0?"+":""}${brl(r.dLucro)}); recupera ${r.payback?`em ${r.payback} meses`:"não volta"}`}</td><td>${r.mitig}</td></tr>`).join("")}</table></div></div>
+    <div class="card dil"><h3>Checklist de diligência</h3><p class="sub">Documentos que um investidor vai pedir. O status fica guardado neste navegador. ${rd.ok} de ${rd.total} recebidos${rd.na?`, ${rd.na} não se aplicam`:""}.</p>
+      <div class="scroll"><table class="txt"><tr><th>Documento</th><th>O que conferir</th><th>Status</th></tr>
+        ${DILIG.map(([id, n, o]) => { const v = DILIG_ST[st[id]] ? st[id] : "pend";
+          return `<tr><td>${n}</td><td>${o}</td><td><select data-dil="${id}" aria-label="Status: ${n}">${Object.entries(DILIG_ST).map(([k, l]) => `<option value="${k}"${k===v?" selected":""}>${l}</option>`).join("")}</select></td></tr>`; }).join("")}</table></div></div>`;
+}
 function renderResults(){
   const p = P, s = simulate(p, p.modelo), d = s.d;
   groupInfo(p, s);
@@ -1097,8 +1362,8 @@ function renderResults(){
     <div class="big"><div class="q">Lucro por mês com ${num(s.A)} alunos</div><div class="a">${sgn(s.resultado)}</div><div class="d">Depois de impostos e todos os custos, com o studio maduro.${s.resultadoPos!==null?` Depois de quitar os aparelhos: ${brl(s.resultadoPos)}/mês.`:""}</div></div>
     <div class="big"><div class="q">Alunos para empatar</div><div class="a">${Number.isFinite(s.be)?s.be:"—"} <span style="font-size:15px;color:var(--muted)">de ${d.lotacao} vagas</span></div>
       <div class="meter ${meterCls}"><i style="width:${Math.min(100, fin(beFrac)*100).toFixed(0)}%"></i></div><div class="d">${Number.isFinite(beFrac)?pct(beFrac,0)+" do studio ocupado para não ter prejuízo.":""}</div></div>
-    <div class="big"><div class="q">Dinheiro que vocês precisam ter</div><div class="a">${brl(s.exposicao)}</div><div class="d">Obra, aparelhos e prejuízos até o negócio se pagar sozinho. Com reserva de ${num(p.reservaMeses)} meses: <b>${brl(s.capitalRec)}</b>${p.capital>0?` · vocês têm ${brl(p.capital)}`:""}.</div></div>
-    <div class="big"><div class="q">Tempo para recuperar o investimento</div><div class="a">${s.payback?tempo(s.payback):"não volta"}</div><div class="d">${s.payback?"Contado a partir da inauguração.":`Não acontece em ${num(s.H/12,0)} anos.`}</div></div>`;
+    <div class="big"><div class="q">Dinheiro que vocês precisam ter</div><div class="a">${brl(s.exposicao)}</div><div class="d">Obra, aparelhos e prejuízos até o negócio se pagar sozinho. Com reserva de ${num(p.reservaMeses)} meses: <b>${brl(s.capitalRec)}</b>${capDisp(p)>0?` · vocês têm ${brl(capDisp(p))}`:""}.</div></div>
+    <div class="big"><div class="q">Tempo para recuperar o investimento</div><div class="a">${s.payback?tempo(s.payback):"não volta"}</div><div class="d">${s.payback?"Contado a partir da inauguração.":`Não acontece em ${anosTxt(s.H)}.`}</div></div>`;
 
   // ----- Aba Resumo -----
   const ch = cashChart(s), bal = balanco(p, s);
@@ -1123,7 +1388,7 @@ function renderResults(){
         <tr><td>+ Aluguel e custos durante a obra</td><td>${brl(dec.obra)}</td><td>Aluguel, condomínio e taxas pagos antes de abrir (sem receita).</td></tr>
         <tr><td>+ Prejuízo da operação até o mês ${dec.m1}</td><td>${brl(dec.op)}</td><td>${dec.op>=0?"Soma das perdas mensais depois da abertura, com a rampa de alunos.":"A operação já dá lucro nesse período; esse valor reduz o total."}</td></tr>
         <tr><td>+ Parcelas do empréstimo até o mês ${dec.m1}</td><td>${brl(dec.parc)}</td><td>${dec.parc>0?"Juros e amortizações pagos no período.":"Não há parcelas."}</td></tr>
-        <tr class="total"><td>= Dinheiro que vocês precisam ter</td><td>${brl(dec.total)}</td><td>Pior saldo acumulado dos sócios.</td></tr>
+        <tr class="total"><td>= Dinheiro que vocês precisam ter</td><td>${brl(Math.max(0, dec.total))}</td><td>Pior saldo acumulado dos sócios.</td></tr>
         <tr><td>+ Reserva de segurança (${num(p.reservaMeses)} meses de custo fixo)</td><td>${brl(s.reserva)}</td><td>Folga para imprevistos: atraso na obra, alunos chegando mais devagar.</td></tr>
         <tr class="total"><td>= Capital recomendado</td><td>${brl(s.capitalRec)}</td><td>O que os sócios deveriam ter disponível.</td></tr>
       </table></div>
@@ -1142,13 +1407,13 @@ function renderResults(){
       <div class="chartbox" id="chartbox">${ch.svg}<div class="tip"></div></div>
       <p class="note">Inclui a obra, os meses até os alunos chegarem${p.empValor>0?" e o empréstimo":""}.</p></div>
     ${decomp}
-    <div class="card"><h3>Fôlego de caixa</h3>${(()=>{ const fo = folego(s, p.capital);
+    <div class="card"><h3>Fôlego de caixa</h3>${(()=>{ const fo = folego(s, capDisp(p));
       if(!fo) return `<p class="sub">Informe o "Dinheiro que os sócios têm para investir" (grupo Dinheiro dos sócios e empréstimo) para ver até quando o dinheiro dura.</p>`;
       const cab = fo.acaba === null
-        ? `<div class="alert ok"><b>✓</b><span>O capital de ${brl(p.capital)} cobre o pior momento (mês ${s.minMes}, ${brl(-s.exposicao)}). Sobram ${brl(fo.sobra)}${fo.sobraRec<0?`, mas faltam ${brl(-fo.sobraRec)} para a reserva de ${num(p.reservaMeses)} meses`:" e a reserva também está coberta"}.</span></div>`
+        ? `<div class="alert ok"><b>✓</b><span>O capital de ${brl(capDisp(p))} cobre o pior momento (mês ${s.minMes}, ${brl(-s.exposicao)}). Sobram ${brl(fo.sobra)}${fo.sobraRec<0?`, mas faltam ${brl(-fo.sobraRec)} para a reserva de ${num(p.reservaMeses)} meses`:" e a reserva também está coberta"}.</span></div>`
         : `<div class="alert bad"><b>✕</b><span>O dinheiro acaba no mês ${fo.acaba} após a assinatura${fo.acaba>p.mesesObra?` (mês ${fo.acaba-Math.round(p.mesesObra)} de funcionamento)`:" (ainda na obra)"}. Faltam ${brl(-fo.sobra)} para chegar ao pior momento (mês ${s.minMes}) e ${brl(-fo.sobraRec)} para ter também a reserva.</span></div>`;
       return `<p class="sub">Compara o dinheiro dos sócios com o caixa acumulado mês a mês (linha tracejada no gráfico do caixa).</p>${cab}
-        <div class="scroll"><table><tr><td>Capital dos sócios</td><td>${brl(p.capital)}</td></tr><tr><td>Dinheiro necessário (pior momento)</td><td>${brl(s.exposicao)}</td></tr>
+        <div class="scroll"><table><tr><td>${p.aporteInv>0?"Capital dos sócios + aporte do investidor":"Capital dos sócios"}</td><td>${brl(capDisp(p))}</td></tr><tr><td>Dinheiro necessário (pior momento)</td><td>${brl(s.exposicao)}</td></tr>
         <tr><td>Capital recomendado (com reserva)</td><td>${brl(s.capitalRec)}</td></tr><tr class="total"><td>${fo.sobra>=0?"Folga":"Falta"} em relação ao necessário</td><td>${sgn(fo.sobra)}</td></tr></table></div>`; })()}</div>
     <div class="card"><h3>Pontos de atenção</h3>${alerts(p,s).map(([t,m])=>`<div class="alert ${t}"><b>${ICON[t]}</b><span>${m}</span></div>`).join("")}</div>
     <div class="card"><h3>Indicadores</h3><p class="sub">Todos os números para o studio maduro (${num(s.A)} alunos), salvo indicação.</p><div class="indgrid">
@@ -1186,16 +1451,16 @@ function renderResults(){
         ["Valor do negócio hoje (VPL)", sgn(s.vpl), "Positivo = rende mais que a aplicação alternativa"],
         ["Rentabilidade anual (TIR)", s.tir===null?"—":pct(s.tir), `Compare com os ${num(p.tma,1)}% desejados`],
         ["Retorno por real investido", s.il===null?"—":num(s.il,2), "Acima de 1 = vale a pena"],
-        ["Retorno anual com o studio maduro", pct(s.resultado*12/Math.max(1,s.capexTotal)), "Lucro de um ano cheio ÷ investimento inicial (ignora obra e meses de prejuízo)"],
+        ["Retorno anual com o studio maduro", pct(s.resultado*12/Math.max(1,s.capexTotal)), "Lucro de um ano cheio ÷ investimento inicial (ignora o tempo de obra e os meses de prejuízo)"],
         ["1º mês com lucro", s.mesLucro?`mês ${s.mesLucro} de funcionamento`:"não acontece"],
-        [`Caixa no fim de ${num(s.H/12,0)} anos`, sgn(s.cumFinal)],
+        [`Caixa dos sócios no fim de ${anosTxt(s.H)}`, sgn(s.cumFinal), "Já descontado o empréstimo; inclui a venda do negócio e a caução, se houver"],
       ])}
       ${indBox("Pesos dos custos", [
         ["Imóvel ÷ faturamento", pct((p.aluguel+p.condIptu+p.taxasPrediais+p.garantia)/tot), "Aluguel, condomínio e taxas"],
         ["Equipe ÷ faturamento", pct(d.folha/tot)],
         ["Custo fixo por aluno", s.A>0?brl2(s.opex/s.A):"—"],
         ["Folha que conta no Fator R", brl(d.folhaR)+"/mês", `Fator R = ${pct(d.fatorR,1)} do faturamento (mínimo 28% para o Anexo III)`],
-        ["Simples Nacional em regime", p.modoSimples==="manual" ? pct(d.tSimp)+" (manual)" : `${pct(d.tSimp)} (Anexo ${d.anexo})`, "Mais 2,5% de cartão no studio"],
+        ["Simples Nacional em regime", p.modoSimples==="manual" ? pct(d.tSimp)+" (manual)" : `${pct(d.tSimp)} (Anexo ${d.anexo})`, `Mais ${pct(p.tCartao/100)} de cartão no studio`],
         ["Custo da equipe técnica", brl(d.tecnica)+"/mês", `${num(d.horasOp*p.instrBase+p.horasPico2)} horas de instrutor`],
       ])}
       ${indBox("Alunos", [
@@ -1251,7 +1516,8 @@ function renderResults(){
       ${p.recExtra?`<tr><td>(−) Outras receitas do studio, sem impostos</td><td>${brl2(p.recExtra*(1-d.tT))}</td></tr>`:""}
       <tr><td>= O que os alunos precisam cobrir</td><td>${brl2(s.fixoLiq)}</td></tr>
       <tr><td>÷ Quanto cada aluno deixa por mês</td><td>${brl2(s.margAluno)}</td></tr>
-      <tr class="total"><td>= Alunos para empatar (arredondado para cima)</td><td>${Number.isFinite(s.be)?s.be:"—"}</td></tr>
+      <tr><td>= Conta aproximada (com o Simples de ${pct(d.tSimp)} do regime)</td><td>${s.margAluno>0?num(s.fixoLiq/s.margAluno,1):"—"}</td></tr>
+      <tr class="total"><td>= Alunos para empatar <small>(conta exata: o Simples é recalculado para o faturamento de cada nº de alunos, que é menor que o do regime)</small></td><td>${Number.isFinite(s.be)?s.be:"—"}</td></tr>
     </table></div></div>`;
 
   // ----- Aba Riscos e cenários -----
@@ -1294,7 +1560,7 @@ function renderResults(){
       ${mcOk ? (()=>{ const r = MC.res, fP = v => Number.isFinite(v) ? v+" meses" : "não volta";
         return `<div class="indgrid">${indBox("Chances", [
             [`Recuperar em até ${num(p.paybackAlvo)} meses`, pct(r.pPrazo,0)],
-            [`Recuperar dentro da análise (${num(p.horizonte)} meses)`, pct(r.pVolta,0)],
+            [`Recuperar dentro da análise (${num(Math.max(12, p.horizonte))} meses)`, pct(r.pVolta,0)],
             ["Render mais que a aplicação alternativa (VPL > 0)", pct(r.pVpl,0)],
             ["Dar prejuízo mesmo com o studio maduro", pct(r.pPrej,0)]])}
           ${indBox("Faixas (10% pior · mediana · 10% melhor)", [
@@ -1331,7 +1597,7 @@ function renderResults(){
           vrefs:[{x:d.lotacao, label:`vagas: ${d.lotacao}`}], marks, aria:"Lucro do mês por número de alunos", tip:(i,x) => `${x} alunos: ${brl(vals[i])}/mês`}); })()}</div>
       <div class="scroll"><table>
       <tr><th>Alunos</th><th>% das vagas</th><th>Faturamento do studio</th><th>Lucro por mês</th><th>Lucro por ano</th></tr>
-      ${pts.map(n=>{ const r=regime(comAlunos(p, n),p.modelo); const tag=[n===s.be?"empata":"",n===Math.round(s.A)?(p.modoCrescimento==="captacao"?"base estável":"meta"):"",n===alunosLucro?"lucro desejado":""].filter(Boolean).join(", ");
+      ${pts.map(n=>{ const r=regime(comAlunos(p, n, {limitarVagas:"nao"}),p.modelo); const tag=[n===s.be?"empata":"",n===Math.round(s.A)?(p.modoCrescimento==="captacao"?"base estável":"meta"):"",n===alunosLucro?"lucro desejado":""].filter(Boolean).join(", ");
         return `<tr${tag?' class="hl"':''}><td>${n}${tag?" · "+tag:""}</td><td>${pct(n/Math.max(1,d.lotacao),0)}</td><td>${brl(r.recT)}</td><td>${sgn(r.resultado)}</td><td>${sgn(r.resultado*12)}</td></tr>`;}).join("")}
     </table></div></div>`;
 
@@ -1417,23 +1683,32 @@ function renderResults(){
       <li>Simples Nacional (modo automático): academia e sublocação de salas são "atividades do Fator R". Fator R = folha dos 12 meses (salários e encargos de pessoas físicas + pró-labore; MEI/PJ não contam) ÷ receita dos 12 meses. Se ≥ 28%, Anexo III; se menor, Anexo V. Alíquota efetiva = (receita dos 12 meses × alíquota da faixa − parcela a deduzir) ÷ receita dos 12 meses, sobre studio + salas. No início da atividade, usa a média dos meses já faturados × 12. A taxa de cartão é somada só no studio.</li>
       <li>Depreciação: obra dividida pelo prazo do contrato; aparelhos próprios pela vida útil (leasing não deprecia).</li>
       <li>Salas: horas alugadas = horas disponíveis × ocupação; preço médio pondera pacote, avulsa e turno; sobra = receita − impostos − taxa do app − custo por hora.</li>
-      <li>Alunos para empatar = (custos fixos − sobra das salas − outras receitas) ÷ quanto cada aluno deixa.</li>
-      <li>Caixa mês a mês: alunos e ocupação crescem em linha reta até a meta; preços, custos e aluguel sobem a cada 12 meses; carência conta da assinatura.</li>
+      <li>Alunos para empatar: menor nº de alunos com lucro ≥ 0, recalculando o Simples para o faturamento de cada nº de alunos. Aproximação: (custos fixos − sobra das salas − outras receitas) ÷ quanto cada aluno deixa.</li>
+      <li>Caixa mês a mês: alunos crescem como escolhido em "Como os alunos chegam" (linha reta, curva em S ou captação) e a ocupação das salas em linha reta; preços, custos e aluguel sobem a cada 12 meses; carência conta da assinatura.</li>
       <li>VPL e TIR usam o caixa do negócio sem o empréstimo; "dinheiro necessário" inclui o empréstimo.</li>
+      <li>Investidor: participação de exemplo = aporte ÷ (aporte + dinheiro dos sócios + VPL). Post-money = aporte ÷ participação; pre-money = post-money − aporte. Caixa da empresa = sócios + investidor + empréstimo + caixa do mês; depois do pior momento, a sobra acima da reserva × % distribuído vai para sócios e investidor pela participação. Se o caixa ficar negativo, aporte extra no pior mês, dividido pela participação.</li>
+      <li>Retorno do investidor: TIR e múltiplo dos fluxos líquidos (lucros recebidos, caixa final e venda, menos IR). Aplicação: rendimento bruto = "Rendimento mínimo desejado", com IR regressivo (22,5% até 6 meses, 20% até 12, 17,5% até 24, 15% acima).</li>
+      <li>Se fechar no mês N: caixa acumulado + revenda dos aparelhos (% × valor × (1 − meses de uso ÷ durabilidade)) + caução − multa (meses de aluguel × meses que faltam ÷ prazo) − saldo do empréstimo e do financiamento.</li>
+      <li>Matriz de riscos: impacto alto se o lucro cair mais de 30%, se o investimento deixar de voltar ou se recuperar demorar 12 meses a mais; médio acima de 10% ou 4 meses.</li>
     </ul></div>
     <div class="card"><h3>Limites da simulação</h3><ul class="note" style="font-size:13.5px">
       <li>Durante a obra entram só aluguel (fora da carência), condomínio + IPTU, outras taxas do imóvel e garantia. Equipe, contas e sistema começam na inauguração.</li>
-      <li>A meta de alunos não é limitada às vagas: se for maior, aparece um alerta, mas o cálculo usa a meta.</li>
+      <li>${p.limitarVagas==="sim" ? "Os alunos nunca passam das vagas do studio (campo \"Limitar alunos às vagas\")." : "Os alunos não são limitados às vagas: se a meta for maior, aparece um alerta, mas o cálculo usa a meta."}</li>
       <li>Salas em contrato mensal fixo contam desde a inauguração; só a venda por hora cresce aos poucos.</li>
       <li>O Simples segue os Anexos III e V pelo Fator R (ou um % manual). O enquadramento real (CNAE, tratamento da cessão das salas, ISS) depende do contador. O INSS patronal já está dentro do Simples nos Anexos III e V; o "custo da hora do instrutor" deve incluir só FGTS, férias e 13º. A reforma tributária (CBS/IBS a partir de 2027) e a tributação de dividendos não estão modeladas.</li>
-      <li>Reajustes de preços, custos e aluguel de 4,5% ao ano (inflação estimada) e taxa mínima de 15% ao ano, ambos em valores correntes.</li>
-      <li>A análise padrão vai até o fim do contrato de locação (60 meses); depois, depende da renovação.</li>
+      <li>Reajustes de ${pct(p.reajPreco/100)} ao ano nos preços, ${pct(p.inflCustos/100)} nos custos e ${pct(p.reajAluguel/100)} no aluguel, e rendimento mínimo de ${pct(p.tma/100)} ao ano, todos em valores correntes.</li>
+      <li>A análise vai até o mês ${num(s.H)}; o contrato de locação termina no mês ${num(p.prazoContrato)}. Depois do contrato, tudo depende da renovação.</li>
       <li>"Lucro por mês" é sobra de caixa: inclui a parcela do financiamento ou do leasing dos aparelhos e não desconta depreciação (mostrada à parte).</li>
       <li>A caução volta no fim do período analisado; luvas não voltam. Sem valor de venda do negócio, salvo se informado.</li>
+      <li>Investidor: IR sobre lucros (10% acima de R$ 50 mil/mês, Lei 15.270/2025) e sobre ganho de capital (15%) a confirmar com o contador; sócios operadores sem IR. Probabilidades da matriz de riscos são uma avaliação inicial. O fechamento não inclui rescisões trabalhistas.</li>
     </ul></div>`;
 
-  LAST = {p:{...p}, s, verdictHTML: document.getElementById("verdict").innerHTML, bigsHTML: document.getElementById("bigs").innerHTML, resumo, lucro, riscos, comparar, caixa, como};
-  const painel = {resumo, lucro, riscos, comparar, caixa, como};
+  const iv = investidor(p, s), rs = matrizRiscos(p, s), rem = remuneracaoSocios(p);
+  const cenInv = [["Ruim", -1], ["Esperado", 0], ["Bom", 1]].map(([n, sg]) => { const q = sg ? scenario(p, sg) : p, sq = sg ? simulate(q, q.modelo) : s;
+    return {n, s: sq, iv: sg ? investidor(q, sq, {aporte: iv.aporte, part: iv.part}) : iv}; });
+  const investidorTab = investidorHTML(p, s, iv, rs, rem, cenInv);
+  LAST = {p:{...p}, s, iv, rs, rem, cenInv, investidor: investidorTab, verdictHTML: document.getElementById("verdict").innerHTML, bigsHTML: document.getElementById("bigs").innerHTML, resumo, lucro, riscos, comparar, caixa, como};
+  const painel = {resumo, lucro, riscos, comparar, investidor: investidorTab, caixa, como};
   document.getElementById("results").innerHTML = ABAS.map(t =>
     `<div class="tab" data-tab="${t}" role="tabpanel" id="painel-${t}" aria-labelledby="aba-${t}" tabindex="0">${painel[t]}</div>`).join("");
   showTab(UI.tab);
@@ -1443,9 +1718,15 @@ function renderResults(){
     bmc.disabled = true; bmc.textContent = "Calculando…";
     setTimeout(() => { MC = {key: JSON.stringify(P), res: monteCarlo(P)}; renderResults(); }, 30);
   });
+  // F9: status dos documentos
+  document.querySelectorAll("#results [data-dil]").forEach(sel => sel.addEventListener("change", () => {
+    const st = lerDilig(); st[sel.dataset.dil] = sel.value; gravarDilig(st); renderResults();
+    const n = document.querySelector(`#results [data-dil="${sel.dataset.dil}"]`); if(n) n.focus();
+  }));
+  const bi = document.getElementById("btnInvPdf2"); if(bi && bi.addEventListener) bi.addEventListener("click", baixarResumoInvestidor);
 }
 // Abas (E3): papéis ARIA, só a aba ativa entra na ordem do Tab; setas esquerda/direita (com volta), Home e End trocam de aba
-const ABAS = ["resumo","lucro","riscos","comparar","caixa","como"];
+const ABAS = ["resumo","lucro","riscos","comparar","investidor","caixa","como"];
 function proximaAba(atual, tecla){
   const i = Math.max(0, ABAS.indexOf(atual)), n = ABAS.length;
   if(tecla==="ArrowRight") return ABAS[(i+1)%n];
@@ -1601,7 +1882,7 @@ const REP_STYLE = `<style>
 .rep .pbox td:last-child{text-align:right;font-weight:600}.rep .pbox tr.alt td{background:var(--warn-weak)}.rep .pbox small{font-weight:400;color:var(--muted)}
 </style>`;
 function repSection(title, body){ return `<div class="rep">${REP_STYLE}${title?`<h2 class="sec">${title}</h2>`:""}${body}</div>`; }
-// Monta as 7 seções do relatório (usadas no PDF e na versão para impressão)
+// Monta as 8 seções do relatório (usadas no PDF e na versão para impressão)
 async function buildSections(){
   if(!LAST) throw new Error("Sem simulação calculada");
   // E2: o PDF sempre traz a simulação de risco; se ainda não rodou com estas premissas, roda agora
@@ -1617,6 +1898,7 @@ async function buildSections(){
     ${UI.cenario ? `<p>Cenário: <b>${escHtml(UI.cenario)}</b></p>` : ""}<p>Gerado em ${quando} · ${nAlt ? nAlt + " premissa(s) diferente(s) do padrão (destacadas na seção 1)" : "premissas padrão"} · aparelhos: ${MODELS[p.modelo]}</p><p>${textoVersao()}</p></div></div>
     <p class="note">Valores estimados a partir das premissas da seção 1. Não substituem orçamento de obra, parecer contábil ou validação da Vigilância Sanitária.</p>`;
   const tirarBotoes = h => h.replace(/<button[\s\S]*?<\/button>/g, "");
+  const selectsTexto = h => h.replace(/<select[^>]*>[\s\S]*?<\/select>/g, m => { const o = /<option[^>]*selected[^>]*>([^<]*)<\/option>/.exec(m); return o ? `<b>${o[1]}</b>` : ""; });
   const resumo = tirarBotoes(await svgsToImages(L.resumo)).replace(" Passe o mouse para ver cada mês.", "");
   const caixaHtml = L.caixa.replace(/<details>/g,"<div>").replace(/<\/details>/g,"</div>").replace(/<summary[^>]*>[\s\S]*?<\/summary>/, "<h3>Mês a mês</h3>");
   const secoes = [
@@ -1625,8 +1907,9 @@ async function buildSections(){
     repSection("3. Lucro do mês", tirarBotoes(await svgsToImages(L.lucro))),
     repSection("4. Riscos e cenários", tirarBotoes(await svgsToImages(L.riscos))),
     repSection("5. Comparar opções", tirarBotoes(await svgsToImages(L.comparar))),
-    repSection("6. Caixa ao longo do tempo", tirarBotoes(await svgsToImages(caixaHtml))),
-    repSection("7. Como calculamos", tirarBotoes(L.como)),
+    repSection("6. Visão do investidor", selectsTexto(tirarBotoes(await svgsToImages(L.investidor)))),
+    repSection("7. Caixa ao longo do tempo", tirarBotoes(await svgsToImages(caixaHtml))),
+    repSection("8. Como calculamos", tirarBotoes(L.como)),
   ];
   return {secoes, agora, quando};
 }
@@ -1638,7 +1921,7 @@ async function buildPdf(){
     image:{type:"jpeg", quality:0.95},
     html2canvas:{scale:2, backgroundColor:"#ffffff", scrollX:0, scrollY:0},
     jsPDF:{unit:"mm", format:"a4", orientation:"portrait"},
-    pagebreak:{mode:["css","legacy"], avoid:["tr",".ind",".hbar",".alert","img",".chartbox",".big",".verdict","h3",".cover",".legend",".pbox"]},
+    pagebreak:{mode:["css","legacy"], avoid:["tr",".ind",".hbar",".alert","img",".chartbox",".big",".verdict","h3",".cover",".legend",".pbox",".rmat"]},
   };
   let w = html2pdf().set(opt).from(secoes[0]).toPdf();
   for(const sec of secoes.slice(1)) w = w.get("pdf").then(pdf => { pdf.addPage(); }).from(sec).toContainer().toCanvas().toPdf();
@@ -1660,9 +1943,105 @@ document.getElementById("btnPdf").onclick = async () => {
   }
   finally { b.disabled = false; b.textContent = txt; }
 };
+// ================= Resumo para investidor (F11): PDF de 2 páginas =================
+const RI_STYLE = `<style>
+.rep.ri{font-size:10.5px;line-height:1.35}.ri h2.sec{font-size:14px;margin:6px 0 5px;padding-bottom:3px}
+.ri .cover{padding:12px 16px;margin-bottom:8px}.ri .cover img{height:58px}.ri .cover h1{font-size:19px}.ri .cover p{font-size:11px}
+.ri .card{padding:6px 9px;margin-bottom:6px}.ri .card h3{font-size:12px;margin-bottom:3px}.ri .sub,.ri .note{font-size:9.5px;margin:0 0 4px}
+.ri table{font-size:9.6px}.ri th,.ri td{padding:2px 4px;font-size:9.6px}.ri small.ex{font-size:9px}
+.ri .bigs{gap:6px;margin:6px 0}.ri .big{padding:6px 8px;border-radius:9px}.ri .big .a{font-size:16px}.ri .big .q,.ri .big .d{font-size:9px}
+.ri .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ri .prop{background:var(--accent-weak);border-radius:9px;padding:7px 10px;margin-bottom:6px}
+.ri .alert{font-size:9.8px;padding:4px 8px;margin:4px 0}.ri .legend{font-size:9.5px;margin:2px 0}
+</style>`;
+async function buildResumoInvestidor(){
+  if(!LAST) throw new Error("Sem simulação calculada");
+  const L = LAST, p = L.p, s = L.s, d = s.d, iv = L.iv, mt = iv.met, agora = new Date();
+  const quando = agora.toLocaleDateString("pt-BR") + " às " + agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  const x = v => v===null ? "—" : num(v,2) + "×", pb = v => v===null ? "não recupera" : `mês ${v}`;
+  const linhas = rows => `<table>${rows.map(([l,v,c]) => `<tr${c?` class="${c}"`:""}><td>${l}</td><td>${v}</td></tr>`).join("")}</table>`;
+  const capa = `<div class="cover"><img src="${document.querySelector(".logo").src}" alt="Core One"><div><h1>Core One · Resumo para investidor</h1>
+    <p>Studio de movimento + salas de atendimento · Rua Real Grandeza, 190 — Botafogo, Rio de Janeiro</p>
+    <p>${UI.cenario ? `Cenário: <b>${escHtml(UI.cenario)}</b> · ` : ""}Gerado em ${quando} · ${textoVersao()}</p></div></div>`;
+  const prop = `<div class="prop"><b>A proposta.</b> No térreo, studio de musculação e funcional com até ${d.capSim} alunos treinando ao mesmo tempo e planos de ${brl(p.p2)} a ${brl(p.p45)} por mês (mensalidade média ${brl2(d.ticket)}). No 2º andar, ${num(p.salas)} salas de terapia alugadas por hora (${brl2(p.precoHora)}/h). Meta: ${num(s.A)} alunos (${pct(s.A/Math.max(1,d.lotacao),0)} das ${d.lotacao} vagas)${p.modoCrescimento==="captacao"?"":` em ${num(p.rampa)} meses`}, com ${num(p.ocupCow)}% de ocupação das salas.</div>`;
+  const bigs = `<div class="bigs">
+    <div class="big"><div class="q">Lucro por mês (maduro)</div><div class="a">${sgn(s.resultado)}</div><div class="d">Margem de ${pct(s.resultado/Math.max(1,s.receitaTotal),0)} sobre ${brl(s.receitaTotal)}</div></div>
+    <div class="big"><div class="q">Alunos para empatar</div><div class="a">${Number.isFinite(s.be)?s.be:"—"}</div><div class="d">de ${d.lotacao} vagas</div></div>
+    <div class="big"><div class="q">Capital recomendado</div><div class="a">${brl(s.capitalRec)}</div><div class="d">Necessário ${brl(s.exposicao)} + reserva ${brl(s.reserva)}</div></div>
+    <div class="big"><div class="q">Recupera o investimento</div><div class="a">${s.payback?s.payback+" meses":"não volta"}</div><div class="d">TIR do projeto ${pct(s.tir,0)} ao ano</div></div></div>`;
+  const ex = (c, t) => c ? ` <small class="ex">(${t})</small>` : "";
+  const estrutura = `<div class="card"><h3>Estrutura do aporte</h3>${linhas([
+    ["Aporte do investidor" + ex(iv.exemploAporte,"exemplo"), brl(iv.aporte)], ["Dinheiro dos sócios operadores", brl(p.capital)],
+    ["Participação do investidor" + ex(iv.exemploPart,"exemplo"), pct(iv.part,1)], ["Valor antes do aporte (pre-money)", brl(iv.preMoney)],
+    ["Valor depois do aporte (post-money)", brl(iv.postMoney), "total"], ["Valor pelo fluxo de caixa", brl(iv.preFluxo)],
+    ["Aportes extras previstos", iv.extra>0 ? brl(iv.extra) : "nenhum"]])}</div>`;
+  const fu = `<div class="card"><h3>Fontes e usos</h3>${linhas([...iv.fontes.filter(([,v]) => v>0).map(([l,v]) => [l, brl(v)]), ["Total das fontes", brl(iv.totF), "total"],
+    ...iv.usos.filter(([,v]) => Math.abs(v)>=1).map(([l,v]) => [l, brl(v)]), ["Total dos usos", brl(iv.totU), "total"]])}</div>`;
+  const melhor = mt.tir!==null && mt.tir > iv.taxaAplicLiq;
+  const retorno = `<div class="card"><h3>Retorno do investidor (líquido de IR)</h3><div class="two">${linhas([
+      ["Total aportado", brl(mt.aportado)], ["Total recebido em " + num(s.H) + " meses", brl(mt.recebido)], ["Múltiplo do capital", x(mt.moic)],
+      ["Rentabilidade anual (TIR)", pct(mt.tir,1)], ["Recupera o aporte", mt.payback===null ? "não recupera" : pb(mt.payback) + " após a assinatura"], ["Lucro recebido por mês (último ano)", brl(iv.distMes*iv.part)]])}
+    ${linhas([["Aplicação (CDI/Tesouro) bruta", pct(p.tma/100,1) + " ao ano"], ["Aplicação líquida de IR", pct(iv.taxaAplicLiq,1) + " ao ano"],
+      [`Em ${num(s.H)} meses na aplicação`, brl(iv.aplicFinal)], [`Em ${num(s.H)} meses no negócio`, brl(iv.invFinal)],
+      ["Venda do negócio no fim", p.multSaida>0 ? `${num(p.multSaida,1)}× o lucro anual` : "não considerada"]])}</div>
+    <div class="alert ${mt.aportado<=0 ? "warn" : melhor?"ok":"bad"}"><b>${mt.aportado<=0 ? "!" : melhor?"✓":"✕"}</b><span>${mt.aportado<=0 ? "Sem aporte do investidor: o capital dos sócios já cobre o capital recomendado." : melhor ? `Rende ${pct(mt.tir - iv.taxaAplicLiq,1)} ao ano a mais que a aplicação, depois do IR.` : `Rende menos que a aplicação depois do IR.`} Distribuição: ${num(p.distribLucro)}% da sobra de caixa acima da reserva, a partir do mês ${s.minMes+1}.</span></div></div>`;
+  const pag1 = capa + prop + bigs + `<div class="two">${estrutura}${fu}</div>` + retorno;
+  // Página 2
+  const cen = L.cenInv;
+  const cenarios = `<div class="card"><h3>Cenários</h3><p class="sub">Ruim e bom variam alunos (±${p.varAlunos}%), ocupação das salas (±${p.varOcup}%), preços (±${p.varPrecos}%), custos (±${p.varCustos}%) e tempo para encher (±${p.varRampa}%), com o mesmo acordo de aporte.</p>
+    <table><tr><th></th>${cen.map(c => `<th>${c.n}</th>`).join("")}</tr>
+      <tr><td>Alunos em regime</td>${cen.map(c => `<td>${num(c.s.A)}</td>`).join("")}</tr>
+      <tr><td>Lucro por mês (maduro)</td>${cen.map(c => `<td>${sgn(c.s.resultado)}</td>`).join("")}</tr>
+      <tr><td>Dinheiro necessário</td>${cen.map(c => `<td>${brl(c.s.exposicao)}</td>`).join("")}</tr>
+      <tr><td>Recupera o investimento do projeto</td>${cen.map(c => `<td>${c.s.payback?c.s.payback+" meses":"não volta"}</td>`).join("")}</tr>
+      <tr><td>TIR do investidor</td>${cen.map(c => `<td>${pct(c.iv.met.tir,1)}</td>`).join("")}</tr>
+      <tr><td>Múltiplo do investidor</td>${cen.map(c => `<td>${x(c.iv.met.moic)}</td>`).join("")}</tr></table>
+    ${legendHTML([["Ruim","var(--s-out)"],["Esperado","var(--s-res)"],["Bom","var(--s-in)"]])}
+    ${(() => { const cum = f => { let c = 0; return f.map(v => c += v); };
+      const ser = cen.map(c => ({name: c.n, color: {Ruim:"var(--s-out)", Esperado:"var(--s-res)", Bom:"var(--s-in)"}[c.n], vals: cum(c.iv.fluxoInv)}));
+      const xs = ser[1].vals.map((_, i) => i);
+      return lineChart({xs, series: ser, H: 190, yfmt: kR, xfmt: v => v===0 ? "assinatura" : "mês " + v, xticks: xs.filter(v => v%12===0), aria: "Caixa acumulado do investidor por cenário", tip: () => ""}); })()}</div>`;
+  const top = L.rs.filter(r => !r.semEfeito).sort((a,b) => b.sev - a.sev || a.dLucro - b.dLucro).slice(0, 5);
+  const riscosT = `<div class="card"><h3>Principais riscos</h3><table class="txt"><tr><th>Risco</th><th>Prob.</th><th>Impacto</th><th>Efeito</th><th>Como reduzir</th></tr>
+    ${top.map(r => `<tr><td>${r.nome}</td><td>${r.prob}</td><td>${r.imp}</td><td>${Math.abs(r.dLucro)>=1?`lucro ${sgn(r.dLucro)}/mês; `:""}recupera ${r.payback?`em ${r.payback} meses`:"não volta"}</td><td>${r.mitig}</td></tr>`).join("")}</table></div>`;
+  const venda = `<div class="card"><h3>Venda do negócio${iv.exemploMult?" (exemplo: 2× o lucro anual)":` (${num(iv.multEx,1)}× o lucro anual)`}</h3><table><tr><th>Vende no</th><th>Valor</th><th>Parte do investidor</th><th>TIR</th><th>Múltiplo</th></tr>
+    ${iv.saidas.map(v => `<tr><td>ano ${v.ano}</td><td>${brl(v.venda)}</td><td>${brl(v.vendaInv)}</td><td>${pct(v.tir,0)}</td><td>${x(v.moic)}</td></tr>`).join("")}</table></div>`;
+  const fecha = `<div class="card"><h3>Se precisar fechar</h3><table><tr><th>Fecha no mês</th><th>Resultado de todos</th></tr>
+    ${iv.encerrar.filter(e => [6,12,24,36].includes(e.m) || e.m===s.H).map(e => `<tr><td>${e.m}</td><td>${sgn(e.res)}</td></tr>`).join("")}</table><p class="note">Caixa acumulado + revenda dos aparelhos + caução − multa − dívidas. A obra fica no imóvel.</p></div>`;
+  const rd = resumoDilig(lerDilig());
+  const dil = `<div class="card"><h3>Diligência</h3><p class="sub">${rd.ok} de ${rd.total} documentos recebidos${rd.na?`, ${rd.na} não se aplicam`:""}.${rd.pendentes.length ? " Pendentes: " + rd.pendentes.join("; ") + "." : ""}</p></div>`;
+  const nota = `<p class="note">Premissas: aluguel ${brl(p.aluguel)}/mês, condomínio + IPTU ${brl(p.condIptu)}, obra ${brl(d.capexObra)}, aparelhos: ${MODELS[p.modelo]}, Simples ${pct(d.tSimp)}${d.anexo&&d.anexo!=="manual"?` (Anexo ${d.anexo})`:""}, reajustes de ${num(p.reajPreco,1)}% ao ano, análise de ${num(s.H)} meses. Estimativas do simulador; não substituem orçamento de obra, parecer contábil ou validação da Vigilância Sanitária. IR do investidor a confirmar com o contador.</p>`;
+  const pag2 = cenarios + riscosT + `<div class="two">${venda}${fecha}</div>` + dil + nota;
+  const sec = body => `<div class="rep ri">${REP_STYLE}${RI_STYLE}${body}</div>`;
+  return {secoes: [sec(pag1), sec(await svgsToImages(pag2))], agora, quando};
+}
+async function pdfResumoInvestidor(){
+  const {secoes, agora, quando} = await buildResumoInvestidor();
+  await loadScript(PDF_LIB);
+  const opt = {margin:[8,8,12,8], filename:`core-one-resumo-investidor-${agora.toISOString().slice(0,10)}.pdf`, image:{type:"jpeg", quality:0.95},
+    html2canvas:{scale:2, backgroundColor:"#ffffff", scrollX:0, scrollY:0}, jsPDF:{unit:"mm", format:"a4", orientation:"portrait"},
+    pagebreak:{mode:["css","legacy"], avoid:["tr",".big",".card",".alert","img"]}};
+  const w = html2pdf().set(opt).from(secoes[0]).toPdf().get("pdf").then(pdf => { pdf.addPage(); }).from(secoes[1]).toContainer().toCanvas().toPdf();
+  return {worker: w.get("pdf").then(pdf => {
+    const n = pdf.internal.getNumberOfPages(), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+    for(let i=1;i<=n;i++){ pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(110); pdf.text(`Core One · Resumo para investidor · ${quando} · Simulador ${VERSAO.app} · página ${i} de ${n}`, W/2, H-5, {align:"center"}); }
+  })};
+}
+async function baixarResumoInvestidor(){
+  const bs = [document.getElementById("btnInvPdf"), document.getElementById("btnInvPdf2")].filter(Boolean), txt = bs.map(b => b.textContent);
+  bs.forEach(b => { b.disabled = true; b.textContent = "Gerando PDF…"; });
+  try { const {worker} = await pdfResumoInvestidor(); await worker.save(); }
+  catch(e){
+    console.error(e);
+    if(confirm("Não foi possível gerar o PDF direto (a biblioteca de PDF precisa de internet).\n\nAbrir a versão para impressão? Na janela que abrir, escolha \"Salvar como PDF\" como impressora.")){
+      try { await printReport(true, (await buildResumoInvestidor()).secoes); } catch(e2){ console.error(e2); alert("Também não foi possível abrir a impressão: " + e2.message); }
+    }
+  }
+  finally { bs.forEach((b, i) => { b.disabled = false; b.textContent = txt[i]; }); }
+}
+document.getElementById("btnInvPdf").onclick = baixarResumoInvestidor;
 // Alternativa sem internet: imprime o mesmo relatório por um iframe oculto (o navegador salva em PDF)
-async function printReport(doPrint = true){
-  const {secoes} = await buildSections();
+async function printReport(doPrint = true, secoesProntas){
+  const secoes = secoesProntas || (await buildSections()).secoes;
   const css = document.querySelector("head style").outerHTML;
   const printCss = `<style>@page{size:A4;margin:10mm 8mm}html,body{background:#fff!important;margin:0}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}.rep{width:auto}.rep+.rep{break-before:page}
