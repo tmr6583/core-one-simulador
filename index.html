@@ -115,11 +115,19 @@ details.grp[open]>summary::after{content:"－"}
 .field.hidden,.field.adv-hidden{display:none}
 
 /* Abas */
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.tabs button{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:7px 14px;cursor:pointer;color:var(--muted)}
-.tabs button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
-:root[data-theme="dark"] .tabs button.on{background:var(--accent);color:#0b1726}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tabs button.on{background:var(--accent);border-color:var(--accent);color:#0b1726}}
+/* Abas: barra própria, fixa no topo ao rolar, com ícones (diferente dos botões de cenário) */
+.tabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:14px;padding:5px;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:14px;box-shadow:0 3px 10px rgba(11,38,54,.10);position:sticky;top:8px;z-index:20}
+.tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:0;background:transparent;border-radius:10px;padding:9px 6px 10px;cursor:pointer;color:var(--text);font-weight:600;font-size:13.5px;line-height:1.2;text-align:center;transition:background .15s,color .15s}
+.tabs button svg{width:21px;height:21px;flex:0 0 auto;color:var(--accent)}
+.tabs button:hover{background:var(--accent-weak);color:var(--text)}
+.tabs button.on{background:var(--brand);color:#fff;box-shadow:inset 0 -3px 0 #7fbfa3}
+.tabs button.on svg{color:#7fbfa3}
+:root[data-theme="dark"] .tabs button.on{background:var(--accent);color:#0b1726;box-shadow:inset 0 -3px 0 #0b2636}
+:root[data-theme="dark"] .tabs button.on svg{color:#0b1726}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tabs button.on{background:var(--accent);color:#0b1726;box-shadow:inset 0 -3px 0 #0b2636}
+  :root:not([data-theme="light"]) .tabs button.on svg{color:#0b1726}}
+@media (max-width:700px){.tabs{display:flex;overflow-x:auto;top:0;border-radius:0 0 12px 12px;scrollbar-width:thin}
+  .tabs button{flex-direction:row;flex:0 0 auto;white-space:nowrap;padding:9px 12px;font-size:14px;gap:7px}.tabs button svg{width:18px;height:18px}}
 .tab{display:none}.tab.on{display:block}
 /* Teclado (E3): contorno visível em tudo que recebe foco pelo teclado */
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -221,13 +229,13 @@ tr.sub td{color:var(--muted);font-size:13px}
   <aside id="inputs"></aside>
   <section>
     <div class="tabs" id="tabs" role="tablist" aria-label="Resultados da simulação">
-      <button role="tab" id="aba-resumo" aria-controls="painel-resumo" data-tab="resumo">Resumo</button>
-      <button role="tab" id="aba-lucro" aria-controls="painel-lucro" data-tab="lucro">Lucro do mês</button>
-      <button role="tab" id="aba-riscos" aria-controls="painel-riscos" data-tab="riscos">Riscos e cenários</button>
-      <button role="tab" id="aba-comparar" aria-controls="painel-comparar" data-tab="comparar">Comparar opções</button>
-      <button role="tab" id="aba-investidor" aria-controls="painel-investidor" data-tab="investidor">Investidor</button>
-      <button role="tab" id="aba-caixa" aria-controls="painel-caixa" data-tab="caixa">Caixa ao longo do tempo</button>
-      <button role="tab" id="aba-como" aria-controls="painel-como" data-tab="como">Como calculamos</button>
+      <button role="tab" id="aba-resumo" aria-controls="painel-resumo" data-tab="resumo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Resumo</span></button>
+      <button role="tab" id="aba-lucro" aria-controls="painel-lucro" data-tab="lucro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.6-1-1.7-1.5-3-1.5-1.7 0-3 .9-3 2s1.3 1.7 3 2 3 .9 3 2-1.3 2-3 2c-1.3 0-2.4-.5-3-1.5M12 6.5v11"/></svg><span>Lucro do mês</span></button>
+      <button role="tab" id="aba-riscos" aria-controls="painel-riscos" data-tab="riscos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.01"/></svg><span>Riscos e cenários</span></button>
+      <button role="tab" id="aba-comparar" aria-controls="painel-comparar" data-tab="comparar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M6 17V9M12 17V5M18 17v-5"/></svg><span>Comparar opções</span></button>
+      <button role="tab" id="aba-investidor" aria-controls="painel-investidor" data-tab="investidor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></svg><span>Investidor</span></button>
+      <button role="tab" id="aba-caixa" aria-controls="painel-caixa" data-tab="caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/></svg><span>Caixa ao longo do tempo</span></button>
+      <button role="tab" id="aba-como" aria-controls="painel-como" data-tab="como"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 11.5h1M11.5 11.5h1M14.5 11.5h1M8.5 15h1M11.5 15h1M14.5 15h1M8.5 18h1M11.5 18h1M14.5 18h1"/></svg><span>Como calculamos</span></button>
     </div>
     <div id="results"></div>
   </section>
@@ -1839,12 +1847,21 @@ function showTab(t, foco){
     b.classList.toggle("on", on); b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1;
     if(on && foco) b.focus(); });
   document.querySelectorAll("#results .tab").forEach(d => d.classList.toggle("on", d.dataset.tab===t));
+  // no celular a barra de abas rola na horizontal: mantém a aba escolhida à vista
+  const tb = document.getElementById("tabs"), ab = tb && tb.querySelector(".on");
+  if(ab && tb.scrollWidth > tb.clientWidth && (ab.offsetLeft < tb.scrollLeft || ab.offsetLeft + ab.offsetWidth > tb.scrollLeft + tb.clientWidth))
+    tb.scrollLeft = ab.offsetLeft - (tb.clientWidth - ab.offsetWidth)/2;
 }
-document.querySelectorAll("#tabs [role=tab]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+function topoDoPainel(){
+  const tb = document.getElementById("tabs"), pn = document.querySelector("#results .tab.on"); if(!tb || !pn) return;
+  const y = pn.getBoundingClientRect().top - tb.getBoundingClientRect().bottom - 14;
+  if(y < 0) window.scrollBy({top: y});
+}
+document.querySelectorAll("#tabs [role=tab]").forEach(b => b.addEventListener("click", () => { showTab(b.dataset.tab); topoDoPainel(); }));
 document.getElementById("tabs").addEventListener("keydown", e => {
   const b = e.target && e.target.closest ? e.target.closest("[role=tab]") : null; if(!b) return;
   const t = proximaAba(b.dataset.tab, e.key); if(!t) return;
-  e.preventDefault(); showTab(t, true);
+  e.preventDefault(); showTab(t, true); topoDoPainel();
 });
 
 function rerender(){ save(); renderInputs(); renderResults(); }
@@ -1964,7 +1981,7 @@ const REP_STYLE = `<style>
 .rep .card{padding:10px 12px;margin-bottom:10px}.rep .big .a{font-size:20px}.rep .hbar{grid-template-columns:170px 1fr 110px;font-size:11.5px}
 .rep .ind .l{font-size:11.5px}.rep .ind .l small{font-size:10.5px}.rep .ind .v{font-size:11.5px}
 .rep h2.sec{font-size:19px;margin:4px 0 12px;color:#0b2636;border-bottom:2px solid #3f7f66;padding-bottom:5px}
-.rep .card{box-shadow:none}.rep .tip{display:none}
+.rep .card{box-shadow:none}.rep .tip{display:none}.rep small.pb-c{font-weight:400;color:var(--muted);font-size:.85em}
 .rep .bigs{grid-template-columns:repeat(4,minmax(0,1fr))}
 .rep .indgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .rep .cover{background:#0b2636;color:#fff;border-radius:14px;padding:18px 20px;display:flex;gap:18px;align-items:center;margin-bottom:14px}
@@ -2011,6 +2028,151 @@ async function buildSections(){
   ];
   return {secoes, agora, quando};
 }
+// ================= Quebra de páginas do PDF =================
+// O html2pdf fotografa a seção inteira e corta a imagem a cada altura de página. Antes disso, a seção é montada
+// fora da tela com a mesma largura do PDF e cada bloco que cruzaria o corte é empurrado para a página seguinte:
+// linhas de tabela, parágrafos, gráficos, indicadores e cartões pequenos nunca são cortados; títulos ficam junto
+// do que vem depois; tabelas longas continuam na página seguinte com o cabeçalho repetido; cartões longos
+// continuam em um cartão novo com o título e "(continuação)"; tabela não deixa só 1 linha em uma das páginas.
+const A4_MM = [595.28/72*25.4, 841.89/72*25.4];
+function geometriaPdf(margin, scale){
+  const iw = A4_MM[0] - margin[1] - margin[3], ih = A4_MM[1] - margin[0] - margin[2];
+  return {largura: iw + "mm", altura: cw => { const c = Math.ceil(cw)*scale; return Math.floor(c*ih/iw)/scale; }};
+}
+const PB_ATOMO = "tr,p,li,img,svg,h1,h2,h3,h4,.big,.bigs,.ind,.hbar,.alert,.verdict,.cover,.chartbox,.legend,.pbox,.pgrid,.pcalc,.rmat,.prop,.meter,.ex";
+function paginar(root, H){
+  const G = 14; // folga no pé da página: o fundo e a borda do cartão também cabem antes do corte
+  const mede = el => { const r = el.getBoundingClientRect(), t = root.getBoundingClientRect().top; return {top: r.top - t, bottom: r.bottom - t, h: r.height}; };
+  const disp = el => el ? getComputedStyle(el).display : "block";
+  const ignora = el => el.tagName==="STYLE" || el.classList.contains("pb-sp");
+  const filhos = el => [...el.children].filter(c => !ignora(c) && c.getBoundingClientRect().height >= 1);
+  const presos = new WeakSet(); // blocos que já começam no topo e mesmo assim não cabem: ficam como estão
+  const ehGrade = el => /grid/.test(disp(el)) && !el.matches(PB_ATOMO);
+  const folha = el => el.matches(PB_ATOMO) || !el.firstElementChild;
+  const atomo = (el, h) => folha(el) || (el.matches(".card") && h <= H*0.42) || (el.tagName==="TABLE" && h <= H*0.22) || (ehGrade(el) && h <= H*0.5);
+  const primeiro = el => { let x = el.previousElementSibling; while(x && ignora(x)) x = x.previousElementSibling; return !x; };
+  const fimDaPagina = top => (Math.floor((top + 1)/H) + 1)*H;
+  function procura(box){
+    for(const el of filhos(box)){
+      const m = mede(el), fim = fimDaPagina(m.top);
+      if(atomo(el, m.h)){
+        if(m.bottom <= fim - (folha(el) ? G : -0.5)) continue; // cartão/tabela inteiros: já incluem o próprio fundo
+        if((m.h <= H - G - 8 || el.matches(".pgrid")) && !presos.has(el)) return el;
+        continue;
+      }
+      if(m.bottom <= fim + 0.5) continue;
+      if(ehGrade(el)){ // grade (colunas lado a lado): quebra entre linhas da grade, nunca dentro de uma coluna
+        const linhas = [];
+        for(const c of filhos(el)){ const t = Math.round(mede(c).top), l = linhas.find(x => Math.abs(x.t - t) < 2); if(l) l.itens.push(c); else linhas.push({t, itens:[c]}); }
+        for(const l of linhas){
+          const bot = Math.max(...l.itens.map(c => mede(c).bottom)), f = fimDaPagina(l.t);
+          if(bot <= f - G) continue;
+          if(bot - l.t <= H - G - 8 && !presos.has(l.itens[0])) return l.itens[0];
+          for(const c of l.itens){ const r = procura(c); if(r) return r; }
+        }
+        continue;
+      }
+      const dentro = procura(el); if(dentro) return dentro;
+    }
+    return null;
+  }
+  function inicio(el){
+    if(el.tagName==="TR"){ // não deixa 1 linha sozinha em nenhuma das páginas
+      const rows = [...el.parentElement.children], cab = rows[0] && [...rows[0].children].every(c => c.tagName==="TH") ? 1 : 0;
+      let i = rows.indexOf(el);
+      if(rows.length - i < 2 && i - cab >= 3) i = rows.length - 2;
+      el = i - cab < 2 ? rows[0] : rows[i];
+    }
+    let x = el.previousElementSibling; // títulos e subtítulos vão junto
+    while(x && (ignora(x) || x.matches("h1,h2,h3,h4,.sub,.legend"))){ if(!ignora(x)) el = x; x = x.previousElementSibling; }
+    return el;
+  }
+  function divideTabela(corpo, linha){
+    const tab = corpo.parentElement, nt = tab.cloneNode(false), nc = corpo.cloneNode(false);
+    nt.removeAttribute("id");
+    const thead = tab.querySelector(":scope > thead"), cab = corpo.firstElementChild;
+    if(thead && corpo.tagName!=="THEAD") nt.append(thead.cloneNode(true));
+    else if(cab && cab!==linha && [...cab.children].every(c => c.tagName==="TH")) nc.append(cab.cloneNode(true));
+    let x = linha; while(x){ const n = x.nextElementSibling; nc.append(x); x = n; }
+    nt.append(nc); tab.after(nt); return nt;
+  }
+  function divideBloco(par, el){
+    const nb = par.cloneNode(false); nb.removeAttribute("id"); nb.classList.add("pb-cont");
+    const h = [...par.children].find(c => !ignora(c));
+    if(h && h.tagName==="H3" && h!==el){ const t = h.cloneNode(true); t.querySelectorAll(".pb-c").forEach(x => x.remove()); t.insertAdjacentHTML("beforeend", '<small class="pb-c"> (continuação)</small>'); nb.append(t); }
+    let x = el; while(x){ const n = x.nextElementSibling; nb.append(x); x = n; }
+    par.after(nb); return nb;
+  }
+  function empurra(el, alvo, comoMargem){
+    let sp = null;
+    if(comoMargem) el.dataset.pbMt = el.dataset.pbMt || getComputedStyle(el).marginTop;
+    else { sp = document.createElement("div"); sp.className = "pb-sp"; sp.setAttribute("aria-hidden", "true"); el.before(sp); }
+    let extra = 0;
+    for(let k=0; k<4; k++){
+      const d = alvo - mede(el).top; if(Math.abs(d) < 0.5) break;
+      extra = Math.max(0, extra + d);
+      if(sp) sp.style.height = extra + "px"; else el.style.marginTop = `calc(${el.dataset.pbMt} + ${extra}px)`;
+    }
+  }
+  // Premissas em 3 colunas (.pgrid): passa as últimas caixas para uma grade nova na página seguinte
+  function dividePgrid(g, p0, alvo){
+    const ng = g.cloneNode(false); ng.classList.add("pb-cont"); g.after(ng);
+    while(g.firstElementChild && mede(g).bottom > (p0 + 1)*H - G) ng.prepend(g.lastElementChild);
+    if(!g.firstElementChild) g.remove();
+    if(!ng.firstElementChild){ ng.remove(); presos.add(g); return; }
+    if(mede(ng).top - p0*H < 4){ presos.add(ng); return; }
+    empurra(ng, alvo);
+  }
+  function quebraAntes(el){
+    const p0 = Math.floor((mede(el).top + 1)/H), alvo = (p0 + 1)*H + 3; // vai para o topo da página seguinte
+    if(el.matches(".pgrid")){ dividePgrid(el, p0, alvo); return; }
+    let cur = inicio(el);
+    for(;;){
+      const par = cur.parentElement;
+      if(par !== root && primeiro(cur)){
+        const sobe = par.tagName==="TBODY" || par.tagName==="THEAD" ? par.parentElement : par;
+        if(mede(sobe).top >= p0*H - 1){ cur = inicio(sobe); continue; }
+      }
+      const m = mede(cur);
+      if(m.top - p0*H < 4 && m.top >= p0*H - 1){ presos.add(el); return; } // já está no topo da página
+      if(par === root){ empurra(cur, alvo); return; }
+      if(par.tagName==="TBODY" || par.tagName==="THEAD"){ cur = divideTabela(par, cur); continue; }
+      const dp = disp(par);
+      if(/flex/.test(dp)){ empurra(cur, alvo, true); return; }
+      if((/grid/.test(dp) || /^(block|flow-root)$/.test(dp)) && !/grid|flex/.test(disp(par.parentElement)) && !par.matches(".pgrid")){ cur = divideBloco(par, cur); continue; }
+      if(/grid/.test(dp)){ empurra(cur, alvo, true); return; }
+      empurra(cur, alvo); return;
+    }
+  }
+  for(let n=0; n<400; n++){ const el = procura(root); if(!el) break; quebraAntes(el); }
+}
+// Monta a seção fora da tela, quebra as páginas e devolve o elemento pronto para o html2pdf
+async function secaoPaginada(html, opt){
+  const g = geometriaPdf(opt.margin, opt.html2canvas.scale);
+  const host = document.createElement("div");
+  host.style.cssText = `position:absolute;left:-12000px;top:0;width:${g.largura};background:#fff`;
+  host.innerHTML = html; document.body.appendChild(host);
+  await Promise.all([...host.querySelectorAll("img")].map(i => i.decode ? i.decode().catch(() => {}) : null));
+  if(document.fonts && document.fonts.ready) await document.fonts.ready;
+  const el = host.firstElementChild;
+  paginar(el, g.altura(host.getBoundingClientRect().width));
+  return {el, fim: () => host.remove()};
+}
+// Gera o PDF seção por seção (cada seção começa em página nova) e escreve o rodapé em todas as páginas
+async function montaPdf(secoes, opt, rodape){
+  const prontas = [];
+  try { for(const sec of secoes) prontas.push(await secaoPaginada(sec, opt)); }
+  catch(e){ prontas.forEach(s => s.fim()); throw e; }
+  const o = {...opt, pagebreak:{mode:[], before:[], after:[], avoid:[]}};
+  let w = html2pdf().set(o).from(prontas[0].el).toPdf();
+  for(const sec of prontas.slice(1)) w = w.get("pdf").then(pdf => { pdf.addPage(); }).from(sec.el).toContainer().toCanvas().toPdf();
+  // devolvido dentro de um objeto: o "worker" do html2pdf é thenable e seria consumido pelo await
+  return {worker: w.get("pdf").then(pdf => {
+    prontas.forEach(s => s.fim());
+    const n = pdf.internal.getNumberOfPages(), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+    for(let i=1;i<=n;i++){ pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(110); pdf.text(rodape(i, n), W/2, H - opt.margin[2] + 8, {align:"center"}); }
+  })};
+}
 async function buildPdf(){
   const {secoes, agora, quando} = await buildSections();
   await loadScript(PDF_LIB);
@@ -2019,15 +2181,8 @@ async function buildPdf(){
     image:{type:"jpeg", quality:0.95},
     html2canvas:{scale:2, backgroundColor:"#ffffff", scrollX:0, scrollY:0},
     jsPDF:{unit:"mm", format:"a4", orientation:"portrait"},
-    pagebreak:{mode:["css","legacy"], avoid:["tr",".ind",".hbar",".alert","img",".chartbox",".big",".verdict","h3",".cover",".legend",".pbox",".rmat"]},
   };
-  let w = html2pdf().set(opt).from(secoes[0]).toPdf();
-  for(const sec of secoes.slice(1)) w = w.get("pdf").then(pdf => { pdf.addPage(); }).from(sec).toContainer().toCanvas().toPdf();
-  // devolvido dentro de um objeto: o "worker" do html2pdf é thenable e seria consumido pelo await
-  return {worker: w.get("pdf").then(pdf => {
-    const n = pdf.internal.getNumberOfPages(), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
-    for(let i=1;i<=n;i++){ pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(110); pdf.text(`Core One · Simulação de ${quando} · Simulador ${VERSAO.app} · padrões de ${VERSAO.padroes} · página ${i} de ${n}`, W/2, H-6, {align:"center"}); }
-  })};
+  return await montaPdf(secoes, opt, (i, n) => `Core One · Simulação de ${quando} · Simulador ${VERSAO.app} · padrões de ${VERSAO.padroes} · página ${i} de ${n}`);
 }
 document.getElementById("btnPdf").onclick = async () => {
   const b = document.getElementById("btnPdf"), txt = b.textContent;
@@ -2116,13 +2271,8 @@ async function pdfResumoInvestidor(){
   const {secoes, agora, quando} = await buildResumoInvestidor();
   await loadScript(PDF_LIB);
   const opt = {margin:[8,8,12,8], filename:`core-one-resumo-investidor-${agora.toISOString().slice(0,10)}.pdf`, image:{type:"jpeg", quality:0.95},
-    html2canvas:{scale:2, backgroundColor:"#ffffff", scrollX:0, scrollY:0}, jsPDF:{unit:"mm", format:"a4", orientation:"portrait"},
-    pagebreak:{mode:["css","legacy"], avoid:["tr",".big",".card",".alert","img"]}};
-  const w = html2pdf().set(opt).from(secoes[0]).toPdf().get("pdf").then(pdf => { pdf.addPage(); }).from(secoes[1]).toContainer().toCanvas().toPdf();
-  return {worker: w.get("pdf").then(pdf => {
-    const n = pdf.internal.getNumberOfPages(), W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
-    for(let i=1;i<=n;i++){ pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(110); pdf.text(`Core One · Resumo para investidor · ${quando} · Simulador ${VERSAO.app} · página ${i} de ${n}`, W/2, H-5, {align:"center"}); }
-  })};
+    html2canvas:{scale:2, backgroundColor:"#ffffff", scrollX:0, scrollY:0}, jsPDF:{unit:"mm", format:"a4", orientation:"portrait"}};
+  return await montaPdf(secoes, opt, (i, n) => `Core One · Resumo para investidor · ${quando} · Simulador ${VERSAO.app} · página ${i} de ${n}`);
 }
 async function baixarResumoInvestidor(){
   const bs = [document.getElementById("btnInvPdf"), document.getElementById("btnInvPdf2")].filter(Boolean), txt = bs.map(b => b.textContent);
@@ -2143,7 +2293,8 @@ async function printReport(doPrint = true, secoesProntas){
   const css = document.querySelector("head style").outerHTML;
   const printCss = `<style>@page{size:A4;margin:10mm 8mm}html,body{background:#fff!important;margin:0}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}.rep{width:auto}.rep+.rep{break-before:page}
-    tr,.ind,.hbar,.alert,img,.big,.verdict,.cover,h3,.card:has(.chartbox){break-inside:avoid}</style>`;
+    tr,p,li,.ind,.hbar,.alert,img,.big,.verdict,.cover,h3,h4,.legend,.pbox,.pcalc,.rmat,.indbox,.chartbox,.card:has(.chartbox){break-inside:avoid}
+    h2,h3,h4,.sub,.legend{break-after:avoid}</style>`;
   const fr = document.createElement("iframe");
   fr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
   document.body.appendChild(fr);
