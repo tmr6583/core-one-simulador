@@ -118,8 +118,8 @@ details.grp[open]>summary::after{content:"－"}
 
 /* Abas */
 /* Abas: barra própria, fixa no topo ao rolar, com ícones (diferente dos botões de cenário) */
-.tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;padding:5px;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:14px;box-shadow:0 3px 10px rgba(11,38,54,.10);position:sticky;top:8px;z-index:20}
-.tabs button{flex:1 1 auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;border-radius:10px;padding:14px 9px;cursor:pointer;color:var(--text);font-weight:600;font-size:13.5px;line-height:1.2;white-space:nowrap;transition:background .15s,color .15s}
+.tabs{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:14px;padding:5px;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:14px;box-shadow:0 3px 10px rgba(11,38,54,.10);position:sticky;top:8px;z-index:20}
+.tabs button{flex:1 1 auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;border:0;background:transparent;border-radius:10px;padding:14px 5px;cursor:pointer;color:var(--text);font-weight:600;font-size:13px;line-height:1.2;white-space:nowrap;transition:background .15s,color .15s}
 .tabs button svg{width:17px;height:17px;flex:0 0 auto;color:var(--accent)}
 .tabs button:hover{background:var(--accent-weak);color:var(--text)}
 .tabs button.on{background:var(--brand);color:#fff;box-shadow:inset 0 -3px 0 #7fbfa3}
@@ -128,7 +128,7 @@ details.grp[open]>summary::after{content:"－"}
 :root[data-theme="dark"] .tabs button.on svg{color:#0b1726}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tabs button.on{background:var(--accent);color:#0b1726;box-shadow:inset 0 -3px 0 #0b2636}
   :root:not([data-theme="light"]) .tabs button.on svg{color:#0b1726}}
-@media (max-width:700px){.tabs{display:flex;overflow-x:auto;top:0;border-radius:0 0 12px 12px;scrollbar-width:thin}
+@media (max-width:700px){.tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;top:0;border-radius:0 0 12px 12px;scrollbar-width:thin}
   .tabs button{flex:0 0 auto;padding:10px 12px;font-size:14px}}
 .tab{display:none}.tab.on{display:block}
 /* Teclado (E3): contorno visível em tudo que recebe foco pelo teclado */
@@ -136,6 +136,18 @@ details.grp[open]>summary::after{content:"－"}
 .brandbar :focus-visible{outline-color:#7fbfa3}
 .tabs button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .tab:focus-visible{outline:2px dashed var(--accent);outline-offset:4px;border-radius:14px}
+/* Aba Consultor (D11) */
+p.txt{margin:6px 0 10px;line-height:1.6}
+.ativ2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.ativ{border:1px solid var(--border);border-left:4px solid var(--s-in);border-radius:10px;padding:10px 14px;background:var(--surface-2)}
+.ativ.sl{border-left-color:var(--s-res)}.ativ h4{margin:0 0 4px;font-size:15px}.ativ p{margin:0;line-height:1.55;font-size:14px}
+table.mn td:first-child{font-weight:600;color:var(--muted);width:150px}table.mn td{vertical-align:top}
+small.base{display:block;color:var(--muted);font-size:12px;font-weight:400}
+table.rec tr.grupo td{font-weight:700;color:var(--accent);padding-top:12px;border-bottom:1px solid var(--border)}
+table.rec td.barra,table.rec th.barra{width:22%;min-width:90px}table.rec td.barra i{display:block;height:12px;border-radius:3px;min-width:2px}
+table.rec tr.geral td{font-size:15px;border-top:2px solid var(--text)}
+ul.lista{margin:6px 0 0;padding-left:20px;line-height:1.6}ul.lista li{margin-bottom:4px}
+@media (max-width:700px){table.rec .barra{display:none}table.mn td:first-child{width:auto}}
 /* Aba Sócios e matriz de riscos */
 small.ex{color:var(--gold);font-weight:500;font-size:11.5px}
 .rmat{display:grid;grid-template-columns:110px repeat(3,minmax(0,1fr));gap:4px;font-size:12.5px;margin:6px 0 12px}
@@ -256,6 +268,7 @@ td,th,.big .a{font-variant-numeric:tabular-nums}
   <section>
     <div class="tabs" id="tabs" role="tablist" aria-label="Resultados da simulação">
       <button role="tab" id="aba-resumo" aria-controls="painel-resumo" data-tab="resumo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Resumo</span></button>
+      <button role="tab" id="aba-consultor" aria-controls="painel-consultor" data-tab="consultor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h4"/></svg><span>Consultor</span></button>
       <button role="tab" id="aba-lucro" aria-controls="painel-lucro" data-tab="lucro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.6-1-1.7-1.5-3-1.5-1.7 0-3 .9-3 2s1.3 1.7 3 2 3 .9 3 2-1.3 2-3 2c-1.3 0-2.4-.5-3-1.5M12 6.5v11"/></svg><span>Lucro do mês</span></button>
       <button role="tab" id="aba-riscos" aria-controls="painel-riscos" data-tab="riscos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.01"/></svg><span>Riscos e cenários</span></button>
       <button role="tab" id="aba-comparar" aria-controls="painel-comparar" data-tab="comparar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M6 17V9M12 17V5M18 17v-5"/></svg><span>Comparar opções</span></button>
@@ -723,6 +736,30 @@ function quadroFaturamento(s){
   const ns = [...new Set([0.5,0.6,0.7,0.8,0.9,1].map(x => Math.round(lot*x)).concat([be, A].filter(x => x !== null)))].filter(n => n > 0).sort((a,b) => a-b);
   const tickets = QF_TICKETS.map(f => ({f, t: d.ticket*f}));
   return {tickets, lot, A, be, linhas: ns.map(n => ({n, empata: n===be, meta: n===A, maximo: n===lot, vals: tickets.map(x => n*x.t)}))};
+}
+// D11 (aba Consultor): modelo de negócio e receita por atividade. Só reorganiza números que o motor já calcula
+// (mês maduro, preços do 1º ano); as linhas de cada atividade somam exatamente a receita do studio e a das salas.
+function modeloNegocio(p, s){
+  const d = s.d, c = s.c, A = s.A;
+  const fator = (1 - p.pctLongo/100*p.descLongo/100)*(1 - p.inadimpl/100); // descontos de plano longo e inadimplência
+  const planos = [["Plano 2x por semana", p.m2, p.p2], ["Plano 3x por semana", p.m3, p.p3], ["Plano 4 a 5x por semana", p.m45, p.p45]]
+    .map(([n, m, preco]) => ({nome: n, base: `${num(A*m/100,1)} alunos (${num(m)}%) × ${brl(preco)}`, v: A*m/100*preco*fator}));
+  const studio = [...planos,
+    {nome: "Matrículas", base: `${num(s.novos,1)} alunos novos por mês × ${brl(p.matricula)}`, v: s.recMat},
+    {nome: "Outras receitas do studio", base: "avaliação física, personal, produtos (valor informado)", v: p.recExtra}];
+  const pa = p.pctAvulsa/100, pt = p.pctTurno/100, pp = Math.max(0, 1 - pa - pt), hh = c.sh*c.horas;
+  const salas = [
+    {nome: "Horas em pacote", base: `${num(hh*pp)} h × ${brl2(p.precoHora)}`, v: hh*pp*p.precoHora},
+    {nome: "Horas avulsas", base: `${num(hh*pa)} h × ${brl2(p.precoAvulsa)}`, v: hh*pa*p.precoAvulsa},
+    {nome: "Horas em turno fixo", base: `${num(hh*pt)} h × ${brl2(p.precoTurno)}`, v: hh*pt*p.precoTurno},
+    {nome: "Salas em contrato mensal", base: `${num(Math.min(Math.max(p.salasFixas,0), p.salas))} sala(s) × ${brl(p.aluguelFixoSala)}`, v: c.recFixo}];
+  const b = balanco(p, s), share = b.share;
+  const dirStudio = s.impT + s.cvar + d.tecnica + s.eqOp + p.marketing, dirSalas = c.imp + c.vari + c.plat + p.residuos;
+  const ativ = [
+    {nome: "Studio de movimento", rec: s.recT, dir: dirStudio, com: b.comuns*(1 - share)},
+    {nome: "Salas de terapia", rec: c.rec, dir: dirSalas, com: b.comuns*share}];
+  ativ.forEach(a => { a.contrib = a.rec - a.dir; a.res = a.contrib - a.com; });
+  return {studio, salas, ativ, fator, share, comuns: b.comuns, total: s.recT + c.rec, dirStudio, dirSalas, hh};
 }
 // TIR mensal por bisseção, anualizada. null se não houver troca de sinal (ex.: fluxo nunca volta, ou duas trocas).
 function irr(flows){
@@ -1347,6 +1384,85 @@ function indBox(title, items){
   return `<div class="indbox"><h4>${title}</h4>${items.map(([l,v,hint])=>`<div class="ind"><div class="l">${l}${hint?`<small>${hint}</small>`:""}</div><div class="v">${v}</div></div>`).join("")}</div>`;
 }
 
+// D11: aba "Consultor" — descrição da atividade, modelo de negócio e de onde vem a receita de cada atividade
+function consultorHTML(p, s){
+  const d = s.d, c = s.c, mn = modeloNegocio(p, s), tot = Math.max(1, mn.total), ra = resumoAnual(s);
+  const h = (a, b) => `${num(a)}h às ${num(b)}h`;
+  const area = p.salaLarg*p.salaComp;
+  const linhas = (rows, cor) => rows.filter(r => r.v > 0.5).map(r => `<tr><td>${r.nome}<small class="base">${r.base}</small></td><td>${brl(r.v)}</td><td>${brl(r.v*12)}</td><td>${pct(r.v/tot,1)}</td><td class="barra"><i style="width:${(r.v/tot*100).toFixed(1)}%;background:${cor}"></i></td></tr>`).join("");
+  const soma = rows => rows.reduce((a, r) => a + r.v, 0);
+  const st = mn.ativ[0], sl = mn.ativ[1];
+  const porAluno = v => s.A > 0 ? brl2(v/s.A) : "—", porHora = v => mn.hh > 0 ? brl2(v/mn.hh) : "—";
+  const contribHoraSalas = c.recHora - c.recHora/Math.max(1, c.rec)*c.imp - c.plat - c.vari;
+  return `
+    <div class="card"><h3>A atividade</h3><p class="sub">Resumo para quem está avaliando o negócio. Os números mudam com as premissas (mês maduro, preços do 1º ano).</p>
+      <p class="txt">A <b>Core One</b> funciona num imóvel de dois andares na Rua Real Grandeza, 190, em Botafogo (Rio de Janeiro), alugado por ${num(p.prazoContrato)} meses. Tem <b>duas atividades</b> no mesmo endereço:</p>
+      <div class="ativ2">
+        <div class="ativ st"><h4>1. Studio de movimento (térreo)</h4><p>Musculação e treino funcional em turmas pequenas: até <b>${d.capSim} alunos treinando ao mesmo tempo</b>, com instrutor. Aberto de segunda a sexta das ${h(p.abreSemana, p.fechaSemana)}${p.sabados>0 && p.fechaSab>p.abreSab ? ` e aos sábados das ${h(p.abreSab, p.fechaSab)}` : ""}. O aluno paga uma <b>mensalidade pelo número de treinos por semana</b> (2x, 3x ou 4 a 5x). Cabem até <b>${num(d.lotacao)} alunos</b>; a meta é <b>${num(s.A)}</b>.</p></div>
+        <div class="ativ sl"><h4>2. Salas de terapia (2º andar)</h4><p>${num(p.salas)} salas de ${num(area,1)} m² alugadas a <b>terapeutas e profissionais de saúde</b> que atendem os próprios pacientes (coworking de saúde). O profissional paga <b>pelas horas que usa</b> (pacote, avulsa ou turno fixo)${p.salasFixas>0 ? " ou um contrato mensal pela sala" : ""}. A premissa é ocupar <b>${num(p.ocupCow)}% das horas</b> disponíveis.</p></div>
+      </div>
+      <p class="note">Sócios: um gestor e um sócio técnico fisioterapeuta, que ganham pelo lucro (sem pró-labore, regra RN-010). Não há investidor externo.</p></div>
+    <div class="card"><h3>Modelo de negócio</h3><p class="sub">Como cada atividade cria e cobra valor. Itens marcados "a confirmar" ainda dependem de decisão ou validação dos sócios.</p>
+      <div class="scroll"><table class="txt mn"><tr><th></th><th>Studio de movimento</th><th>Salas de terapia</th></tr>
+        <tr><td>O que oferece</td><td>Treino acompanhado em turma pequena (até ${d.capSim} por horário), com instrutor</td><td>Sala equipada por hora, sem o profissional precisar montar consultório</td></tr>
+        <tr><td>Para quem</td><td>Pessoas do bairro que querem treinar com acompanhamento <small class="ex">perfil a confirmar</small></td><td>Fisioterapeutas, massoterapeutas e outros terapeutas autônomos <small class="ex">a confirmar com cartas de intenção</small></td></tr>
+        <tr><td>Como cobra</td><td>Mensalidade por frequência: 2x ${brl(p.p2)}, 3x ${brl(p.p3)}, 4–5x ${brl(p.p45)}${p.matricula>0?`; matrícula ${brl(p.matricula)}`:""}. Ticket médio ${brl2(d.ticket)}</td><td>Por hora: pacote ${brl2(p.precoHora)}${p.pctAvulsa>0?`, avulsa ${brl2(p.precoAvulsa)}`:""}${p.pctTurno>0?`, turno ${brl2(p.precoTurno)}`:""}${p.salasFixas>0?`; mensal ${brl(p.aluguelFixoSala)}`:""}. Preço médio ${brl2(c.precoMed)}/h</td></tr>
+        <tr><td>Como vende</td><td>Divulgação (${brl(p.marketing)}/mês), pré-venda antes de abrir e indicação <small class="ex">a confirmar</small></td><td>Contato direto com terapeutas${p.comissaoPlat>0?` e aplicativo de reservas (${num(p.comissaoPlat,1)}% por reserva)`:"; sem aplicativo de reservas na premissa"}</td></tr>
+        <tr><td>Recursos principais</td><td>Térreo (${num(p.areaBrutaTerreo)} m²), aparelhos (${MODELS[p.modelo].toLowerCase()}), instrutores (${num(d.horasOp)} h abertas por mês)</td><td>2º andar (${num(p.areaBruta2)} m²), ${num(p.salas)} salas mobiliadas, recepção compartilhada</td></tr>
+        <tr><td>Custos que mais pesam</td><td>Instrutores (${brl(d.tecnica)}/mês), impostos e cartão, aparelhos e divulgação</td><td>Impostos${p.custoVarHora>0?", custo por hora alugada":""}${p.comissaoPlat>0?", taxa do aplicativo":""}; quase todo o custo é o espaço, dividido com o studio</td></tr>
+        <tr><td>O que mais muda o resultado</td><td>Número de alunos e preço dos planos</td><td>Ocupação das salas e preço da hora</td></tr>
+      </table></div></div>
+    <div class="card"><h3>De onde vem a receita, por atividade</h3><p class="sub">Faturamento de um mês maduro (${num(s.A)} alunos e ${num(p.ocupCow)}% de ocupação das salas), antes de impostos. Cada linha mostra a conta que gera o valor.</p>
+      <div class="scroll"><table class="rec">
+        <tr><th>Fonte de receita</th><th>Por mês</th><th>Por ano</th><th>% do total</th><th class="barra"></th></tr>
+        <tr class="grupo"><td colspan="5">Studio de movimento</td></tr>
+        ${linhas(mn.studio, "var(--s-in)")}
+        <tr class="total"><td>Total do studio</td><td>${brl(soma(mn.studio))}</td><td>${brl(soma(mn.studio)*12)}</td><td>${pct(soma(mn.studio)/tot,1)}</td><td></td></tr>
+        <tr class="grupo"><td colspan="5">Salas de terapia</td></tr>
+        ${linhas(mn.salas, "var(--s-res)") || `<tr><td colspan="5">Sem receita de salas com estas premissas.</td></tr>`}
+        <tr class="total"><td>Total das salas</td><td>${brl(soma(mn.salas))}</td><td>${brl(soma(mn.salas)*12)}</td><td>${pct(soma(mn.salas)/tot,1)}</td><td></td></tr>
+        <tr class="total geral"><td>Faturamento do negócio</td><td>${brl(mn.total)}</td><td>${brl(mn.total*12)}</td><td>100%</td><td></td></tr>
+      </table></div>
+      <p class="note">${mn.fator<1 ? `Mensalidades já com ${p.pctLongo>0&&p.descLongo>0?"desconto de plano longo":""}${p.pctLongo>0&&p.descLongo>0&&p.inadimpl>0?" e ":""}${p.inadimpl>0?`inadimplência de ${num(p.inadimpl,1)}%`:""}: cada plano recebe ${pct(mn.fator,1)} do preço de tabela.` : "Mensalidades pelo preço de tabela: a premissa não tem desconto de plano longo nem inadimplência."} Por ano = mês maduro × 12, sem reajuste e sem a rampa de alunos; o faturamento ano a ano, com rampa e reajustes, está mais abaixo.</p></div>
+    <div class="card"><h3>Quanto cada atividade deixa</h3><p class="sub">Receita menos os custos de cada atividade. Os custos do imóvel e da administração são comuns e foram divididos pela área: ${pct(1-mn.share,0)} para o studio e ${pct(mn.share,0)} para as salas.</p>
+      <div class="scroll"><table>
+        <tr><th>Por mês</th><th>Studio</th><th>Salas</th><th>Negócio</th></tr>
+        <tr><td>Receita</td><td>${brl(st.rec)}</td><td>${brl(sl.rec)}</td><td>${brl(st.rec+sl.rec)}</td></tr>
+        <tr><td>(−) Custos próprios da atividade <small class="base">studio: instrutores, impostos e cartão, aparelhos, divulgação, custo por aluno · salas: impostos, custo por hora, aplicativo, resíduos</small></td><td>${sgn(-st.dir)}</td><td>${sgn(-sl.dir)}</td><td>${sgn(-(st.dir+sl.dir))}</td></tr>
+        <tr class="total"><td>= Margem de contribuição <small class="base">o que sobra para pagar o espaço e a administração</small></td><td>${sgn(st.contrib)} <small>(${pct(st.contrib/Math.max(1,st.rec),0)})</small></td><td>${sgn(sl.contrib)} <small>(${pct(sl.contrib/Math.max(1,sl.rec),0)})</small></td><td>${sgn(st.contrib+sl.contrib)}</td></tr>
+        <tr><td>(−) Custos comuns <small class="base">aluguel, condomínio, recepção, contas, sistema, contador, seguro</small></td><td>${sgn(-st.com)}</td><td>${sgn(-sl.com)}</td><td>${sgn(-mn.comuns)}</td></tr>
+        <tr class="total"><td>= Resultado</td><td>${sgn(st.res)}</td><td>${sgn(sl.res)}</td><td>${sgn(st.res+sl.res)}</td></tr>
+      </table></div>
+      <p class="note">O resultado do negócio é o mesmo do topo da página (${sgn(s.resultado)}/mês). A margem de contribuição não depende da divisão dos custos comuns: é a melhor medida de quanto cada atividade ajuda a pagar o imóvel.</p></div>
+    <div class="card"><h3>Números de cada atividade</h3><p class="sub">Indicadores por unidade vendida: aluno no studio e hora nas salas.</p>
+      <div class="indgrid">${indBox("Studio de movimento", [
+          ["Alunos (meta)", `${num(s.A)} de ${num(d.lotacao)}`, `${pct(s.A/Math.max(1,d.lotacao),0)} das vagas`],
+          ["Ticket médio", brl2(d.ticket), "Mensalidade média recebida por aluno"],
+          ["Receita por aluno", porAluno(st.rec), "Inclui matrículas e outras receitas"],
+          ["Custo próprio por aluno", porAluno(st.dir)],
+          ["Contribuição por aluno", porAluno(st.contrib), "Receita − custos próprios do studio"]])}
+        ${indBox("Salas de terapia", [
+          ["Salas", `${num(p.salas)}${p.salasFixas>0?` (${num(Math.min(p.salasFixas,p.salas))} em contrato mensal)`:""}`],
+          ["Horas disponíveis por sala", `${num(d.horasSala)} h/mês`],
+          ["Horas alugadas por sala", `${num(c.horas)} h/mês`, `${num(p.ocupCow)}% de ocupação`],
+          ["Preço médio da hora", brl2(c.precoMed)],
+          ["Receita por sala", `${brl(c.recSala)}/mês`],
+          ["Sobra por hora alugada", porHora(contribHoraSalas), "Preço − impostos, custo por hora e aplicativo"]])}</div></div>
+    <div class="card"><h3>Receita de cada atividade ao longo do contrato</h3><p class="sub">Com a rampa de alunos e salas e os reajustes anuais. Anos contados da assinatura do contrato${p.mesesObra>0?` (o ano 1 inclui ${num(p.mesesObra)} meses de obra)`:""}.</p>
+      <div class="scroll"><table>
+        <tr><th>Ano do contrato</th><th>Studio</th><th>Salas</th><th>Total</th><th>Parte das salas</th></tr>
+        ${ra.anos.map(y => `<tr><td>Ano ${y.ano}${y.meses<12?` <small>(${y.meses} meses)</small>`:""}</td><td>${brl(y.studio)}</td><td>${brl(y.salas)}</td><td>${brl(y.total)}</td><td>${y.total>0?pct(y.salas/y.total,0):"—"}</td></tr>`).join("")}
+        <tr class="total"><td>Total</td><td>${brl(ra.total.studio)}</td><td>${brl(ra.total.salas)}</td><td>${brl(ra.total.total)}</td><td>${ra.total.total>0?pct(ra.total.salas/ra.total.total,0):"—"}</td></tr>
+      </table></div></div>
+    <div class="card"><h3>O que ainda precisa ser confirmado</h3><p class="sub">Premissas que mais afetam a receita e ainda não foram validadas.</p>
+      <ul class="lista">
+        <li><b>Preços dos planos</b> (${brl(p.p2)} a ${brl(p.p45)}): ainda não testados com clientes (RN-002). Validar com pesquisa ou pré-venda.</li>
+        <li><b>Ocupação das salas</b> (${num(p.ocupCow)}%) e preço da hora (${brl2(p.precoHora)}): confirmar com cartas de intenção de terapeutas.</li>
+        <li><b>Salas de ${num(area,1)} m²</b>: a norma pede 7,5 m² para consultório; depende de aceite da Vigilância Sanitária.</li>
+        <li><b>Condomínio e IPTU</b> (${brl(p.condIptu)}/mês na premissa): confirmar por escrito com o proprietário.</li>
+        <li><b>Mix de planos</b> (${num(p.m2)}/${num(p.m3)}/${num(p.m45)}%): muda o ticket médio e as vagas; ver os botões de mix em "Cenários rápidos".</li>
+      </ul></div>`;
+}
 // F8: matriz de riscos (aba Riscos e cenários)
 function matrizHTML(rs){
   const ordemP = ["Alta","Média","Baixa"], ordemI = ["Baixo","Médio","Alto"];
@@ -1800,9 +1916,9 @@ function renderResults(){
     </ul></div>`;
 
   const so = socios(p, s), rs = matrizRiscos(p, s), rem = remuneracaoSocios(p);
-  const riscosTab = riscos + matrizHTML(rs), sociosTab = sociosHTML(p, s, so, rem);
-  LAST = {p:{...p}, s, so, rs, rem, socios: sociosTab, verdictHTML: document.getElementById("verdict").innerHTML, bigsHTML: document.getElementById("bigs").innerHTML, resumo, lucro, riscos: riscosTab, comparar, caixa, como};
-  const painel = {resumo, lucro, riscos: riscosTab, comparar, socios: sociosTab, caixa, como};
+  const riscosTab = riscos + matrizHTML(rs), sociosTab = sociosHTML(p, s, so, rem), consultor = consultorHTML(p, s);
+  LAST = {p:{...p}, s, so, rs, rem, socios: sociosTab, verdictHTML: document.getElementById("verdict").innerHTML, bigsHTML: document.getElementById("bigs").innerHTML, resumo, consultor, lucro, riscos: riscosTab, comparar, caixa, como};
+  const painel = {resumo, consultor, lucro, riscos: riscosTab, comparar, socios: sociosTab, caixa, como};
   document.getElementById("results").innerHTML = ABAS.map(t =>
     `<div class="tab" data-tab="${t}" role="tabpanel" id="painel-${t}" aria-labelledby="aba-${t}" tabindex="0">${painel[t]}</div>`).join("");
   showTab(UI.tab);
@@ -1819,7 +1935,7 @@ function renderResults(){
   }));
 }
 // Abas (E3): papéis ARIA, só a aba ativa entra na ordem do Tab; setas esquerda/direita (com volta), Home e End trocam de aba
-const ABAS = ["resumo","lucro","riscos","comparar","socios","caixa","como"];
+const ABAS = ["resumo","consultor","lucro","riscos","comparar","socios","caixa","como"];
 function proximaAba(atual, tecla){
   const i = Math.max(0, ABAS.indexOf(atual)), n = ABAS.length;
   if(tecla==="ArrowRight") return ABAS[(i+1)%n];
@@ -1985,7 +2101,7 @@ const REP_STYLE = `<style>
 .rep .pbox td:last-child{text-align:right;font-weight:600}.rep .pbox tr.alt td{background:var(--warn-weak)}.rep .pbox small{font-weight:400;color:var(--muted)}
 </style>`;
 function repSection(title, body){ return `<div class="rep">${REP_STYLE}${title?`<h2 class="sec">${title}</h2>`:""}${body}</div>`; }
-// Monta as 8 seções do relatório (usadas no PDF e na versão para impressão)
+// Monta as 9 seções do relatório (usadas no PDF e na versão para impressão)
 async function buildSections(){
   if(!LAST) throw new Error("Sem simulação calculada");
   // E2: o PDF sempre traz a simulação de risco; se ainda não rodou com estas premissas, roda agora
@@ -2007,12 +2123,13 @@ async function buildSections(){
   const secoes = [
     repSection("", capa + `<h2 class="sec">1. Premissas</h2>` + premissasCompactas(p, L.s)),
     repSection("2. Resultado", L.verdictHTML + `<div class="bigs">${L.bigsHTML}</div>` + resumo.replace(/^\s*/, "")),
-    repSection("3. Lucro do mês", tirarBotoes(await svgsToImages(L.lucro))),
-    repSection("4. Riscos e cenários", tirarBotoes(await svgsToImages(L.riscos))),
-    repSection("5. Comparar opções", tirarBotoes(await svgsToImages(L.comparar))),
-    repSection("6. Sócios", selectsTexto(tirarBotoes(await svgsToImages(L.socios)))),
-    repSection("7. Caixa ao longo do tempo", tirarBotoes(await svgsToImages(caixaHtml))),
-    repSection("8. Como calculamos", tirarBotoes(L.como)),
+    repSection("3. Modelo de negócio e receitas (consultor)", L.consultor),
+    repSection("4. Lucro do mês", tirarBotoes(await svgsToImages(L.lucro))),
+    repSection("5. Riscos e cenários", tirarBotoes(await svgsToImages(L.riscos))),
+    repSection("6. Comparar opções", tirarBotoes(await svgsToImages(L.comparar))),
+    repSection("7. Sócios", selectsTexto(tirarBotoes(await svgsToImages(L.socios)))),
+    repSection("8. Caixa ao longo do tempo", tirarBotoes(await svgsToImages(caixaHtml))),
+    repSection("9. Como calculamos", tirarBotoes(L.como)),
   ];
   return {secoes, agora, quando};
 }
