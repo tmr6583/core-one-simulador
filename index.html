@@ -76,7 +76,8 @@ button,select,input{font:inherit;color:inherit}
 .big .a{font-size:19.5px;font-weight:700;margin:0;letter-spacing:-.3px;line-height:1.1}
 .big .a .de{font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0}
 .big .d{font-size:12px;color:var(--muted);line-height:1.35}
-.meter{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin:4px 0 3px}
+.meter{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin:4px 0 3px;position:relative}
+.meter b{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--text)} /* D12: ponto do negócio maduro */
 .meter i{display:block;height:100%;background:var(--accent);border-radius:5px}
 .meter.warn i{background:var(--warn)} .meter.bad i{background:var(--bad)}
 
@@ -423,7 +424,9 @@ const GROUPS = [
   ]},
   {id:"metas", g:"Metas e análise", intro:"O que vocês esperam alcançar e como comparar com outras aplicações.", f:[
     ["modoCrescimento","Como os alunos chegam","","linear",null,"Linha reta: cresce igual todo mês até a meta. Curva em S: começa devagar, acelera e desacelera perto da meta. Por captação: você informa quantos alunos novos entram por mês; os cancelamentos tiram alunos e a base se estabiliza sozinha.",1],
-    ["alunosAlvo","Meta de alunos","alunos",120,1,"Alunos ativos quando o studio estiver maduro.",1],
+    ["metaPor","Como definir os alunos do negócio maduro","","vagas",null,"% do máximo: o negócio maduro tem essa parte das vagas preenchida (premissa dos sócios: 75%). Número fixo: você informa quantos alunos.",1],
+    ["pctMaduro","Alunos no negócio maduro","% do máximo",75,1,"Parte do máximo de alunos do studio (vagas) que está matriculada quando o negócio fica maduro. Premissa dos sócios: 75%. Muda sozinho com horário, alunos por horário, mix e faltas.",1],
+    ["alunosAlvo","Meta de alunos","alunos",120,1,"Alunos ativos quando o studio estiver maduro. Só vale com \"Número fixo\".",1],
     ["novosMes","Alunos novos por mês","alunos/mês",10,1,"Só no modo por captação. Use junto com a taxa de cancelamentos (grupo Planos).",1],
     ["limitarVagas","Limitar alunos às vagas","","sim",null,"Sim: o número de alunos nunca passa das vagas do studio. Não: a simulação usa a meta mesmo que não caiba (só mostra alerta).",0],
     ["alunosIniciais","Alunos já na inauguração","alunos",0,1,"Quem comprou na pré-venda.",0],
@@ -451,7 +454,8 @@ const SIMPLES_MODES = {auto:"Automático (Anexo III ou V pelo Fator R)", manual:
 const GROWTH_MODES = {linear:"Linha reta até a meta", curvaS:"Curva em S até a meta", captacao:"Por captação mensal (novos − cancelamentos)"};
 const YESNO = {sim:"Sim", nao:"Não"};
 const VINCULOS = {clt:"CLT ou autônomo (pessoa física)", pj:"MEI ou empresa (PJ)"};
-const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES, modoCrescimento: GROWTH_MODES, limitarVagas: YESNO, vinculoInstr: VINCULOS};
+const META_MODES = {vagas:"% do máximo de alunos (vagas)", num:"Número fixo de alunos"};
+const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES, modoCrescimento: GROWTH_MODES, metaPor: META_MODES, limitarVagas: YESNO, vinculoInstr: VINCULOS};
 const FIELDS = {}; GROUPS.forEach(g => g.f.forEach(f => FIELDS[f[0]] = {l:f[1], u:f[2], v:f[3], st:f[4], h:f[5], e:f[6], g:g.id}));
 const DEFAULTS = {}; Object.keys(FIELDS).forEach(k => DEFAULTS[k] = FIELDS[k].v);
 // Limites de cada campo (à prova de erros): nada negativo, horas de 0 a 24, partes de um todo até 100%,
@@ -476,7 +480,7 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.5.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.6.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
@@ -589,12 +593,19 @@ function loanPay(p, m){
 }
 // B1/B3: alunos em regime. Linha reta e curva em S: a meta. Captação: novos ÷ cancelamento (base estável);
 // sem cancelamento, a base cresce até o fim da análise. Com "limitar às vagas", nunca passa da lotação.
+// D12: meta do negócio maduro. Padrão: 75% do máximo de alunos (vagas), premissa dos sócios; ou um número fixo.
+function metaAlunos(p, d){ return p.metaPor==="num" ? p.alunosAlvo : Math.round(d.lotacao*p.pctMaduro/100); }
+// Texto da premissa do negócio maduro, para títulos e frases: "114 alunos (75% do máximo de 152)"
+function pctMaduroReal(p, s){ return p.modoCrescimento!=="captacao" && p.metaPor!=="num" && s.A < s.d.lotacao ? p.pctMaduro/100 : s.A/Math.max(1, s.d.lotacao); }
+function maduroTxt(p, s){
+  return `${num(s.A)} alunos = ${p.modoCrescimento==="captacao" ? "base estável, " : ""}${pct(pctMaduroReal(p, s),0)} do máximo de ${num(s.d.lotacao)}`;
+}
 function alunosRegime(p, d, limitar = p.limitarVagas==="sim"){
   let A;
   if(p.modoCrescimento==="captacao"){
     const ch = p.churn/100, meses = Math.max(1, Math.max(12, Math.round(p.horizonte)) - Math.round(p.mesesObra));
     A = ch>0 ? p.novosMes/ch : p.alunosIniciais + p.novosMes*meses;
-  } else A = p.alunosAlvo;
+  } else A = metaAlunos(p, d);
   return limitar ? Math.min(A, d.lotacao) : A;
 }
 // B1/B2/B3: alunos no mês k de funcionamento
@@ -606,10 +617,11 @@ function alunosNoMes(p, d, k, anterior){
   }
   const x = p.rampa>0 ? Math.min(1, k/p.rampa) : 1;
   const f = p.modoCrescimento==="curvaS" ? x*x*(3 - 2*x) : x; // curva em S: começo e fim mais lentos
-  return Math.min(teto, Math.min(p.alunosAlvo, p.alunosIniciais + (p.alunosAlvo - p.alunosIniciais)*f));
+  const meta = metaAlunos(p, d);
+  return Math.min(teto, Math.min(meta, p.alunosIniciais + (meta - p.alunosIniciais)*f));
 }
 // Usado nas tabelas que testam um nº de alunos específico
-function comAlunos(p, n, extra){ return {...p, ...(extra||{}), alunosAlvo: n, modoCrescimento: p.modoCrescimento==="captacao" ? "linear" : p.modoCrescimento}; }
+function comAlunos(p, n, extra){ return {...p, ...(extra||{}), alunosAlvo: n, metaPor: "num", modoCrescimento: p.modoCrescimento==="captacao" ? "linear" : p.modoCrescimento}; }
 // Resultado de um mês "maduro" com A alunos (preços e custos do 1º ano)
 function regimeCore(p, modelo, A, d, eq){
   const ch = p.churn/100, novos = A*ch;
@@ -773,7 +785,8 @@ function irr(flows){
 function scenario(p, sign){
   const q = {...p}, a = p.varAlunos/100*sign, o = p.varOcup/100*sign, pr = p.varPrecos/100*sign, c = -p.varCustos/100*sign, r = -p.varRampa/100*sign;
   q.alunosAlvo = Math.max(0, Math.round(p.alunosAlvo*(1+a)));
-  if(p.modoCrescimento!=="captacao") q.alunosIniciais = Math.min(q.alunosAlvo, p.alunosIniciais); // na captação a meta não vale
+  q.pctMaduro = Math.max(0, p.pctMaduro*(1+a)); // pode passar de 100%: "limitar às vagas" segura no máximo
+  if(p.modoCrescimento!=="captacao") q.alunosIniciais = Math.min(metaAlunos(q, deriv(q)), p.alunosIniciais); // na captação a meta não vale
   q.novosMes = Math.max(0, p.novosMes*(1+a));
   q.ocupCow = Math.min(100, Math.max(0, p.ocupCow*(1+o)));
   ["p2","p3","p45","precoHora","precoAvulsa","precoTurno","aluguelFixoSala","matricula"].forEach(k => q[k] = Math.max(0, p[k]*(1+pr)));
@@ -786,7 +799,7 @@ function sensitivity(p){
   const base = regime(p, p.modelo), lot = q => deriv(q).lotacao;
   const items = [
     ["Preço dos planos", (q,f)=>{q.p2*=f;q.p3*=f;q.p45*=f;}],
-    ["Número de alunos", (q,f)=>{ if(q.modoCrescimento==="captacao") q.novosMes*=f; else q.alunosAlvo=Math.round(q.alunosAlvo*f); }],
+    ["Número de alunos", (q,f)=>{ if(q.modoCrescimento==="captacao") q.novosMes*=f; else if(q.metaPor==="num") q.alunosAlvo=Math.round(q.alunosAlvo*f); else q.pctMaduro*=f; }],
     ["Alunos ao mesmo tempo", (q,f)=>{q.capSim=Math.round(q.capSim*f);}],
     ["Taxa de faltas", (q,f)=>{q.faltas*=f;}],
     ["Ocupação das salas", (q,f)=>{q.ocupCow*=f;}],
@@ -884,7 +897,8 @@ function applyFilter(){
       // Simples automático: os percentuais manuais ficam escondidos
       const manualOnly = (id==="tSimples" || id==="tCow") && P.modoSimples!=="manual";
       const capt = P.modoCrescimento==="captacao";
-      const growthHide = (id==="novosMes" && !capt) || ((id==="alunosAlvo" || id==="rampa") && capt);
+      const growthHide = (id==="novosMes" && !capt) || ((id==="alunosAlvo" || id==="rampa" || id==="metaPor" || id==="pctMaduro") && capt)
+        || (id==="alunosAlvo" && P.metaPor!=="num") || (id==="pctMaduro" && P.metaPor==="num");
       const vis = !manualOnly && !growthHide && (isEq
         ? eqList.includes(id) && (!q || f.dataset.label.includes(q))
         : (q ? f.dataset.label.includes(q) : true) && (q || UI.modo==="todas" || f.dataset.ess==="1" || f.classList.contains("changed")));
@@ -908,7 +922,7 @@ function groupInfo(p, s){
     equip:`${MODELS[p.modelo]} · ${brl(s.eq.capex)} agora + ${brl(s.eqOp)}/mês`,
     fin:p.capital>0 ? `Capital: ${brl(p.capital)}` : `Capital ainda não informado`,
     saida:`${p.multSaida>0 ? `Venda por ${num(p.multSaida,1)}× o lucro anual no fim` : "Sem venda no fim do período"} · revenda dos aparelhos ${num(p.revendaAparelhos)}%`,
-    metas:`${p.modoCrescimento==="captacao"?"Base estável":"Meta"}: ${num(s.A)} alunos = ${pct(s.A/Math.max(1,d.lotacao),0)} das vagas`,
+    metas:`Negócio maduro: ${maduroTxt(p, s)}`,
     cenarios:`Veja em "Riscos e cenários"`,
   };
   for(const k in info){ const e = document.getElementById("gi_"+k); if(e) e.textContent = info[k]; }
@@ -922,12 +936,12 @@ function verdict(p, s){
   if(!beOk || s.resultado<=0) return ["bad","✕","Com estas premissas, o negócio não se sustenta.",
     !Number.isFinite(s.be) ? "Nenhum número de alunos cobre os custos."
     : s.be > d.lotacao ? `Precisaria de ${s.be} alunos para empatar, mas só cabem ${d.lotacao}.${s.resultado>0?` O lucro de ${brl(s.resultado)}/mês da simulação conta alunos que não cabem no studio.`:""}`
-    : s.A < s.be ? `Com ${num(s.A)} alunos o resultado é de ${brl(s.resultado)}/mês. Para empatar são precisos ${s.be} alunos.`
+    : s.A < s.be ? `Maduro, com ${maduroTxt(p, s)}, o resultado é de ${brl(s.resultado)}/mês. Para empatar são precisos ${s.be} alunos.`
     : `Com ${num(s.A)} alunos o resultado é de ${brl(s.resultado)}/mês, embora ${s.be} alunos já empatem: com mais faturamento o Simples fica mais caro (faixa ou Anexo V pelo Fator R).`];
-  if(s.payback===null) return ["bad","✕","Dá lucro quando estiver cheio, mas o investimento não volta.", `Com lucro de ${brl(s.resultado)}/mês e ${num(s.A)} alunos, os ${brl(s.exposicao)} que precisam ser colocados não voltam em ${anosTxt(s.H)}.`];
+  if(s.payback===null) return ["bad","✕","Dá lucro quando estiver cheio, mas o investimento não volta.", `Com lucro de ${brl(s.resultado)}/mês e ${maduroTxt(p, s)}, os ${brl(s.exposicao)} que precisam ser colocados não voltam em ${anosTxt(s.H)}.`];
   if(s.vpl<0) return ["warn","!","O investimento volta, mas rende menos do que outra aplicação.", `Recupera em ${tempo(s.payback)}, porém rende abaixo dos ${num(p.tma,1)}% ao ano desejados.`];
   if(s.be/d.lotacao>0.7 || (capDisp(p)>0 && capDisp(p)<s.exposicao)) return ["warn","!","Viável, mas com risco alto.", `Precisa de ${pct(s.be/d.lotacao,0)} das vagas ocupadas para empatar${capDisp(p)>0 && capDisp(p)<s.exposicao?` e faltam ${brl(s.exposicao-capDisp(p))} de capital`:""}.`];
-  return ["ok","✓","Viável com estas premissas.", `Recupera o investimento em ${tempo(s.payback)} e rende ${s.tir===null?`acima dos ${num(p.tma,1)}%`:pct(s.tir,0)} ao ano.`];
+  return ["ok","✓","Viável com estas premissas.", `Maduro com ${maduroTxt(p, s)}, recupera o investimento em ${tempo(s.payback)} e rende ${s.tir===null?`acima dos ${num(p.tma,1)}%`:pct(s.tir,0)} ao ano.`];
 }
 function alerts(p, s){
   const a = [], d = s.d;
@@ -944,7 +958,7 @@ function alerts(p, s){
   const alvoBruto = alunosRegime(p, d, false);
   if(alvoBruto > d.lotacao) a.push([p.limitarVagas==="sim"?"warn":"bad", p.modoCrescimento==="captacao"
     ? `Com ${num(p.novosMes)} alunos novos por mês e ${num(p.churn,1)}% de cancelamento, a base chegaria a ${num(alvoBruto)} alunos, mais do que cabe no studio (${d.lotacao}).${p.limitarVagas==="sim"?" A simulação para nas vagas.":""}`
-    : `A meta de ${num(p.alunosAlvo)} alunos é maior do que cabe no studio (${d.lotacao}).${p.limitarVagas==="sim"?" A simulação limita às vagas.":" Reduza a meta ou aumente horário/área."}`]);
+    : `A meta de ${num(alvoBruto)} alunos${p.metaPor==="num" ? "" : ` (${num(p.pctMaduro)}% do máximo)`} é maior do que cabe no studio (${d.lotacao}).${p.limitarVagas==="sim"?" A simulação limita às vagas.":" Reduza a meta ou aumente horário/área."}`]);
   if(p.modoCrescimento==="captacao" && p.churn>0 && s.rows.length && s.rows[s.rows.length-1].alunos < s.A*0.95) a.push(["warn",`Por captação, a base de ${num(s.A)} alunos (usada no lucro do topo) só é alcançada aos poucos: no fim dos ${num(s.H)} meses são ${num(s.rows[s.rows.length-1].alunos)}. O caixa, o prazo para recuperar e o VPL já usam os alunos de cada mês.`]);
   if(p.modoCrescimento==="captacao" && p.churn<=0) a.push(["warn","No modo por captação, informe a taxa de cancelamentos (grupo Planos). Sem ela, a base de alunos só cresce."]);
   if(p.modoCrescimento==="captacao" && Number.isFinite(s.be) && s.A < s.be) a.push(["bad", p.churn>0
@@ -967,10 +981,10 @@ function alerts(p, s){
   if([p.abreSalaSemana,p.fechaSalaSemana,p.abreSalaSab,p.fechaSalaSab,p.abreSalaDom,p.fechaSalaDom].some(v => v<0 || v>24)) a.push(["bad","Há horário das salas fora do intervalo de 0 a 24 h."]);
   if(p.prazoContrato>0 && p.horizonte > p.prazoContrato) a.push(["warn",`A análise vai até o mês ${num(p.horizonte)}, mas o contrato de locação termina no mês ${num(p.prazoContrato)}. Depois disso, o aluguel e a permanência dependem da renovação.`]);
   if(p.fatorOcup>100 || p.ocupCow>100) a.push(["bad","Aproveitamento dos horários ou ocupação das salas acima de 100%."]);
-  if(p.modoCrescimento!=="captacao" && p.alunosIniciais > p.alunosAlvo) a.push(["warn","Há mais alunos na inauguração do que na meta. A simulação usa a meta."]);
+  if(p.modoCrescimento!=="captacao" && p.alunosIniciais > metaAlunos(p, d)) a.push(["warn","Há mais alunos na inauguração do que na meta. A simulação usa a meta."]);
   if(s.A>0 && Number.isFinite(s.be) && s.A >= s.be && s.resultado < 0) a.push(["bad",`Com ${s.be} alunos o negócio já empata, mas com ${num(s.A)} alunos o resultado volta a ser negativo (${brl(s.resultado)}/mês): o faturamento maior encarece o Simples${p.modoSimples!=="manual"&&d.anexo==="V"?" (Anexo V pelo Fator R)":""}. Veja a tabela "Lucro por número de alunos".`]);
   if(p.horizonte < 12) a.push(["warn",`O período analisado mínimo é de 12 meses; a simulação usa 12 em vez de ${num(p.horizonte)}.`]);
-  if(s.A>0 && Number.isFinite(s.be) && s.A >= s.be && s.be <= d.lotacao && s.resultado >= 0) a.push(["ok",`${p.modoCrescimento==="captacao"?"A base estável":"A meta"} de ${num(s.A)} alunos fica ${num(s.A-s.be)} acima do ponto de equilíbrio.`]);
+  if(s.A>0 && Number.isFinite(s.be) && s.A >= s.be && s.be <= d.lotacao && s.resultado >= 0) a.push(["ok",`O negócio maduro, com ${maduroTxt(p, s)}, fica ${num(s.A-s.be)} alunos acima do ponto de equilíbrio (${s.be}).`]);
   return a;
 }
 const ICON = {bad:"✕", warn:"!", ok:"✓"};
@@ -1070,9 +1084,9 @@ let LAST = null;
 
 // ================= Cenários rápidos (D1, D2, D3) =================
 const PRESETS = {
-  "capt-otimista":   {grupo:"Captação de alunos", label:"Otimista", nome:"Captação otimista (40 → 140 em 9 meses, cancelamento 3%)", v:{modoCrescimento:"linear", alunosIniciais:40, alunosAlvo:140, rampa:9, churn:3}},
-  "capt-realista":   {grupo:"Captação de alunos", label:"Realista", nome:"Captação realista (15 → 120 em 15 meses, cancelamento 5%)", v:{modoCrescimento:"linear", alunosIniciais:15, alunosAlvo:120, rampa:15, churn:5}},
-  "capt-pessimista": {grupo:"Captação de alunos", label:"Pessimista", nome:"Captação pessimista (0 → 100 em 24 meses, cancelamento 8%)", v:{modoCrescimento:"linear", alunosIniciais:0, alunosAlvo:100, rampa:24, churn:8}},
+  "capt-otimista":   {grupo:"Captação de alunos", label:"Otimista", nome:"Captação otimista (40 → 90% do máximo em 9 meses, cancelamento 3%)", v:{modoCrescimento:"linear", metaPor:"vagas", alunosIniciais:40, pctMaduro:90, rampa:9, churn:3}},
+  "capt-realista":   {grupo:"Captação de alunos", label:"Realista", nome:"Captação realista (15 → 75% do máximo em 15 meses, cancelamento 5%)", v:{modoCrescimento:"linear", metaPor:"vagas", alunosIniciais:15, pctMaduro:75, rampa:15, churn:5}},
+  "capt-pessimista": {grupo:"Captação de alunos", label:"Pessimista", nome:"Captação pessimista (0 → 65% do máximo em 24 meses, cancelamento 8%)", v:{modoCrescimento:"linear", metaPor:"vagas", alunosIniciais:0, pctMaduro:65, rampa:24, churn:8}},
   "mix-padrao":      {grupo:"Mix de planos", label:"Padrão 45/40/15", nome:"Mix padrão (45/40/15)", v:{m2:45, m3:40, m45:15}},
   "mix-2x":          {grupo:"Mix de planos", label:"2x maioria 60/25/15", nome:"Mix com 2x maioria (60/25/15)", v:{m2:60, m3:25, m45:15}},
   "mix-qualivida":   {grupo:"Mix de planos", label:"Tipo Qualivida 35/30/35", nome:"Mix tipo Qualivida (35/30/35)", v:{m2:35, m3:30, m45:35}},
@@ -1260,12 +1274,12 @@ function monteCarlo(p, n = 500, seed = 20261115){
   const res = [];
   for(let i=0; i<n; i++){
     const fa = f(p.varAlunos), fo = f(p.varOcup), fp = f(p.varPrecos), fc = f(p.varCustos), fr = f(p.varRampa);
-    const q = {...p, alunosAlvo: Math.round(p.alunosAlvo*fa), novosMes: p.novosMes*fa, ocupCow: Math.min(100, p.ocupCow*fo)};
+    const q = {...p, alunosAlvo: Math.round(p.alunosAlvo*fa), pctMaduro: p.pctMaduro*fa, novosMes: p.novosMes*fa, ocupCow: Math.min(100, p.ocupCow*fo)};
     ["p2","p3","p45","precoHora","precoAvulsa","precoTurno","aluguelFixoSala","matricula"].forEach(k => q[k] = p[k]*fp);
     ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = p[k]*fc);
     q.rampa = p.rampa>0 ? Math.max(1, Math.round(p.rampa*fr)) : 0;
     q.rampaCow = p.rampaCow>0 ? Math.max(1, Math.round(p.rampaCow*fr)) : 0;
-    if(p.modoCrescimento!=="captacao") q.alunosIniciais = Math.min(q.alunosAlvo, p.alunosIniciais); // na captação a meta não vale
+    if(p.modoCrescimento!=="captacao") q.alunosIniciais = Math.min(metaAlunos(q, deriv(q)), p.alunosIniciais); // na captação a meta não vale
     const x = simulate(q, q.modelo);
     res.push({payback: x.payback === null ? Infinity : x.payback, exposicao: x.exposicao, vpl: x.vpl, resultado: x.resultado});
   }
@@ -1395,10 +1409,10 @@ function consultorHTML(p, s){
   const porAluno = v => s.A > 0 ? brl2(v/s.A) : "—", porHora = v => mn.hh > 0 ? brl2(v/mn.hh) : "—";
   const contribHoraSalas = c.recHora - c.recHora/Math.max(1, c.rec)*c.imp - c.plat - c.vari;
   return `
-    <div class="card"><h3>A atividade</h3><p class="sub">Resumo para quem está avaliando o negócio. Os números mudam com as premissas (mês maduro, preços do 1º ano).</p>
+    <div class="card"><h3>A atividade</h3><p class="sub">Resumo para quem está avaliando o negócio. Os números mudam com as premissas (mês maduro, com ${maduroTxt(p, s)}, preços do 1º ano).</p>
       <p class="txt">A <b>Core One</b> funciona num imóvel de dois andares na Rua Real Grandeza, 190, em Botafogo (Rio de Janeiro), alugado por ${num(p.prazoContrato)} meses. Tem <b>duas atividades</b> no mesmo endereço:</p>
       <div class="ativ2">
-        <div class="ativ st"><h4>1. Studio de movimento (térreo)</h4><p>Musculação e treino funcional em turmas pequenas: até <b>${d.capSim} alunos treinando ao mesmo tempo</b>, com instrutor. Aberto de segunda a sexta das ${h(p.abreSemana, p.fechaSemana)}${p.sabados>0 && p.fechaSab>p.abreSab ? ` e aos sábados das ${h(p.abreSab, p.fechaSab)}` : ""}. O aluno paga uma <b>mensalidade pelo número de treinos por semana</b> (2x, 3x ou 4 a 5x). Cabem até <b>${num(d.lotacao)} alunos</b>; a meta é <b>${num(s.A)}</b>.</p></div>
+        <div class="ativ st"><h4>1. Studio de movimento (térreo)</h4><p>Musculação e treino funcional em turmas pequenas: até <b>${d.capSim} alunos treinando ao mesmo tempo</b>, com instrutor. Aberto de segunda a sexta das ${h(p.abreSemana, p.fechaSemana)}${p.sabados>0 && p.fechaSab>p.abreSab ? ` e aos sábados das ${h(p.abreSab, p.fechaSab)}` : ""}. O aluno paga uma <b>mensalidade pelo número de treinos por semana</b> (2x, 3x ou 4 a 5x). Cabem até <b>${num(d.lotacao)} alunos</b>; maduro, o negócio tem <b>${num(s.A)}</b> (${pct(pctMaduroReal(p, s),0)} do máximo).</p></div>
         <div class="ativ sl"><h4>2. Salas de terapia (2º andar)</h4><p>${num(p.salas)} salas de ${num(area,1)} m² alugadas a <b>terapeutas e profissionais de saúde</b> que atendem os próprios pacientes (coworking de saúde). O profissional paga <b>pelas horas que usa</b> (pacote, avulsa ou turno fixo)${p.salasFixas>0 ? " ou um contrato mensal pela sala" : ""}. A premissa é ocupar <b>${num(p.ocupCow)}% das horas</b> disponíveis.</p></div>
       </div>
       <p class="note">Sócios: um gestor e um sócio técnico fisioterapeuta, que ganham pelo lucro (sem pró-labore, regra RN-010). Não há investidor externo.</p></div>
@@ -1412,7 +1426,7 @@ function consultorHTML(p, s){
         <tr><td>Custos que mais pesam</td><td>Instrutores (${brl(d.tecnica)}/mês), impostos e cartão, aparelhos e divulgação</td><td>Impostos${p.custoVarHora>0?", custo por hora alugada":""}${p.comissaoPlat>0?", taxa do aplicativo":""}; quase todo o custo é o espaço, dividido com o studio</td></tr>
         <tr><td>O que mais muda o resultado</td><td>Número de alunos e preço dos planos</td><td>Ocupação das salas e preço da hora</td></tr>
       </table></div></div>
-    <div class="card"><h3>De onde vem a receita, por atividade</h3><p class="sub">Faturamento de um mês maduro (${num(s.A)} alunos e ${num(p.ocupCow)}% de ocupação das salas), antes de impostos. Cada linha mostra a conta que gera o valor.</p>
+    <div class="card"><h3>De onde vem a receita, por atividade</h3><p class="sub">Faturamento de um mês maduro (${maduroTxt(p, s)}; ${num(p.ocupCow)}% de ocupação das salas), antes de impostos. Cada linha mostra a conta que gera o valor.</p>
       <div class="scroll"><table class="rec">
         <tr><th>Fonte de receita</th><th>Por mês</th><th>Por ano</th><th>% do total</th><th class="barra"></th></tr>
         <tr class="grupo"><td colspan="5">Studio de movimento</td></tr>
@@ -1436,7 +1450,7 @@ function consultorHTML(p, s){
       <p class="note">O resultado do negócio é o mesmo do topo da página (${sgn(s.resultado)}/mês). A margem de contribuição não depende da divisão dos custos comuns: é a melhor medida de quanto cada atividade ajuda a pagar o imóvel.</p></div>
     <div class="card"><h3>Números de cada atividade</h3><p class="sub">Indicadores por unidade vendida: aluno no studio e hora nas salas.</p>
       <div class="indgrid">${indBox("Studio de movimento", [
-          ["Alunos (meta)", `${num(s.A)} de ${num(d.lotacao)}`, `${pct(s.A/Math.max(1,d.lotacao),0)} das vagas`],
+          ["Alunos (negócio maduro)", `${num(s.A)} de ${num(d.lotacao)}`, `${pct(pctMaduroReal(p, s),0)} do máximo de alunos`],
           ["Ticket médio", brl2(d.ticket), "Mensalidade média recebida por aluno"],
           ["Receita por aluno", porAluno(st.rec), "Inclui matrículas e outras receitas"],
           ["Custo próprio por aluno", porAluno(st.dir)],
@@ -1461,6 +1475,7 @@ function consultorHTML(p, s){
         <li><b>Salas de ${num(area,1)} m²</b>: a norma pede 7,5 m² para consultório; depende de aceite da Vigilância Sanitária.</li>
         <li><b>Condomínio e IPTU</b> (${brl(p.condIptu)}/mês na premissa): confirmar por escrito com o proprietário.</li>
         <li><b>Mix de planos</b> (${num(p.m2)}/${num(p.m3)}/${num(p.m45)}%): muda o ticket médio e as vagas; ver os botões de mix em "Cenários rápidos".</li>
+        <li><b>Alunos do negócio maduro</b> (${maduroTxt(p, s)}): ${p.modoCrescimento==="captacao" ? "vem da captação e dos cancelamentos" : p.metaPor==="num" ? "número informado pelos sócios" : `premissa dos sócios de ${num(p.pctMaduro)}% do máximo`}; confirmar com a procura real (pré-venda e lista de interessados).</li>
       </ul></div>`;
 }
 // F8: matriz de riscos (aba Riscos e cenários)
@@ -1542,15 +1557,16 @@ function renderResults(){
   const lucroContabil = s.resultado + amortCdc - deprec - jurosEmp;
   const parcEmp = p.empValor>0 ? pmt(p.empValor,p.empTaxa/100,p.empPrazo) : 0;
   const beFrac = Number.isFinite(s.be) ? s.be/Math.max(1,d.lotacao) : Infinity;
+  const madF = pctMaduroReal(p, s); // D12: parte do máximo de alunos no negócio maduro (padrão 75%)
 
   // Veredito e números principais
   const [vt, vi, vh, vd] = verdict(p, s);
   document.getElementById("verdict").innerHTML = `<div class="verdict ${vt}"><div class="ic">${vi}</div><div><b>${vh}</b><span>${vd}</span></div></div>`;
   const meterCls = beFrac>1 ? "bad" : beFrac>0.7 ? "warn" : "";
   document.getElementById("bigs").innerHTML = `
-    <div class="big"><div class="q">Lucro por mês com ${num(s.A)} alunos</div><div class="a">${sgn(s.resultado)}</div><div class="d">Depois de impostos e todos os custos, com o studio maduro.${s.resultadoPos!==null?` Depois de quitar os aparelhos: ${brl(s.resultadoPos)}/mês.`:""}</div></div>
+    <div class="big"><div class="q">Lucro por mês com ${num(s.A)} alunos</div><div class="a">${sgn(s.resultado)}</div><div class="d">Negócio maduro: ${pct(madF,0)} do máximo de ${num(d.lotacao)} alunos. Depois de impostos e todos os custos.${s.resultadoPos!==null?` Depois de quitar os aparelhos: ${brl(s.resultadoPos)}/mês.`:""}</div></div>
     <div class="big"><div class="q">Alunos para empatar · máximo possível</div><div class="a">${Number.isFinite(s.be)?s.be:"—"} <span class="de">de ${d.lotacao} no máximo</span></div>
-      <div class="meter ${meterCls}"><i style="width:${Math.min(100, fin(beFrac)*100).toFixed(0)}%"></i></div><div class="d">Máximo: <b>${d.lotacao} alunos</b> (${d.capSim} por horário).${!Number.isFinite(beFrac) ? " Nenhum número de alunos empata." : beFrac>1 ? " Empatar exige mais alunos do que cabem." : ` Empata com ${pct(beFrac,0)}.`}</div></div>
+      <div class="meter ${meterCls}" title="Barra: alunos para empatar. Traço: negócio maduro (${pct(madF,0)} do máximo)."><i style="width:${Math.min(100, fin(beFrac)*100).toFixed(0)}%"></i><b style="left:${Math.min(100, madF*100).toFixed(0)}%"></b></div><div class="d">Máximo: <b>${d.lotacao} alunos</b> (${d.capSim} por horário).${!Number.isFinite(beFrac) ? " Nenhum número de alunos empata." : beFrac>1 ? " Empatar exige mais alunos do que cabem." : ` Empata com ${pct(beFrac,0)}; maduro: ${pct(madF,0)}.`}</div></div>
     <div class="big"><div class="q">Dinheiro que vocês precisam ter</div><div class="a">${brl(s.exposicao)}</div><div class="d">Obra, aparelhos e prejuízos até o negócio se pagar sozinho. Com reserva de ${num(p.reservaMeses)} meses: <b>${brl(s.capitalRec)}</b>${capDisp(p)>0?` · vocês têm ${brl(capDisp(p))}`:""}.</div></div>
     <div class="big"><div class="q">Tempo para recuperar o investimento</div><div class="a">${s.payback?tempo(s.payback):"não volta"}</div><div class="d">${s.payback?"Contado a partir da inauguração.":`Não acontece em ${anosTxt(s.H)}.`}</div></div>`;
 
@@ -1583,7 +1599,7 @@ function renderResults(){
       </table></div>
       <p class="note">Some os itens de cima para baixo; o resultado é igual ao indicador do topo. Os valores de obra e aparelhos mudam nos campos "Investimento para abrir" e "Aparelhos de musculação".</p></div>`;
   const resumo = `
-    <div class="card"><h3>Balanço do mês: studio, salas e negócio total</h3><p class="sub">Quanto entra, quanto sai e o que sobra por mês com o negócio maduro (${num(s.A)} alunos e ${num(p.ocupCow,0)}% de ocupação das salas).</p>
+    <div class="card"><h3>Balanço do mês: studio, salas e negócio total</h3><p class="sub">Quanto entra, quanto sai e o que sobra por mês com o negócio maduro (${maduroTxt(p, s)}; ${num(p.ocupCow,0)}% de ocupação das salas).</p>
       <div class="legend"><span><i style="background:var(--s-in)"></i>Entradas</span><span><i style="background:var(--s-out)"></i>Saídas</span><span><i style="background:var(--s-res)"></i>Resultado (entradas − saídas)</span></div>
       <div class="chartbox">${balanceChart(bal)}</div>
       <div class="scroll"><table>
@@ -1600,16 +1616,16 @@ function renderResults(){
         <tr class="total"><td>Total</td><td></td><td>${num(ra.total.alunosFim)}</td><td>${brl(ra.total.studio)}</td><td>${brl(ra.total.salas)}</td><td>${brl(ra.total.total)}</td><td>${porMes(ra.total)}</td></tr>
       </table></div>
       <p class="note">Faturamento antes de impostos e cartão: mensalidades (já com descontos e inadimplência), matrículas, outras receitas do studio e aluguel das salas, com os reajustes anuais. Alunos ativos no mês; a média considera só os meses abertos. Mês a mês na aba "Caixa".</p></div>`; })()
-    + (() => { const q = quadroFaturamento(s), mx = Math.max(1, ...q.linhas.flatMap(l => l.vals)), cap = p.modoCrescimento==="captacao" ? "base estável" : "meta";
+    + (() => { const q = quadroFaturamento(s), mx = Math.max(1, ...q.linhas.flatMap(l => l.vals)), cap = p.modoCrescimento==="captacao" ? "base estável" : "negócio maduro";
       const cor = v => `background:rgba(63,111,181,${(Math.min(1, v/mx)*0.32).toFixed(2)})`;
       return `
-    <div class="card"><h3>Alunos × ticket médio × faturamento</h3><p class="sub">Faturamento das mensalidades por mês: número de alunos (linhas) vezes o ticket médio (colunas). Ticket médio atual: <b>${brl2(d.ticket)}</b> (mix de planos, já com descontos e inadimplência). Máximo de alunos: <b>${num(q.lot)}</b>.</p>
+    <div class="card"><h3>Alunos × ticket médio × faturamento</h3><p class="sub">Faturamento das mensalidades por mês: número de alunos (linhas) vezes o ticket médio (colunas). Ticket médio atual: <b>${brl2(d.ticket)}</b> (mix de planos, já com descontos e inadimplência). Máximo de alunos: <b>${num(q.lot)}</b>. Negócio maduro: <b>${maduroTxt(p, s)}</b>.</p>
       <div class="scroll"><table class="qfat">
         <tr><th>Alunos</th>${q.tickets.map(x => `<th>${brl2(x.t)}<br><small>${x.f===1?"ticket atual":(x.f>1?"+":"")+num((x.f-1)*100,0)+"%"}</small></th>`).join("")}<th>Por ano<br><small>ticket atual</small></th></tr>
         ${q.linhas.map(l => { const tag = [l.empata?"empata":"", l.meta?cap:"", l.maximo?"máximo":""].filter(Boolean).join(", ");
           return `<tr${l.empata||l.meta?' class="hl"':""}><td>${num(l.n)} <small>(${pct(l.n/Math.max(1,q.lot),0)})</small>${tag?` · ${tag}`:""}</td>${l.vals.map((v,i) => `<td style="${cor(v)}"${l.meta&&q.tickets[i].f===1?' class="atual"':""}>${brl(v)}</td>`).join("")}<td>${brl(l.vals[QF_TICKETS.indexOf(1)]*12)}</td></tr>`; }).join("")}
       </table></div>
-      <p class="note">Só mensalidades do studio, antes de impostos e da taxa do cartão; não inclui matrículas, outras receitas nem as salas. Preços do 1º ano (sem reajuste). Em destaque: o ponto de equilíbrio e a ${cap}; com contorno, a situação atual. Cores mais fortes = faturamento maior.</p></div>`; })()
+      <p class="note">Só mensalidades do studio, antes de impostos e da taxa do cartão; não inclui matrículas, outras receitas nem as salas. Preços do 1º ano (sem reajuste). Em destaque: o ponto de equilíbrio e o ${cap === "base estável" ? "número da base estável" : "negócio maduro"}; com contorno, a situação atual. Cores mais fortes = faturamento maior.</p></div>`; })()
     + `
     <div class="card"><h3>Caixa dos sócios ao longo do tempo</h3><p class="sub">Quanto dinheiro saiu (abaixo de zero) e quando volta (acima de zero). Passe o mouse para ver cada mês.</p>
       <div class="chartbox" id="chartbox">${ch.svg}<div class="tip"></div></div>
@@ -1624,7 +1640,7 @@ function renderResults(){
         <div class="scroll"><table><tr><td>Capital dos sócios</td><td>${brl(capDisp(p))}</td></tr><tr><td>Dinheiro necessário (pior momento)</td><td>${brl(s.exposicao)}</td></tr>
         <tr><td>Capital recomendado (com reserva)</td><td>${brl(s.capitalRec)}</td></tr><tr class="total"><td>${fo.sobra>=0?"Folga":"Falta"} em relação ao necessário</td><td>${sgn(fo.sobra)}</td></tr></table></div>`; })()}</div>
     <div class="card"><h3>Pontos de atenção</h3>${alerts(p,s).map(([t,m])=>`<div class="alert ${t}"><b>${ICON[t]}</b><span>${m}</span></div>`).join("")}</div>
-    <div class="card"><h3>Indicadores</h3><p class="sub">Todos os números para o studio maduro (${num(s.A)} alunos), salvo indicação.</p><div class="indgrid">
+    <div class="card"><h3>Indicadores</h3><p class="sub">Todos os números para o negócio maduro (${maduroTxt(p, s)}), salvo indicação.</p><div class="indgrid">
       ${indBox("Receitas", [
         ["Faturamento por mês", brl(s.receitaTotal), "Studio + salas"],
         ["Faturamento por ano", brl(s.receitaTotal*12)],
@@ -1705,7 +1721,7 @@ function renderResults(){
         {label:"Aparelhos", v:s.eqOp, tipo:"sai"},
         {label:"Custos variáveis", v:s.c.vari + s.c.plat + s.cvar, tipo:"sai"},
         {label:"Lucro do mês", v:s.resultado, tipo:"res"}].filter(st => st.tipo!=="sai" || st.v>=0.5), "Cascata do faturamento ao lucro do mês")}</div></div>
-    <div class="card"><h3>Demonstrativo do mês (DRE)</h3><p class="sub">Studio maduro com ${num(s.A)} alunos e preços do 1º ano. Tíquete médio por aluno: <b>${brl2(d.ticket)}</b> por mês.</p><div class="scroll"><table>
+    <div class="card"><h3>Demonstrativo do mês (DRE)</h3><p class="sub">Negócio maduro com ${maduroTxt(p, s)} e preços do 1º ano. Tíquete médio por aluno: <b>${brl2(d.ticket)}</b> por mês.</p><div class="scroll"><table>
       <tr><th>Linha</th><th>R$ por mês</th><th>% do faturamento</th></tr>
       ${row("Mensalidades do studio", s.recPlanos)}${s.recMat?row("Matrículas", s.recMat):""}${p.recExtra?row("Outras receitas do studio", p.recExtra):""}
       ${s.c.recHora?row("Aluguel das salas por hora", s.c.recHora):""}${s.c.recFixo?row("Salas em contrato mensal", s.c.recFixo):""}
@@ -1735,7 +1751,9 @@ function renderResults(){
   const scRow = (l, f) => `<tr><td>${l}</td>${sc.map(([,x])=>`<td>${f(x)}</td>`).join("")}</tr>`;
   const sv = sensitivity(p), maxSw = Math.max(1, ...sv.rows.map(r=>r.swing));
   const fmtBe = o => Number.isFinite(o.be) ? `${o.be} (${pct(o.be/Math.max(1,o.lot),0)})` : "—";
-  const precosF = [0.9,0.95,1,1.05,1.1,1.2], alunosF = [0.6,0.7,0.8,0.9,1,1.1].filter(f => f<=1 || p.limitarVagas!=="sim").map(f=>Math.round(d.lotacao*f));
+  const precosF = [0.9,0.95,1,1.05,1.1,1.2], Amad = Math.round(s.A);
+  const alunosF = [...new Set([0.6,0.7,0.8,0.9,1,1.1].filter(f => f<=1 || p.limitarVagas!=="sim").map(f=>Math.round(d.lotacao*f)).concat(Amad > 0 ? [Amad] : []))].sort((a,b)=>a-b);
+  const tagMad = p.modoCrescimento==="captacao" ? "base estável" : "negócio maduro";
   const pts = [...new Set([0.4,0.5,0.6,0.7,0.8,0.9,1].map(x=>Math.round(d.lotacao*x)).concat([s.be,Math.round(s.A),alunosLucro]).filter(x=>Number.isFinite(x)&&x>=0))].sort((a,b)=>a-b);
   const mi = metaInversa(p);
   const fmtA = v => v===null ? "não alcança" : `${num(v)} alunos${v>d.lotacao?` <span class="neg">(acima das ${d.lotacao} vagas)</span>`:""}`;
@@ -1747,11 +1765,11 @@ function renderResults(){
       <tr><th>Objetivo</th><th>Mínimo de alunos</th><th>Variação mínima dos preços</th><th>Ocupação mínima das salas</th></tr>
       <tr><td>Lucro de ${brl(p.lucroAlvo)} por mês</td><td>${fmtA(mi.lucro.alunos)}</td><td>${fmtP(mi.lucro.preco)}</td><td>${fmtO(mi.lucro.ocup)}</td></tr>
       <tr><td>Recuperar o investimento em até ${num(p.paybackAlvo)} meses</td><td>${fmtA(mi.payback.alunos)}</td><td>${fmtP(mi.payback.preco)}</td><td>${fmtO(mi.payback.ocup)}</td></tr>
-      <tr class="sub"><td>Hoje</td><td>${num(s.A)} alunos</td><td>preços atuais</td><td>${num(p.ocupCow,0)}%</td></tr>
+      <tr class="sub"><td>Hoje (negócio maduro)</td><td>${maduroTxt(p, s)}</td><td>preços atuais</td><td>${num(p.ocupCow,0)}%</td></tr>
     </table></div><p class="note">Valores abaixo dos atuais significam folga: o objetivo já é atingido e a alavanca ainda pode piorar até ali. Preço: variação aplicada aos três planos (entre parênteses, como ficaria o plano 2x). "Não alcança": nem com o máximo testado (20.000 alunos para o lucro, 3.000 para o prazo), preços 3× maiores ou 100% de ocupação.</p></div>
-    <div class="card"><h3>Cenários ruim, esperado e bom</h3><p class="sub">Ruim: ${num(p.varAlunos,1)}% menos alunos, ${num(p.varOcup,1)}% menos ocupação das salas, preços ${num(p.varPrecos,1)}% menores, custos ${num(p.varCustos,1)}% maiores e ${num(p.varRampa,1)}% mais tempo para encher. Bom: o contrário.</p><div class="scroll"><table>
+    <div class="card"><h3>Cenários ruim, esperado e bom</h3><p class="sub">Ruim: ${num(p.varAlunos,1)}% menos alunos, ${num(p.varOcup,1)}% menos ocupação das salas, preços ${num(p.varPrecos,1)}% menores, custos ${num(p.varCustos,1)}% maiores e ${num(p.varRampa,1)}% mais tempo para encher. Bom: o contrário. Esperado: negócio maduro com ${maduroTxt(p, s)}.</p><div class="scroll"><table>
       <tr><th></th>${sc.map(([n])=>`<th>${n}</th>`).join("")}</tr>
-      ${scRow("Alunos", x=>num(x.A))}
+      ${scRow("Alunos no negócio maduro", x=>`${num(x.A)} <small>(${pct(x.A/Math.max(1,x.d.lotacao),0)} do máximo)</small>`)}
       ${scRow("Faturamento por mês", x=>brl(x.receitaTotal))}
       ${scRow("Lucro por mês", x=>sgn(x.resultado))}
       ${scRow("Alunos para empatar", x=>Number.isFinite(x.be)?`${x.be} (${pct(x.be/Math.max(1,x.d.lotacao),0)})`:"—")}
@@ -1789,25 +1807,25 @@ function renderResults(){
       <tr><th>Premissa</th><th>Lucro com −10%</th><th>Lucro com +10%</th><th>Alunos p/ empatar (−10% / +10%)</th><th>Peso</th></tr>
       ${sv.rows.map(r=>`<tr><td>${r.l}</td><td>${sgn(r.lo.res)}</td><td>${sgn(r.hi.res)}</td><td>${fmtBe(r.lo)} / ${fmtBe(r.hi)}</td><td style="min-width:90px"><div class="meter" style="margin:0"><i style="width:${(r.swing/maxSw*100).toFixed(0)}%"></i></div></td></tr>`).join("")}
     </table></div><p class="note">Hoje: lucro de ${brl(sv.base.resultado)} e ${fmtBe({be:sv.base.be, lot:sv.lotBase})} alunos para empatar.</p></div>
-    <div class="card"><h3>Lucro por mês: alunos × preço dos planos</h3><p class="sub">Linhas: número de alunos (e % das vagas). Colunas: preços mais baixos ou mais altos que os atuais.</p><div class="scroll"><table>
+    <div class="card"><h3>Lucro por mês: alunos × preço dos planos</h3><p class="sub">Linhas: número de alunos (e % das vagas). Colunas: preços mais baixos ou mais altos que os atuais. Em destaque: o ${tagMad} (${maduroTxt(p, s)}).</p><div class="scroll"><table>
       <tr><th>Alunos</th>${precosF.map(f=>`<th>${f===1?"preço atual":(f>1?"+":"")+num((f-1)*100,0)+"%"}</th>`).join("")}</tr>
       ${(()=>{ const M = alunosF.map(n => precosF.map(f => regime(comAlunos(p, n, {p2:p.p2*f, p3:p.p3*f, p45:p.p45*f}),p.modelo).resultado));
         const mx = Math.max(1, ...M.flat().map(Math.abs));
-        return alunosF.map((n,i)=>`<tr><td>${n} (${pct(n/Math.max(1,d.lotacao),0)})</td>${M[i].map(v=>`<td style="${heatStyle(v,mx)}">${sgn(v)}</td>`).join("")}</tr>`).join(""); })()}
+        return alunosF.map((n,i)=>`<tr${n===Amad?' class="hl"':""}><td>${n} (${pct(n/Math.max(1,d.lotacao),0)})${n===Amad?` · ${tagMad}`:""}</td>${M[i].map(v=>`<td style="${heatStyle(v,mx)}">${sgn(v)}</td>`).join("")}</tr>`).join(""); })()}
     </table></div><p class="note">Cores: verde = lucro, vermelho = prejuízo; quanto mais forte, maior o valor.</p></div>
-    <div class="card"><h3>Lucro por número de alunos</h3><p class="sub">Lucro do mês (studio maduro) para cada número de alunos. A linha cruza o zero no ponto de equilíbrio.</p>
+    <div class="card"><h3>Lucro por número de alunos</h3><p class="sub">Lucro do mês (preços e custos de um mês maduro) para cada número de alunos. A linha cruza o zero no ponto de equilíbrio; o outro ponto marcado é o ${tagMad} (${maduroTxt(p, s)}).</p>
       <div class="chartbox">${(()=>{ const nmax = Math.ceil(Math.max(d.lotacao, s.A, Number.isFinite(s.be) ? s.be : 0)*1.2), stp = Math.max(1, Math.round(nmax/60));
         const xs = []; for(let n=0; n<=nmax; n+=stp) xs.push(n);
         const vals = xs.map(n => regime(comAlunos(p, n, {limitarVagas:"nao"}), p.modelo).resultado);
         const at = n => regime(comAlunos(p, n, {limitarVagas:"nao"}), p.modelo).resultado;
         const marks = [];
         if(Number.isFinite(s.be)) marks.push({x:s.be, y:at(s.be), label:`empata: ${s.be}`, color:"var(--s-out)", dy:18});
-        marks.push({x:Math.round(s.A), y:at(Math.round(s.A)), label:`${p.modoCrescimento==="captacao"?"base":"meta"}: ${num(s.A)} → ${brl(at(Math.round(s.A)))}`, color:"var(--s-res)"});
+        marks.push({x:Math.round(s.A), y:at(Math.round(s.A)), label:`${p.modoCrescimento==="captacao"?"base":`maduro (${pct(madF,0)})`}: ${num(s.A)} → ${brl(at(Math.round(s.A)))}`, color:"var(--s-res)"});
         return lineChart({xs, series:[{name:"Lucro", color:"var(--chart-line)", vals}], yfmt:kR, xfmt:x => x+" alunos", xticks:xs.filter((x,i) => i%Math.ceil(xs.length/6)===0),
           vrefs:[{x:d.lotacao, label:`vagas: ${d.lotacao}`}], marks, aria:"Lucro do mês por número de alunos", tip:(i,x) => `${x} alunos: ${brl(vals[i])}/mês`}); })()}</div>
       <div class="scroll"><table>
       <tr><th>Alunos</th><th>% das vagas</th><th>Faturamento do studio</th><th>Lucro por mês</th><th>Lucro por ano</th></tr>
-      ${pts.map(n=>{ const r=regime(comAlunos(p, n, {limitarVagas:"nao"}),p.modelo); const tag=[n===s.be?"empata":"",n===Math.round(s.A)?(p.modoCrescimento==="captacao"?"base estável":"meta"):"",n===alunosLucro?"lucro desejado":""].filter(Boolean).join(", ");
+      ${pts.map(n=>{ const r=regime(comAlunos(p, n, {limitarVagas:"nao"}),p.modelo); const tag=[n===s.be?"empata":"",n===Math.round(s.A)?tagMad:"",n===alunosLucro?"lucro desejado":""].filter(Boolean).join(", ");
         return `<tr${tag?' class="hl"':''}><td>${n}${tag?" · "+tag:""}</td><td>${pct(n/Math.max(1,d.lotacao),0)}</td><td>${brl(r.recT)}</td><td>${sgn(r.resultado)}</td><td>${sgn(r.resultado*12)}</td></tr>`;}).join("")}
     </table></div></div>`;
 
@@ -1838,13 +1856,16 @@ function renderResults(){
   // ----- Aba Caixa -----
   const years = {};
   s.rows.forEach(r => { const key = r.k ? "Ano "+(Math.floor((r.k-1)/12)+1) : "Obra"; (years[key] ||= {rec:0,res:0,cumS:0,alunos:0,n:0}); const y=years[key]; y.rec+=r.receita; y.res+=r.soc; y.cumS=r.cumSoc; y.n++; if(r.alunos!=null) y.alunos=r.alunos; });
+  const kMad = s.rows.find(r => r.k && s.A > 0 && r.alunos >= Math.round(s.A) - 0.5); // 1º mês com os alunos do negócio maduro
   const caixa = `
-    <div class="card"><h3>Alunos ao longo do tempo</h3><p class="sub">Alunos ativos em cada mês (contados da assinatura do contrato), comparados com o ponto de equilíbrio e com as vagas do studio.</p>
+    <div class="card"><h3>Alunos ao longo do tempo</h3><p class="sub">Alunos ativos em cada mês (contados da assinatura do contrato), comparados com o ponto de equilíbrio, com o negócio maduro (${maduroTxt(p, s)}) e com as vagas do studio.${kMad ? ` O negócio fica maduro no mês ${kMad.m} (${kMad.k}º mês aberto).` : ""}</p>
       <div class="chartbox">${(()=>{ const xs = [0, ...s.rows.map(r => r.m)], vals = [0, ...s.rows.map(r => r.alunos ?? 0)];
         const refs = [{y:d.lotacao, label:`vagas: ${d.lotacao}`}]; if(Number.isFinite(s.be)) refs.push({y:s.be, label:`empata: ${s.be}`});
-        const kBE = s.rows.find(r => r.k && r.alunos >= s.be);
+        if(Math.round(s.A) < d.lotacao && Math.abs(Math.round(s.A) - s.be) >= 4) refs.push({y:Math.round(s.A), label:`maduro (${pct(madF,0)}): ${num(s.A)}`});
+        const kBE = s.rows.find(r => r.k && r.alunos >= s.be), mk = kBE ? [{x:kBE.m, y:kBE.alunos, label:`passa do equilíbrio no mês ${kBE.m}`, color:"var(--s-out)", dy:18}] : [];
+        if(kMad && (!kBE || kMad.m - kBE.m >= 6)) mk.push({x:kMad.m, y:kMad.alunos, label:`maduro no mês ${kMad.m}`, color:"var(--s-res)"});
         return lineChart({xs, series:[{name:"Alunos", color:"var(--s-res)", vals}], yfmt:v => num(v), xfmt:x => x===0?"assinatura":"mês "+x, xticks:xs.filter(x => x%12===0),
-          refs, marks: kBE ? [{x:kBE.m, y:kBE.alunos, label:`passa do equilíbrio no mês ${kBE.m}`, color:"var(--s-out)", dy:18}] : [],
+          refs, marks: mk,
           aria:"Alunos ativos por mês", tip:(i,x) => `Mês ${x}: ${num(vals[i])} alunos`}); })()}</div></div>
     <div class="card"><h3>Faturamento e custos mês a mês</h3><p class="sub">Meses contados da assinatura do contrato. Quando a linha do faturamento passa a de custos, o mês fecha no azul.</p>
       ${legendHTML([["Faturamento","var(--s-in)"],["Custos (com impostos)","var(--s-out)"]])}
@@ -1876,7 +1897,8 @@ function renderResults(){
       <dt>Valor do negócio hoje (VPL)</dt><dd>Todo o dinheiro que o negócio gera, trazido para valores de hoje usando o rendimento mínimo desejado. Positivo = rende mais que a aplicação alternativa.</dd>
       <dt>Rentabilidade anual (TIR)</dt><dd>Quanto o dinheiro investido rende por ano, em média. Compare com o rendimento mínimo desejado.</dd>
       <dt>Depreciação</dt><dd>Desgaste da obra e dos aparelhos ao longo dos anos. Não sai do caixa, mas reduz o lucro contábil.</dd>
-      <dt>Rampa</dt><dd>Período em que os alunos e os aluguéis de sala crescem aos poucos até a meta.</dd>
+      <dt>Negócio maduro</dt><dd>Fase em que os alunos param de crescer. Premissa dos sócios: ${num(DEFAULTS.pctMaduro)}% do máximo de alunos (vagas) matriculados. Nesta simulação: ${maduroTxt(p, s)}. O lucro do mês, os indicadores e o balanço usam esse número.</dd>
+      <dt>Rampa</dt><dd>Período em que os alunos e os aluguéis de sala crescem aos poucos até o negócio maduro.</dd>
     </dl></div>
     <div class="card"><h3>Fórmulas</h3><ul class="note" style="font-size:13.5px">
       <li>Horas abertas = (fecha − abre) × dias, somando semana, sábado e domingo.</li>
@@ -1884,6 +1906,7 @@ function renderResults(){
       <li>Balanço por área: custos do imóvel e custos comuns (recepção, limpeza, contas, sistema, contador, seguro, outros) divididos entre studio e salas pela área de cada andar; instrutores, aparelhos, divulgação e custos dos alunos ficam no studio; impostos, custos por hora e lixo hospitalar das salas ficam nas salas.</li>
       <li>Treinos por aluno = vezes por semana do mix (2x, 3x, 4–5x) × 52 ÷ 12 × (1 − taxa de faltas).</li>
       <li>Vagas = horas abertas × alunos ao mesmo tempo ÷ treinos por aluno × aproveitamento.</li>
+      <li>Alunos do negócio maduro = vagas × % do máximo (padrão 75%, arredondado), ou o número fixo informado. Muda sozinho quando mudam horário, alunos por horário, mix de planos, faltas ou aproveitamento.</li>
       <li>Alunos no tempo: linha reta ou curva em S até a meta (curva em S = 3x² − 2x³, com x = mês ÷ meses até a meta); ou por captação: alunos do mês = alunos do mês anterior × (1 − cancelamento) + novos. A base estável da captação é novos ÷ cancelamento. Com "limitar às vagas", nunca passa da lotação.</li>
       <li>Capital recomendado = dinheiro que vocês precisam ter + reserva (meses × custos fixos do mês).</li>
       <li>Meta inversa: busca o menor nº de alunos, aumento de preço ou ocupação das salas que atinge o lucro desejado ou o prazo desejado, mudando uma alavanca de cada vez.</li>
@@ -2053,7 +2076,8 @@ function premissasCompactas(p, s){
     if(FIELDS[id].g==="equip" && id!=="modelo" && !eq.includes(id)) return false;
     if((id==="tSimples" || id==="tCow") && p.modoSimples!=="manual") return false;
     if(id==="novosMes" && p.modoCrescimento!=="captacao") return false;
-    if((id==="alunosAlvo" || id==="rampa") && p.modoCrescimento==="captacao") return false;
+    if((id==="alunosAlvo" || id==="rampa" || id==="metaPor" || id==="pctMaduro") && p.modoCrescimento==="captacao") return false;
+    if((id==="alunosAlvo" && p.metaPor!=="num") || (id==="pctMaduro" && p.metaPor==="num")) return false;
     return FIELDS[id].e || p[id]!==DEFAULTS[id] || (typeof p[id]==="number" && p[id]!==0);
   };
   const boxes = GROUPS.map(g => {
@@ -2062,7 +2086,7 @@ function premissasCompactas(p, s){
     return rows ? `<div class="pbox"><h4>${g.g}</h4><table>${rows}</table></div>` : "";
   }).join("");
   const deriv = [["Horas abertas por mês", num(d.horasOp)+" h"],["Treinos por aluno", `${num(d.aulasMes,1)}/mês (contratados ${num(d.aulasContratadas,1)})`],
-    ["Vagas no studio", `${d.lotacao} alunos (${d.capSim} ao mesmo tempo)`],["Alunos em regime", num(s.A)],["Mensalidade média", brl2(d.ticket)],
+    ["Vagas no studio", `${d.lotacao} alunos (${d.capSim} ao mesmo tempo)`],["Alunos no negócio maduro", maduroTxt(p, s)],["Mensalidade média", brl2(d.ticket)],
     ["Horas por sala", num(d.horasSala)+" h/mês"],["Custos fixos do mês", brl(s.opex)],["Investimento para abrir", brl(s.upfront)],
     ["Simples em regime", p.modoSimples==="manual" ? pct(d.tSimp)+" (manual)" : `${pct(d.tSimp)} · Anexo ${d.anexo} · Fator R ${pct(d.fatorR,0)}`]];
   return `<p class="note" style="margin:0 0 8px">Premissas usadas nesta simulação. Linhas em destaque foram alteradas (entre parênteses, o valor padrão). Campos opcionais zerados e campos que não se aplicam às escolhas feitas não aparecem.</p>
