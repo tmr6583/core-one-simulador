@@ -480,7 +480,7 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.6.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.6.1", padroes:"15-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
@@ -519,12 +519,13 @@ function deriv(p){
   const areaNec = capSim*p.m2Aluno; // área de treino necessária para a turma
   const vagas = horasOp*capSim;
   // B4: treinos contratados pelo mix (semanas por mês = 52/12) menos as faltas
-  const freqSem = (p.m2*2 + p.m3*3 + p.m45*p.freq45)/100;
+  // R1: se o mix não somar 100%, usa a proporção entre os planos (o alerta pede o ajuste); mix zerado = sem alunos
+  const mixSum = p.m2+p.m3+p.m45, mixDiv = mixSum>0 ? mixSum : 100;
+  const freqSem = (p.m2*2 + p.m3*3 + p.m45*p.freq45)/mixDiv;
   const aulasContratadas = freqSem*52/12;
   const aulasMes = aulasContratadas*(1 - p.faltas/100);
   const lotacao = aulasMes>0 ? Math.floor(vagas/aulasMes*p.fatorOcup/100) : 0;
-  const mixSum = p.m2+p.m3+p.m45;
-  const ticketBruto = (p.m2*p.p2+p.m3*p.p3+p.m45*p.p45)/100;
+  const ticketBruto = (p.m2*p.p2+p.m3*p.p3+p.m45*p.p45)/mixDiv;
   const ticket = ticketBruto*(1-p.pctLongo/100*p.descLongo/100)*(1-p.inadimpl/100);
   const tecnica = (horasOp*p.instrBase + p.horasPico2)*p.custoHoraInstr + p.adicRT;
   const capLinhas = p.capObraCivil+p.capEletrica+p.capHidraulica+p.capClima+p.capPiso+p.capAcess+p.capProjeto+p.capLicencas+p.capMobiliario+p.capTI+p.capMktPre;
@@ -534,7 +535,7 @@ function deriv(p){
   const horasSala = horasSalas(p);
   const capArea = p.m2Aluno>0 ? Math.floor(p.areaUtilTerreo/p.m2Aluno) : 0; // alunos que cabem na área estimada (A9)
   const lotArea = aulasMes>0 ? Math.floor(horasOp*capArea/aulasMes*p.fatorOcup/100) : 0;
-  return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, ticketBruto, ticket, tecnica, folha, capexObra, outrosFixos, horasSala, capArea, lotArea, freqSem, aulasContratadas, aulasMes};
+  return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, mixDiv, ticketBruto, ticket, tecnica, folha, capexObra, outrosFixos, horasSala, capArea, lotArea, freqSem, aulasContratadas, aulasMes};
 }
 // Horas por mês em que cada sala pode ser alugada (A10): horário próprio das salas × dias do studio
 function horasSalas(p){
@@ -574,10 +575,15 @@ function equip(p, m){
     default: return {capex:p.seminovosValor, opex:()=>p.seminovosManut, oneoff:()=>0, label:"manutenção dos aparelhos"};
   }
 }
+// R2: partes das horas das salas (pacote, avulsa, turno). Se avulsa + turno passar de 100%, usa a proporção entre os dois.
+function mixSalas(p){
+  const a = Math.max(0, p.pctAvulsa)/100, t = Math.max(0, p.pctTurno)/100, s = a + t;
+  return s > 1 ? {pa: a/s, pt: t/s, pp: 0} : {pa: a, pt: t, pp: 1 - s};
+}
 function cow(p, ocup, priceF=1, tC=p.tCow/100, costF=1){
   const sf = Math.min(Math.max(p.salasFixas,0), p.salas), sh = Math.max(0, p.salas - sf);
   const horas = Math.round(horasSalas(p)*Math.min(100, Math.max(0, ocup))/100);
-  const pa = p.pctAvulsa/100, pt = p.pctTurno/100, pp = Math.max(0, 1-pa-pt);
+  const {pa, pt, pp} = mixSalas(p);
   const precoMed = (p.precoHora*pp + p.precoAvulsa*pa + p.precoTurno*pt)*priceF;
   const recHora = sh*horas*precoMed, recFixo = sf*p.aluguelFixoSala*priceF, rec = recHora+recFixo;
   const imp = rec*tC, plat = recHora*p.comissaoPlat/100, vari = sh*horas*p.custoVarHora*costF;
@@ -755,11 +761,11 @@ function modeloNegocio(p, s){
   const d = s.d, c = s.c, A = s.A;
   const fator = (1 - p.pctLongo/100*p.descLongo/100)*(1 - p.inadimpl/100); // descontos de plano longo e inadimplência
   const planos = [["Plano 2x por semana", p.m2, p.p2], ["Plano 3x por semana", p.m3, p.p3], ["Plano 4 a 5x por semana", p.m45, p.p45]]
-    .map(([n, m, preco]) => ({nome: n, base: `${num(A*m/100,1)} alunos (${num(m)}%) × ${brl(preco)}`, v: A*m/100*preco*fator}));
+    .map(([n, m, preco]) => ({nome: n, base: `${num(A*m/d.mixDiv,1)} alunos (${num(m/d.mixDiv*100)}%) × ${brl(preco)}`, v: A*m/d.mixDiv*preco*fator}));
   const studio = [...planos,
     {nome: "Matrículas", base: `${num(s.novos,1)} alunos novos por mês × ${brl(p.matricula)}`, v: s.recMat},
     {nome: "Outras receitas do studio", base: "avaliação física, personal, produtos (valor informado)", v: p.recExtra}];
-  const pa = p.pctAvulsa/100, pt = p.pctTurno/100, pp = Math.max(0, 1 - pa - pt), hh = c.sh*c.horas;
+  const {pa, pt, pp} = mixSalas(p), hh = c.sh*c.horas;
   const salas = [
     {nome: "Horas em pacote", base: `${num(hh*pp)} h × ${brl2(p.precoHora)}`, v: hh*pp*p.precoHora},
     {nome: "Horas avulsas", base: `${num(hh*pa)} h × ${brl2(p.precoAvulsa)}`, v: hh*pa*p.precoAvulsa},
@@ -945,8 +951,9 @@ function verdict(p, s){
 }
 function alerts(p, s){
   const a = [], d = s.d;
-  if(Math.abs(d.mixSum-100)>0.01) a.push(["bad",`Os três planos somam ${num(d.mixSum,1)}% dos alunos. Ajuste para somar 100%.`]);
-  if(p.pctAvulsa+p.pctTurno>100) a.push(["bad","Horas avulsas + turno fixo passam de 100% das horas alugadas."]);
+  if(Math.abs(d.mixSum-100)>0.01) a.push(["bad",`Os três planos somam ${num(d.mixSum,1)}% dos alunos. Ajuste para somar 100%. Até lá, a simulação usa a proporção entre eles.`]);
+  if(p.pctAvulsa+p.pctTurno>100) a.push(["bad","Horas avulsas + turno fixo passam de 100% das horas alugadas. Até o ajuste, a simulação usa a proporção entre as duas."]);
+  if(p.modoSimples!=="manual" && 12*s.receitaTotal > 4800000) a.push(["bad",`O faturamento de 12 meses (${brl(12*s.receitaTotal)}) passa do limite do Simples Nacional (R$ 4,8 milhões). A simulação usa a última faixa do Simples, mas a empresa teria de mudar de regime (Lucro Presumido ou Real). Fale com o contador.`]);
   if(p.salasFixas>p.salas) a.push(["bad","Há mais salas em contrato mensal do que salas existentes."]);
   if(d.areaNec > p.areaUtilTerreo + 0.01) a.push(["warn",`${d.capSim} alunos × ${num(p.m2Aluno,1)} m² = ${num(d.areaNec)} m² de área livre para treinar, mas a estimativa do térreo é de ${num(p.areaUtilTerreo)} m². Nessa área cabem ${d.capArea} alunos ao mesmo tempo (≈ ${d.lotArea} alunos ativos, contra ${d.lotacao} com ${d.capSim}). Confirmar com a planta.`]);
   const areaTreino = Math.max(p.areaUtilTerreo, d.areaNec);
@@ -1568,7 +1575,7 @@ function renderResults(){
     <div class="big"><div class="q">Alunos para empatar · máximo possível</div><div class="a">${Number.isFinite(s.be)?s.be:"—"} <span class="de">de ${d.lotacao} no máximo</span></div>
       <div class="meter ${meterCls}" title="Barra: alunos para empatar. Traço: negócio maduro (${pct(madF,0)} do máximo)."><i style="width:${Math.min(100, fin(beFrac)*100).toFixed(0)}%"></i><b style="left:${Math.min(100, madF*100).toFixed(0)}%"></b></div><div class="d">Máximo: <b>${d.lotacao} alunos</b> (${d.capSim} por horário).${!Number.isFinite(beFrac) ? " Nenhum número de alunos empata." : beFrac>1 ? " Empatar exige mais alunos do que cabem." : ` Empata com ${pct(beFrac,0)}; maduro: ${pct(madF,0)}.`}</div></div>
     <div class="big"><div class="q">Dinheiro que vocês precisam ter</div><div class="a">${brl(s.exposicao)}</div><div class="d">Obra, aparelhos e prejuízos até o negócio se pagar sozinho. Com reserva de ${num(p.reservaMeses)} meses: <b>${brl(s.capitalRec)}</b>${capDisp(p)>0?` · vocês têm ${brl(capDisp(p))}`:""}.</div></div>
-    <div class="big"><div class="q">Tempo para recuperar o investimento</div><div class="a">${s.payback?tempo(s.payback):"não volta"}</div><div class="d">${s.payback?"Contado a partir da inauguração.":`Não acontece em ${anosTxt(s.H)}.`}</div></div>`;
+    <div class="big"><div class="q">Tempo para recuperar o investimento</div><div class="a">${s.payback?tempo(s.payback):"não volta"}</div><div class="d">${s.payback?`Contado a partir da inauguração (${num(s.payback + s.p.mesesObra)} meses desde a assinatura, com ${num(s.p.mesesObra)} de obra).`:`Não acontece em ${anosTxt(s.H)}.`}</div></div>`;
 
   // ----- Aba Resumo -----
   const ch = cashChart(s), bal = balanco(p, s);
@@ -1670,7 +1677,7 @@ function renderResults(){
         ["Investimento inicial", brl(s.capexTotal), "Obra + aparelhos"],
         ["Dinheiro necessário no pior momento", brl(s.exposicao), `No mês ${s.minMes} após a assinatura`],
         ["Capital recomendado (com reserva)", brl(s.capitalRec), `Necessário + ${num(p.reservaMeses)} meses de custo fixo`],
-        ["Tempo para recuperar", s.payback?tempo(s.payback):"não volta", "A partir da inauguração"],
+        ["Tempo para recuperar", s.payback?tempo(s.payback):"não volta", s.payback ? `A partir da inauguração (${num(s.payback + s.p.mesesObra)} meses desde a assinatura)` : "A partir da inauguração"],
         ["Tempo para recuperar, corrigido", s.paybackDesc?tempo(s.paybackDesc):"não volta", `Considerando ${num(p.tma,1)}% ao ano de rendimento alternativo`],
         ["Valor do negócio hoje (VPL)", sgn(s.vpl), "Positivo = rende mais que a aplicação alternativa"],
         ["Rentabilidade anual (TIR)", s.tir===null?"—":pct(s.tir), `Compare com os ${num(p.tma,1)}% desejados`],
@@ -1893,7 +1900,7 @@ function renderResults(){
       <dt>Ponto de equilíbrio (alunos para empatar)</dt><dd>Número de alunos em que o faturamento cobre exatamente todos os custos. Abaixo dele há prejuízo.</dd>
       <dt>Vagas no studio (lotação)</dt><dd>Quantos alunos ativos cabem, considerando horário, espaço, quantas vezes cada um treina e o vazio fora do pico.</dd>
       <dt>Dinheiro necessário</dt><dd>O pior saldo do caixa: obra, aparelhos e os prejuízos dos primeiros meses, antes de o negócio andar sozinho.</dd>
-      <dt>Tempo para recuperar (payback)</dt><dd>Meses, a partir da inauguração, até o lucro acumulado devolver tudo o que foi investido.</dd>
+      <dt>Tempo para recuperar (payback)</dt><dd>Meses, a partir da inauguração, até o lucro acumulado devolver tudo o que foi investido: obra, aparelhos, luvas, caução e os custos dos meses de obra. É o 1º mês em que o saldo acumulado fica ≥ 0 (conta o mês inteiro). Somando os meses de obra, dá o prazo desde a assinatura. Não inclui o empréstimo (é o retorno do negócio, não dos sócios).</dd>
       <dt>Valor do negócio hoje (VPL)</dt><dd>Todo o dinheiro que o negócio gera, trazido para valores de hoje usando o rendimento mínimo desejado. Positivo = rende mais que a aplicação alternativa.</dd>
       <dt>Rentabilidade anual (TIR)</dt><dd>Quanto o dinheiro investido rende por ano, em média. Compare com o rendimento mínimo desejado.</dd>
       <dt>Depreciação</dt><dd>Desgaste da obra e dos aparelhos ao longo dos anos. Não sai do caixa, mas reduz o lucro contábil.</dd>
