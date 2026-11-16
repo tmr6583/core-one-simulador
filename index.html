@@ -289,7 +289,7 @@ const STORE_KEY = "coreone-simulador-v3";
 // Campo: [id, rótulo, unidade, padrão, passo, explicação para leigos, essencial?]
 const GROUPS = [
   {id:"imovel", g:"O imóvel", intro:"Dados do ponto comercial e do contrato de aluguel.", f:[
-    ["areaBrutaTerreo","Tamanho do térreo","m²",70,1,"Área total do andar de baixo, contando recepção, banheiros e escada. Estimativa até chegar a planta.",1],
+    ["areaBrutaTerreo","Tamanho do térreo","m²",84,1,"Área total do andar de baixo (ginásio), contando recepção, banheiros e escada. 84 m² informados pelos sócios em 16-11-2026.",1],
     ["areaBruta2","Tamanho do 2º andar","m²",40,1,"Área total do andar de cima, onde ficam as salas de atendimento.",1],
     ["aluguel","Aluguel","R$/mês",8900,100,"Valor pago todo mês ao proprietário.",1],
     ["condIptu","Condomínio + IPTU","R$/mês",0,100,"Taxa de condomínio mais o IPTU dividido por 12.",1],
@@ -332,7 +332,7 @@ const GROUPS = [
   {id:"capac", g:"Quantos alunos cabem", intro:"Espaço de treino e frequência dos alunos.", f:[
     ["capSim","Alunos treinando ao mesmo tempo","alunos",10,1,"Limite de alunos no salão em cada horário. Padrão: 10 alunos (decisão dos sócios, 16-11-2026), com 7 m² para cada um = 70 m² de área livre de treino; confirmar com a planta.",1],
     ["m2Aluno","Espaço por aluno","m² por aluno",7,0.5,"Espaço recomendado para cada aluno treinar com conforto. Serve para conferir se a área comporta a turma.",1],
-    ["areaUtilTerreo","Área livre para treinar (planta)","m²",50,1,"Espaço só de treino que o térreo oferece, sem recepção, banheiros e escada. Estimativa até chegar a planta. Se for menor que alunos × espaço por aluno, aparece um alerta.",1],
+    ["areaUtilTerreo","Área livre para treinar (planta)","m²",80,1,"Espaço só de treino que o térreo oferece, sem recepção, banheiros e escada. 80 m² informados pelos sócios em 16-11-2026. Se for menor que alunos × espaço por aluno, aparece um alerta.",1],
     ["faltas","Taxa de faltas","% dos treinos",16.8,0.5,"Parte dos treinos contratados que o aluno não usa. Os treinos contratados vêm do mix de planos (2x, 3x e 4–5x por semana). Com 16,8%, cada aluno vem em média 10 vezes por mês.",1],
     ["freq45","Vezes por semana no plano 4 a 5x","vezes",4.5,0.5,"Média de treinos semanais de quem tem o plano de 4 a 5 vezes.",0],
     ["fatorOcup","Aproveitamento dos horários","%",58,1,"Horários de pico lotam e os do meio do dia ficam vazios. 58% = em média 58% das vagas são usadas.",0],
@@ -480,7 +480,7 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.7.0", padroes:"16-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.7.1", padroes:"16-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
@@ -533,7 +533,7 @@ function deriv(p){
   const folha = tecnica + p.apoio + p.proLabore;
   const outrosFixos = p.condIptu+p.taxasPrediais+p.garantia+folha+p.utilidades+p.marketing+p.software+p.contador+p.seguro+p.residuos+p.outros;
   const horasSala = horasSalas(p);
-  const capArea = p.m2Aluno>0 ? Math.floor(p.areaUtilTerreo/p.m2Aluno) : 0; // alunos que cabem na área estimada (A9)
+  const capArea = p.m2Aluno>0 ? Math.floor(p.areaUtilTerreo/p.m2Aluno) : 0; // alunos que cabem na área de treino (A9)
   const lotArea = aulasMes>0 ? Math.floor(horasOp*capArea/aulasMes*p.fatorOcup/100) : 0;
   return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, mixDiv, ticketBruto, ticket, tecnica, folha, capexObra, outrosFixos, horasSala, capArea, lotArea, freqSem, aulasContratadas, aulasMes};
 }
@@ -919,7 +919,7 @@ function groupInfo(p, s){
     imovel:`${num(p.areaBrutaTerreo+p.areaBruta2)} m² · imóvel custa ${brl(p.aluguel+p.condIptu+p.taxasPrediais+p.garantia)}/mês`,
     capex:`Obra: ${brl(d.capexObra)} · total com aparelhos: ${brl(s.capexTotal)}`,
     horario:`${num(d.horasOp)} horas abertas por mês`,
-    capac:`${num(d.aulasMes,1)} treinos/aluno/mês (contratados ${num(d.aulasContratadas,1)}) · ${d.capSim} alunos ao mesmo tempo · precisam de ${num(d.areaNec)} m² · cabem até ${d.lotacao} alunos (na área estimada: ${d.capArea} ao mesmo tempo)`,
+    capac:`${num(d.aulasMes,1)} treinos/aluno/mês (contratados ${num(d.aulasContratadas,1)}) · ${d.capSim} alunos ao mesmo tempo · precisam de ${num(d.areaNec)} m² · cabem até ${d.lotacao} alunos (nos ${num(p.areaUtilTerreo)} m² de treino: ${d.capArea} ao mesmo tempo)`,
     planos:`Mensalidade média: ${brl2(d.ticket)}`,
     cow:`${num(d.horasSala)} h/mês por sala · receita ${brl(s.c.rec)}/mês`,
     equipe:`Folha: ${brl(d.folha)}/mês`,
@@ -955,7 +955,7 @@ function alerts(p, s){
   if(p.pctAvulsa+p.pctTurno>100) a.push(["bad","Horas avulsas + turno fixo passam de 100% das horas alugadas. Até o ajuste, a simulação usa a proporção entre as duas."]);
   if(p.modoSimples!=="manual" && 12*s.receitaTotal > 4800000) a.push(["bad",`O faturamento de 12 meses (${brl(12*s.receitaTotal)}) passa do limite do Simples Nacional (R$ 4,8 milhões). A simulação usa a última faixa do Simples, mas a empresa teria de mudar de regime (Lucro Presumido ou Real). Fale com o contador.`]);
   if(p.salasFixas>p.salas) a.push(["bad","Há mais salas em contrato mensal do que salas existentes."]);
-  if(d.areaNec > p.areaUtilTerreo + 0.01) a.push(["warn",`${d.capSim} alunos × ${num(p.m2Aluno,1)} m² = ${num(d.areaNec)} m² de área livre para treinar, mas a estimativa do térreo é de ${num(p.areaUtilTerreo)} m². Nessa área cabem ${d.capArea} alunos ao mesmo tempo (≈ ${d.lotArea} alunos ativos, contra ${d.lotacao} com ${d.capSim}). Confirmar com a planta.`]);
+  if(d.areaNec > p.areaUtilTerreo + 0.01) a.push(["warn",`${d.capSim} alunos × ${num(p.m2Aluno,1)} m² = ${num(d.areaNec)} m² de área livre para treinar, mas a área de treino informada é de ${num(p.areaUtilTerreo)} m². Nessa área cabem ${d.capArea} alunos ao mesmo tempo (≈ ${d.lotArea} alunos ativos, contra ${d.lotacao} com ${d.capSim}). Confirmar com a planta.`]);
   const areaTreino = Math.max(p.areaUtilTerreo, d.areaNec);
   if(areaTreino > p.areaBrutaTerreo) a.push(["bad",`A área de treino (${num(areaTreino)} m²) é maior que o térreo inteiro (${p.areaBrutaTerreo} m²).`]);
   else if(areaTreino > p.areaBrutaTerreo*0.8) a.push(["warn",`A área de treino (${num(areaTreino)} m²) ocupa ${pct(areaTreino/p.areaBrutaTerreo,0)} do térreo. Sobra pouco para recepção, escada e banheiros.`]);
@@ -1697,7 +1697,7 @@ function renderResults(){
       ${indBox("Alunos", [
         ["Horas abertas por mês", num(d.horasOp)],
         ["Alunos treinando ao mesmo tempo", d.capSim],
-        ["Alunos ao mesmo tempo que cabem na área estimada", d.capArea, `${num(p.areaUtilTerreo)} m² ÷ ${num(p.m2Aluno,1)} m² por aluno (≈ ${d.lotArea} alunos ativos)`],
+        ["Alunos ao mesmo tempo que cabem na área de treino", d.capArea, `${num(p.areaUtilTerreo)} m² ÷ ${num(p.m2Aluno,1)} m² por aluno (≈ ${d.lotArea} alunos ativos)`],
         ["Vagas no studio", d.lotacao, "Alunos ativos que cabem"],
         ["Tempo médio de permanência", p.churn>0?num(100/p.churn,1)+" meses":"sem cancelamentos"],
         ["Valor de um aluno na vida toda", p.churn>0?brl((d.ticket*(1-d.tT)-p.cvAluno)/(p.churn/100)+p.matricula*(1-d.tT)):"—", "O que ele deixa enquanto fica"],
