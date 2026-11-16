@@ -330,7 +330,7 @@ const GROUPS = [
     ["domingos","Domingos/feriados abertos no mês","dias",0,1,"",0],
   ]},
   {id:"capac", g:"Quantos alunos cabem", intro:"Espaço de treino e frequência dos alunos.", f:[
-    ["capSim","Alunos treinando ao mesmo tempo","alunos",9,1,"Limite de alunos no salão em cada horário. Recomendado: 9 alunos, com 7 m² para cada um.",1],
+    ["capSim","Alunos treinando ao mesmo tempo","alunos",10,1,"Limite de alunos no salão em cada horário. Padrão: 10 alunos (decisão dos sócios, 16-11-2026), com 7 m² para cada um = 70 m² de área livre de treino; confirmar com a planta.",1],
     ["m2Aluno","Espaço por aluno","m² por aluno",7,0.5,"Espaço recomendado para cada aluno treinar com conforto. Serve para conferir se a área comporta a turma.",1],
     ["areaUtilTerreo","Área livre para treinar (planta)","m²",50,1,"Espaço só de treino que o térreo oferece, sem recepção, banheiros e escada. Estimativa até chegar a planta. Se for menor que alunos × espaço por aluno, aparece um alerta.",1],
     ["faltas","Taxa de faltas","% dos treinos",16.8,0.5,"Parte dos treinos contratados que o aluno não usa. Os treinos contratados vêm do mix de planos (2x, 3x e 4–5x por semana). Com 16,8%, cada aluno vem em média 10 vezes por mês.",1],
@@ -480,7 +480,7 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.6.1", padroes:"15-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.7.0", padroes:"16-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
@@ -601,7 +601,7 @@ function loanPay(p, m){
 // sem cancelamento, a base cresce até o fim da análise. Com "limitar às vagas", nunca passa da lotação.
 // D12: meta do negócio maduro. Padrão: 75% do máximo de alunos (vagas), premissa dos sócios; ou um número fixo.
 function metaAlunos(p, d){ return p.metaPor==="num" ? p.alunosAlvo : Math.round(d.lotacao*p.pctMaduro/100); }
-// Texto da premissa do negócio maduro, para títulos e frases: "114 alunos (75% do máximo de 152)"
+// Texto da premissa do negócio maduro, para títulos e frases: "127 alunos = 75% do máximo de 169"
 function pctMaduroReal(p, s){ return p.modoCrescimento!=="captacao" && p.metaPor!=="num" && s.A < s.d.lotacao ? p.pctMaduro/100 : s.A/Math.max(1, s.d.lotacao); }
 function maduroTxt(p, s){
   return `${num(s.A)} alunos = ${p.modoCrescimento==="captacao" ? "base estável, " : ""}${pct(pctMaduroReal(p, s),0)} do máximo de ${num(s.d.lotacao)}`;
