@@ -476,7 +476,7 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.4.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.5.0", padroes:"15-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
