@@ -26,7 +26,7 @@
   --border:#dedcd3; --brand:#0b2636; --accent:#3f7f66; --accent-weak:#e4efe9; --gold:#a08a5a;
   --ok:#2e7d4f; --ok-weak:#e6f3eb; --warn:#9a6a00; --warn-weak:#fdf4dc; --bad:#b3261e; --bad-weak:#fbeae8;
   --chart-line:#3f7f66; --chart-fill:rgba(63,127,102,.12); --grid:#e7e5dd;
-  --s-in:#2f8c64; --s-res:#3f6fb5; --s-out:#c0832a; --s4:#8a5cb8;
+  --s-in:#2f8c64; --s-res:#3f6fb5; --s-out:#c0832a; --s4:#8a5cb8; --s-com:#c06a8f;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -34,7 +34,7 @@
     --border:#243a57; --accent:#7fbfa3; --accent-weak:#173a33; --gold:#c9a96e;
     --ok:#5cc08a; --ok-weak:#123326; --warn:#e0ae3c; --warn-weak:#33290f; --bad:#f2786d; --bad-weak:#3a1a1a;
     --chart-line:#7fbfa3; --chart-fill:rgba(127,191,163,.14); --grid:#22364f;
-    --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028; --s4:#a07fd6;
+    --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028; --s4:#a07fd6; --s-com:#c06a8f;
   }
 }
 :root[data-theme="dark"]{
@@ -42,7 +42,7 @@
   --border:#243a57; --accent:#7fbfa3; --accent-weak:#173a33; --gold:#c9a96e;
   --ok:#5cc08a; --ok-weak:#123326; --warn:#e0ae3c; --warn-weak:#33290f; --bad:#f2786d; --bad-weak:#3a1a1a;
   --chart-line:#7fbfa3; --chart-fill:rgba(127,191,163,.14); --grid:#22364f;
-  --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028; --s4:#a07fd6;
+  --s-in:#4fa880; --s-res:#5f8bd0; --s-out:#bd8028; --s4:#a07fd6; --s-com:#c06a8f;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -235,6 +235,9 @@ td,th,.big .a{font-variant-numeric:tabular-nums}
 .chartbox svg text[font-size="11"]{font-size:12px}.chartbox svg text[font-size="10"]{font-size:11px}
 /* Contorno da cor do fundo atrás de cada rótulo: o texto não se mistura com linhas, grades e barras */
 .chartbox svg text{paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+.chartbox svg text.dentro{stroke:none} /* rótulo dentro da barra colorida: sem contorno */
+.ativgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px 18px;align-items:center}
+@media (min-width:1200px){.ativgrid{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}}
 /* Valores do eixo vertical (ex.: −R$ 1.000 mil) não são mais cortados na borda esquerda */
 .chartbox svg{overflow:visible}
 /* Linha da tabela sob o mouse fica marcada: ajuda a ler da esquerda para a direita */
@@ -499,7 +502,7 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.8.0", padroes:"23-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.8.1", padroes:"23-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
@@ -954,6 +957,12 @@ function applyFilter(){
 const pessoasTxt = (q, um, varios) => { const n = Math.max(0, Math.round(q||0)); return `${n} ${n===1 ? um : varios}`; };
 const equipeTxt = p => [pessoasTxt(p.profQtd,"professor","professores"), pessoasTxt(p.estagQtd,"estagiário","estagiários"),
   pessoasTxt(p.recepQtd,"recepcionista","recepcionistas"), pessoasTxt(p.limpQtd,"prestador de limpeza","prestadores de limpeza")].join(", ");
+// V3: o que entra nos custos comuns (só os itens com valor)
+function comunsTxt(p, d){
+  return [["aluguel", p.aluguel], ["condomínio e IPTU", p.condIptu], ["taxas do imóvel", p.taxasPrediais], ["garantia do aluguel", p.garantia],
+    ["recepção e limpeza", d.apoio], ["retirada dos sócios", p.proLabore], ["energia, água e internet", p.utilidades],
+    ["sistema", p.software], ["contador", p.contador], ["seguro", p.seguro], ["outros", p.outros]].filter(([, v]) => v > 0).map(([n]) => n).join(", ");
+}
 const nomeTecnica = p => p.modoEquipe==="pessoas" ? "Professores e estagiários" : "Instrutores";
 function groupInfo(p, s){
   const d = s.d;
@@ -1452,6 +1461,34 @@ function indBox(title, items){
   return `<div class="indbox"><h4>${title}</h4>${items.map(([l,v,hint])=>`<div class="ind"><div class="l">${l}${hint?`<small>${hint}</small>`:""}</div><div class="v">${v}</div></div>`).join("")}</div>`;
 }
 
+// V3: "Quanto cada atividade deixa" — barras empilhadas na mesma escala: custos próprios + custos comuns + resultado = receita.
+// Com prejuízo, os custos passam da receita (linha tracejada) e o rótulo mostra quanto falta.
+function atividadesChart(mn){
+  const rows = [...mn.ativ.map((a, i) => ({...a, nome: ["Studio", "Salas de terapia"][i]})), {nome:"Negócio total", rec: mn.ativ[0].rec + mn.ativ[1].rec, dir: mn.ativ[0].dir + mn.ativ[1].dir, com: mn.comuns}];
+  rows.forEach(a => { a.res = a.rec - a.dir - a.com; });
+  const W = 800, L = 132, R = 200, T = 8, rowH = 66, bh = 38, B = 30, H = T + rows.length*rowH + B;
+  const sc = niceScale(0, Math.max(1, ...rows.map(a => Math.max(a.rec, a.dir + a.com))), 4);
+  const X = v => L + v*(W-L-R)/(sc.mx - sc.mn);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Quanto cada atividade deixa: receita dividida em custos próprios, custos comuns e resultado">`;
+  for(let v = 0; v <= sc.mx + sc.step/2; v += sc.step)
+    svg += `<line x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H-B}" stroke="var(--grid)"/><text x="${X(v)}" y="${H-B+18}" font-size="11" text-anchor="middle" fill="var(--muted)">${kR(v)}</text>`;
+  rows.forEach((a, i) => {
+    const y = T + i*rowH + (rowH-bh)/2, cy = y + bh/2 + 4;
+    const segs = [["Custos próprios", a.dir, "var(--s-out)"], ["Custos comuns", a.com, "var(--s-com)"], ["Resultado", Math.max(0, a.res), "var(--s-res)"]];
+    svg += `<text x="${L-10}" y="${cy}" font-size="13" text-anchor="end" fill="var(--text)" font-weight="${i===2?700:600}">${a.nome}</text>`;
+    let x0 = 0;
+    segs.forEach(([nome, v, cor]) => { if(v <= 0.5) return;
+      const xa = X(x0), w = Math.max(1, X(x0 + v) - xa);
+      svg += `<rect x="${xa}" y="${y}" width="${w}" height="${bh}" rx="3" fill="${cor}" stroke="var(--surface)" stroke-width="2"><title>${a.nome} · ${nome}: ${brl(v)} (${pct(v/Math.max(1, a.rec),0)} da receita)</title></rect>`;
+      if(w > 64) svg += `<text x="${xa + w/2}" y="${cy}" font-size="11.5" text-anchor="middle" fill="#ffffff" font-weight="600" class="dentro">${kR(v)}</text>`;
+      x0 += v; });
+    svg += `<line x1="${X(a.rec)}" x2="${X(a.rec)}" y1="${y-5}" y2="${y+bh+5}" stroke="var(--text)" stroke-width="1.5" stroke-dasharray="${a.res < 0 ? "3 2" : "none"}"><title>Receita de ${a.nome}: ${brl(a.rec)}</title></line>`;
+    const lx = X(Math.max(a.rec, a.dir + a.com)) + 8;
+    svg += `<text x="${lx}" y="${cy-7}" font-size="11.5" fill="var(--muted)">receita ${kR(a.rec)}</text>`
+      + `<text x="${lx}" y="${cy+9}" font-size="12.5" font-weight="700" fill="${a.res < 0 ? "var(--bad)" : "var(--text)"}">${a.res < 0 ? `prejuízo ${kR(-a.res)}` : `sobra ${kR(a.res)} (${pct(a.res/Math.max(1, a.rec),0)})`}</text>`;
+  });
+  return svg + `</svg>`;
+}
 // D11: aba "Consultor" — descrição da atividade, modelo de negócio e de onde vem a receita de cada atividade
 function consultorHTML(p, s){
   const d = s.d, c = s.c, mn = modeloNegocio(p, s), tot = Math.max(1, mn.total), ra = resumoAnual(s);
@@ -1492,16 +1529,18 @@ function consultorHTML(p, s){
         <tr class="total geral"><td>Faturamento do negócio</td><td>${brl(mn.total)}</td><td>${brl(mn.total*12)}</td><td>100%</td><td></td></tr>
       </table></div>
       <p class="note">${mn.fator<1 ? `Mensalidades já com ${p.pctLongo>0&&p.descLongo>0?"desconto de plano longo":""}${p.pctLongo>0&&p.descLongo>0&&p.inadimpl>0?" e ":""}${p.inadimpl>0?`inadimplência de ${num(p.inadimpl,1)}%`:""}: cada plano recebe ${pct(mn.fator,1)} do preço de tabela.` : "Mensalidades pelo preço de tabela: a premissa não tem desconto de plano longo nem inadimplência."} Por ano = mês maduro × 12, sem reajuste e sem a rampa de alunos; o faturamento ano a ano, com rampa e reajustes, está mais abaixo.</p></div>
-    <div class="card"><h3>Quanto cada atividade deixa</h3><p class="sub">Receita menos os custos de cada atividade. Os custos do imóvel e da administração são comuns e foram divididos pela área: ${pct(1-mn.share,0)} para o studio e ${pct(mn.share,0)} para as salas.</p>
+    <div class="card"><h3>Quanto cada atividade deixa</h3><p class="sub">Cada barra é a receita do mês maduro, dividida em custos próprios, custos comuns e o que sobra (resultado). Os custos comuns (imóvel e administração) foram divididos pela área: ${pct(1-mn.share,0)} para o studio e ${pct(mn.share,0)} para as salas.</p>
+      ${legendHTML([["Custos próprios da atividade","var(--s-out)"],["Custos comuns (divididos pela área)","var(--s-com)"],["Resultado (sobra)","var(--s-res)"],["Receita","var(--text)",true]])}
+      <div class="ativgrid"><div class="chartbox">${atividadesChart(mn)}</div>
       <div class="scroll"><table>
         <tr><th>Por mês</th><th>Studio</th><th>Salas</th><th>Negócio</th></tr>
         <tr><td>Receita</td><td>${brl(st.rec)}</td><td>${brl(sl.rec)}</td><td>${brl(st.rec+sl.rec)}</td></tr>
-        <tr><td>(−) Custos próprios da atividade <small class="base">studio: instrutores, impostos e cartão, aparelhos, divulgação, custo por aluno · salas: impostos, custo por hora, aplicativo, resíduos</small></td><td>${sgn(-st.dir)}</td><td>${sgn(-sl.dir)}</td><td>${sgn(-(st.dir+sl.dir))}</td></tr>
-        <tr class="total"><td>= Margem de contribuição <small class="base">o que sobra para pagar o espaço e a administração</small></td><td>${sgn(st.contrib)} <small>(${pct(st.contrib/Math.max(1,st.rec),0)})</small></td><td>${sgn(sl.contrib)} <small>(${pct(sl.contrib/Math.max(1,sl.rec),0)})</small></td><td>${sgn(st.contrib+sl.contrib)}</td></tr>
-        <tr><td>(−) Custos comuns <small class="base">aluguel, condomínio, recepção, contas, sistema, contador, seguro</small></td><td>${sgn(-st.com)}</td><td>${sgn(-sl.com)}</td><td>${sgn(-mn.comuns)}</td></tr>
-        <tr class="total"><td>= Resultado</td><td>${sgn(st.res)}</td><td>${sgn(sl.res)}</td><td>${sgn(st.res+sl.res)}</td></tr>
-      </table></div>
-      <p class="note">O resultado do negócio é o mesmo do topo da página (${sgn(s.resultado)}/mês). A margem de contribuição não depende da divisão dos custos comuns: é a melhor medida de quanto cada atividade ajuda a pagar o imóvel.</p></div>
+        <tr><td>(−) Custos próprios da atividade <small class="base">studio: ${nomeTecnica(p).toLowerCase()}, impostos e cartão, aparelhos, divulgação${s.cvar>0.5?", custo por aluno":""} · salas: impostos${c.vari>0.5?", custo por hora":""}${c.plat>0.5?", aplicativo":""}${p.residuos>0?", lixo hospitalar":""}</small></td><td>${sgn(-st.dir)}</td><td>${sgn(-sl.dir)}</td><td>${sgn(-(st.dir+sl.dir))}</td></tr>
+        <tr class="total"><td>= Margem de contribuição <small class="base">o que sobra para pagar o espaço e a administração</small></td>${[st.contrib, sl.contrib, st.contrib+sl.contrib].map((v, i) => `<td>${sgn(v)} <small>(${pct(v/Math.max(1,[st.rec, sl.rec, st.rec+sl.rec][i]),0)})</small></td>`).join("")}</tr>
+        <tr><td>(−) Custos comuns <small class="base">${comunsTxt(p, d)}</small></td><td>${sgn(-st.com)}</td><td>${sgn(-sl.com)}</td><td>${sgn(-mn.comuns)}</td></tr>
+        <tr class="total"><td>= Resultado <small class="base">margem sobre a receita entre parênteses</small></td>${[st.res, sl.res, st.res+sl.res].map((v, i) => `<td>${sgn(v)} <small>(${pct(v/Math.max(1,[st.rec, sl.rec, st.rec+sl.rec][i]),0)})</small></td>`).join("")}</tr>
+      </table></div></div>
+      <p class="note">O resultado do negócio é o mesmo do topo da página (${sgn(s.resultado)}/mês). O resultado de cada atividade depende do critério de divisão dos custos comuns (aqui, a área); a margem de contribuição não depende: é a melhor medida de quanto cada atividade ajuda a pagar o imóvel e a administração.</p></div>
     <div class="card"><h3>Números de cada atividade</h3><p class="sub">Indicadores por unidade vendida: aluno no studio e hora nas salas.</p>
       <div class="indgrid">${indBox("Studio de movimento", [
           ["Alunos (negócio maduro)", `${num(s.A)} de ${num(d.lotacao)}`, `${pct(pctMaduroReal(p, s),0)} do máximo de alunos`],
@@ -2095,7 +2134,7 @@ document.getElementById("btnExport").onclick = () => {
 // Cores fixas do tema claro: o PDF sai sempre igual, mesmo com o site em modo escuro.
 const LIGHT = {bg:"#ffffff", surface:"#ffffff", "surface-2":"#f1f0ea", text:"#12263f", muted:"#5b6676", border:"#dedcd3", brand:"#0b2636",
   accent:"#3f7f66", "accent-weak":"#e4efe9", gold:"#a08a5a", ok:"#2e7d4f", "ok-weak":"#e6f3eb", warn:"#9a6a00", "warn-weak":"#fdf4dc",
-  bad:"#b3261e", "bad-weak":"#fbeae8", "chart-line":"#3f7f66", "chart-fill":"rgba(63,127,102,.12)", grid:"#e7e5dd", "s-in":"#2f8c64", "s-res":"#3f6fb5", "s-out":"#c0832a", "s4":"#8a5cb8"};
+  bad:"#b3261e", "bad-weak":"#fbeae8", "chart-line":"#3f7f66", "chart-fill":"rgba(63,127,102,.12)", grid:"#e7e5dd", "s-in":"#2f8c64", "s-res":"#3f6fb5", "s-out":"#c0832a", "s4":"#8a5cb8", "s-com":"#c06a8f"};
 const PDF_LIB = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
 function loadScript(src){
   return new Promise((ok, fail) => {
@@ -2201,7 +2240,7 @@ async function buildSections(){
   const secoes = [
     repSection("", capa + `<h2 class="sec">1. Premissas</h2>` + premissasCompactas(p, L.s)),
     repSection("2. Resultado", L.verdictHTML + `<div class="bigs">${L.bigsHTML}</div>` + resumo.replace(/^\s*/, "")),
-    repSection("3. Modelo de negócio e receitas (consultor)", L.consultor),
+    repSection("3. Modelo de negócio e receitas (consultor)", await svgsToImages(L.consultor)),
     repSection("4. Lucro do mês", tirarBotoes(await svgsToImages(L.lucro))),
     repSection("5. Riscos e cenários", tirarBotoes(await svgsToImages(L.riscos))),
     repSection("6. Comparar opções", tirarBotoes(await svgsToImages(L.comparar))),
