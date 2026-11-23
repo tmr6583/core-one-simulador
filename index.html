@@ -47,12 +47,12 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 button,select,input{font:inherit;color:inherit}
-.wrap{max-width:1872px;margin:0 auto;padding:0 16px}
+.wrap{max-width:2560px;margin:0 auto;padding:0 12px}
 
 /* Cabeçalho da marca */
 .brandbar{background:var(--brand);color:#fff}
-.brandbar .wrap{display:flex;align-items:center;gap:16px;padding-top:14px;padding-bottom:14px;flex-wrap:wrap}
-.logo{height:64px;width:auto;flex:0 0 auto;border-radius:10px;display:block}
+.brandbar .wrap{display:flex;align-items:center;gap:14px;padding-top:8px;padding-bottom:8px;flex-wrap:wrap}
+.logo{height:50px;width:auto;flex:0 0 auto;border-radius:10px;display:block}
 .brandbar h1{margin:0;font-size:22px;letter-spacing:.2px}
 .brandbar p{margin:2px 0 0;color:#c8d3e0;font-size:13px}
 .brandbar .actions{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px}
@@ -62,13 +62,13 @@ button,select,input{font:inherit;color:inherit}
 .brandbar .btn.primary{background:#7fbfa3;color:#10223a;border-color:#7fbfa3;font-weight:600}
 
 /* Herói */
-.hero{margin:16px auto 0}
+.hero{margin:10px auto 0}
 .verdict{border-radius:12px;padding:9px 14px;border:1px solid;display:flex;gap:10px;align-items:center}
 .verdict .ic{font-size:18px;line-height:1}
 .verdict>div:last-child{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:10px;line-height:1.35}
 .verdict b{font-size:16px}
 .verdict span{color:var(--muted);font-size:13.5px}
-.bigs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:10px}
+.bigs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:8px}
 @media (max-width:900px){.bigs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:480px){.bigs{grid-template-columns:1fr}}
 .big{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:3px 12px 4px}
@@ -82,12 +82,12 @@ button,select,input{font:inherit;color:inherit}
 .meter.warn i{background:var(--warn)} .meter.bad i{background:var(--bad)}
 
 /* Layout principal */
-main.wrap{display:grid;grid-template-columns:minmax(320px,440px) minmax(0,1fr);gap:16px;align-items:start;margin-top:16px;padding-bottom:48px}
+main.wrap{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:12px;align-items:start;margin-top:10px;padding-bottom:32px}
 main.wrap>*{min-width:0}
 @media (max-width:1000px){main.wrap{grid-template-columns:minmax(0,1fr)}}
 #inputs{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;padding-right:4px}
 @media (max-width:1000px){#inputs{position:static;max-height:none;overflow:visible}}
-.side-head{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.side-head{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:10px}
 .side-head h2{margin:0 0 4px;font-size:16px}
 .side-head p{margin:0 0 10px;color:var(--muted);font-size:13px}
 .seg{display:flex;background:var(--surface-2);border-radius:9px;padding:3px;gap:3px;margin-bottom:10px}
@@ -96,15 +96,15 @@ main.wrap>*{min-width:0}
 .search{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:8px 10px}
 .changed-note{font-size:12px;color:var(--muted);margin-top:8px}
 
-details.grp{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden}
-details.grp>summary{cursor:pointer;list-style:none;padding:12px 14px;display:flex;align-items:center;gap:10px}
+details.grp{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;overflow:hidden}
+details.grp>summary{cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px}
 details.grp>summary::-webkit-details-marker{display:none}
 details.grp>summary .t{font-weight:650}
 details.grp>summary .s{display:block;font-size:12px;color:var(--accent);font-weight:500}
 details.grp>summary::after{content:"＋";margin-left:auto;color:var(--muted)}
 details.grp[open]>summary::after{content:"－"}
 .gintro{margin:0 14px 6px;font-size:13px;color:var(--muted)}
-.field{padding:10px 14px;border-top:1px solid var(--border)}
+.field{padding:8px 12px;border-top:1px solid var(--border)}
 .field .row{display:flex;align-items:center;gap:10px}
 .field label{flex:1;font-weight:550;font-size:14px}
 .field .inp{display:flex;align-items:center;gap:6px;flex:0 0 auto}
@@ -119,8 +119,8 @@ details.grp[open]>summary::after{content:"－"}
 
 /* Abas */
 /* Abas: barra própria, fixa no topo ao rolar, com ícones (diferente dos botões de cenário) */
-.tabs{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:14px;padding:5px;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:14px;box-shadow:0 3px 10px rgba(11,38,54,.10);position:sticky;top:8px;z-index:20}
-.tabs button{flex:1 1 auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;border:0;background:transparent;border-radius:10px;padding:14px 5px;cursor:pointer;color:var(--text);font-weight:600;font-size:13px;line-height:1.2;white-space:nowrap;transition:background .15s,color .15s}
+.tabs{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:10px;padding:4px;background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:14px;box-shadow:0 3px 10px rgba(11,38,54,.10);position:sticky;top:8px;z-index:20}
+.tabs button{flex:1 1 auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;border:0;background:transparent;border-radius:10px;padding:10px 5px;cursor:pointer;color:var(--text);font-weight:600;font-size:13px;line-height:1.2;white-space:nowrap;transition:background .15s,color .15s}
 .tabs button svg{width:17px;height:17px;flex:0 0 auto;color:var(--accent)}
 .tabs button:hover{background:var(--accent-weak);color:var(--text)}
 .tabs button.on{background:var(--brand);color:#fff;box-shadow:inset 0 -3px 0 #7fbfa3}
@@ -132,6 +132,13 @@ details.grp[open]>summary::after{content:"－"}
 @media (max-width:700px){.tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;top:0;border-radius:0 0 12px 12px;scrollbar-width:thin}
   .tabs button{flex:0 0 auto;padding:10px 12px;font-size:14px}}
 .tab{display:none}.tab.on{display:block}
+/* Telas largas: cartões em duas colunas (gráficos lado a lado); cartões com tabela larga ocupam a linha inteira */
+@media (min-width:1500px){
+  .tab.on{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px;grid-auto-flow:row dense;align-items:start}
+  .tab.on>*{grid-column:1/-1;min-width:0}
+  .tab.on>.card:not(:has(.scroll)):not(:has(.indgrid)):not(:has(.ativ2)):not(:has(.rmat)){grid-column:auto}
+  .tab.on>.card .chartbox svg{max-height:420px}
+}
 /* Teclado (E3): contorno visível em tudo que recebe foco pelo teclado */
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .brandbar :focus-visible{outline-color:#7fbfa3}
@@ -163,7 +170,7 @@ table.txt td,table.txt th{text-align:left;white-space:normal}table.txt td.n{whit
 .rodape{color:var(--muted);font-size:12.5px;padding-bottom:28px}
 .rodape p{margin:0;border-top:1px solid var(--border);padding-top:12px}
 
-.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px}
 .card h3{margin:0 0 2px;font-size:16px}
 .card .sub{margin:0 0 10px;color:var(--muted);font-size:13px}
 .alert{border-radius:10px;padding:9px 12px;margin:7px 0;font-size:14px;border:1px solid;display:flex;gap:8px}
@@ -184,7 +191,7 @@ tr.sub td{color:var(--muted);font-size:13px}
 .scroll{overflow-x:auto}
 .note{color:var(--muted);font-size:12.5px;margin:8px 0 0}
 
-.indgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.indgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
 .indbox h4{margin:0 0 6px;font-size:14px;color:var(--accent)}
 .ind{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--border)}
 .ind .l{font-size:13.5px}
@@ -377,13 +384,23 @@ const GROUPS = [
     ["comissaoPlat","Taxa do aplicativo de reservas","% da receita",0,0.5,"Se usar uma plataforma que cobra por reserva.",0],
     ["tCow","Impostos sobre o aluguel das salas","% da receita",10,0.5,"Só no modo manual do Simples. No automático, as salas pagam a mesma alíquota do studio.",0],
   ]},
-  {id:"equipe", g:"Equipe", intro:"Instrutores, recepção, limpeza e sócios.", f:[
+  {id:"equipe", g:"Equipe", intro:"Instrutores, recepção, limpeza e sócios. Calcule por horas de instrutor ou pelo número de pessoas.", f:[
+    ["modoEquipe","Como calcular a equipe","","horas",null,"Por horas: custo da hora × horas de instrutor (base do projeto). Por pessoas: informe quantos professores, estagiários, recepcionistas e prestadores de limpeza e o custo mensal de cada um.",1],
     ["custoHoraInstr","Custo da hora do instrutor","R$/hora",37,0.5,"Salário mais encargos, por hora trabalhada. Base do projeto: R$ 37/hora.",1],
     ["instrBase","Instrutores em todos os horários","pessoas",1,1,"Quantos instrutores ficam no studio o tempo todo.",0],
     ["horasPico2","Horas com instrutor extra no pico","h/mês",100,5,"Horas no mês em que um 2º instrutor reforça os horários cheios (ex.: 7h–9h e 17h–20h).",1],
     ["vinculoInstr","Como os instrutores são contratados","","clt",null,"CLT ou autônomo (pessoa física): o pagamento entra na folha usada no Fator R do Simples. MEI ou empresa: não entra, a folha cai e o imposto pode passar para o Anexo V (bem mais caro).",1],
     ["adicRT","Adicional do responsável técnico","R$/mês",0,50,"Valor extra para o instrutor que assina como responsável técnico no CREF1.",0],
     ["apoio","Recepção e limpeza","R$/mês",7500,100,"Salários com encargos da recepção (no pico) e da limpeza.",1],
+    ["profQtd","Professores (educação física)","pessoas",2,1,"Profissionais com registro no CREF que dão o treino. Pelo menos um precisa estar no studio em todo horário aberto, também para supervisionar os estagiários.",1],
+    ["profCusto","Custo mensal de cada professor","R$/mês",5000,100,"Salário mais encargos (FGTS, férias com 1/3, 13º). Estimativa a confirmar com o contador.",1],
+    ["profHoras","Horas de trabalho de cada professor","h/mês",190,5,"Jornada no mês: CLT de 44 h por semana ≈ 190 h/mês. Serve para conferir se há professor em todos os horários abertos.",1],
+    ["estagQtd","Estagiários","pessoas",2,1,"Estudantes de educação física (Lei 11.788/2008): até 6 h por dia e 30 h por semana, sempre supervisionados por um professor.",1],
+    ["estagCusto","Custo mensal de cada estagiário","R$/mês",1500,50,"Bolsa mais auxílio-transporte e seguro contra acidentes. A bolsa não é salário: não entra na folha do Fator R (confirmar com o contador).",1],
+    ["recepQtd","Recepcionistas","pessoas",1,1,"Funcionários da recepção (CLT).",1],
+    ["recepCusto","Custo mensal de cada recepcionista","R$/mês",3500,100,"Salário mais encargos. Estimativa.",1],
+    ["limpQtd","Prestadores de serviço de limpeza","pessoas",1,1,"Limpeza contratada (empresa, MEI ou diarista). Não é funcionário: não entra na folha do Fator R.",1],
+    ["limpCusto","Custo mensal de cada prestador de limpeza","R$/mês",2000,100,"Valor do contrato por mês. Estimativa.",1],
     ["proLabore","Retirada fixa dos sócios","R$/mês",0,100,"Salário mensal dos sócios. Pela regra atual, os sócios ganham só com o lucro.",0],
   ]},
   {id:"opex", g:"Outros custos mensais", intro:"Despesas que existem com qualquer número de alunos.", f:[
@@ -455,7 +472,8 @@ const GROWTH_MODES = {linear:"Linha reta até a meta", curvaS:"Curva em S até a
 const YESNO = {sim:"Sim", nao:"Não"};
 const VINCULOS = {clt:"CLT ou autônomo (pessoa física)", pj:"MEI ou empresa (PJ)"};
 const META_MODES = {vagas:"% do máximo de alunos (vagas)", num:"Número fixo de alunos"};
-const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES, modoCrescimento: GROWTH_MODES, metaPor: META_MODES, limitarVagas: YESNO, vinculoInstr: VINCULOS};
+const EQUIPE_MODES = {horas:"Por horas de instrutor", pessoas:"Por número de pessoas"};
+const SELECTS = {modelo: MODELS, modoSimples: SIMPLES_MODES, modoCrescimento: GROWTH_MODES, metaPor: META_MODES, modoEquipe: EQUIPE_MODES, limitarVagas: YESNO, vinculoInstr: VINCULOS};
 const FIELDS = {}; GROUPS.forEach(g => g.f.forEach(f => FIELDS[f[0]] = {l:f[1], u:f[2], v:f[3], st:f[4], h:f[5], e:f[6], g:g.id}));
 const DEFAULTS = {}; Object.keys(FIELDS).forEach(k => DEFAULTS[k] = FIELDS[k].v);
 // Limites de cada campo (à prova de erros): nada negativo, horas de 0 a 24, partes de um todo até 100%,
@@ -472,7 +490,8 @@ function limites(id){
 }
 // Prazos em meses usados mês a mês são inteiros (o motor e as tabelas usam o mesmo valor)
 const MESES_INTEIROS = ["mesesObra","carencia","leasingPrazo","cdcPrazo","empPrazo","empCarencia","horizonte"];
-const limitar = (id, v) => { const [a, b] = limites(id), x = Math.min(b, Math.max(a, v)); return MESES_INTEIROS.includes(id) ? Math.round(x) : x; };
+const PESSOAS_INTEIRAS = ["profQtd","estagQtd","recepQtd","limpQtd"]; // D14: número de pessoas é inteiro
+const limitar = (id, v) => { const [a, b] = limites(id), x = Math.min(b, Math.max(a, v)); return MESES_INTEIROS.includes(id) || PESSOAS_INTEIRAS.includes(id) ? Math.round(x) : x; };
 // Versão (E1). Ao mudar qualquer valor padrão: atualize "padroes" com a data, registre no Contexto.md e no teste do código.
 // Ao publicar uma versão nova do simulador: atualize "app". O código muda sozinho quando algum padrão muda.
 function assinaturaPadroes(){
@@ -480,7 +499,7 @@ function assinaturaPadroes(){
   let h = 2166136261; for(let i=0;i<t.length;i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h>>>0).toString(16).padStart(8,"0").slice(0,6);
 }
-const VERSAO = {app:"1.7.1", padroes:"16-11-2026", codigo: assinaturaPadroes()};
+const VERSAO = {app:"1.8.0", padroes:"23-11-2026", codigo: assinaturaPadroes()};
 const textoVersao = () => `Simulador ${VERSAO.app} · valores padrão de ${VERSAO.padroes} (código ${VERSAO.codigo})`;
 
 const UI = loadUI();
@@ -527,15 +546,23 @@ function deriv(p){
   const lotacao = aulasMes>0 ? Math.floor(vagas/aulasMes*p.fatorOcup/100) : 0;
   const ticketBruto = (p.m2*p.p2+p.m3*p.p3+p.m45*p.p45)/mixDiv;
   const ticket = ticketBruto*(1-p.pctLongo/100*p.descLongo/100)*(1-p.inadimpl/100);
-  const tecnica = (horasOp*p.instrBase + p.horasPico2)*p.custoHoraInstr + p.adicRT;
+  // D14: equipe por horas de instrutor (base do projeto) ou por número de pessoas
+  const pes = p.modoEquipe==="pessoas", nP = x => Math.max(0, Math.round(x||0));
+  const custoProf = pes ? nP(p.profQtd)*p.profCusto : (horasOp*p.instrBase + p.horasPico2)*p.custoHoraInstr;
+  const custoEstag = pes ? nP(p.estagQtd)*p.estagCusto : 0;
+  const custoRecep = pes ? nP(p.recepQtd)*p.recepCusto : p.apoio; // por horas: recepção e limpeza juntas
+  const custoLimp = pes ? nP(p.limpQtd)*p.limpCusto : 0;
+  const apoio = custoRecep + custoLimp;
+  const horasProf = pes ? nP(p.profQtd)*p.profHoras : horasOp*p.instrBase + p.horasPico2;
+  const tecnica = custoProf + custoEstag + p.adicRT;
   const capLinhas = p.capObraCivil+p.capEletrica+p.capHidraulica+p.capClima+p.capPiso+p.capAcess+p.capProjeto+p.capLicencas+p.capMobiliario+p.capTI+p.capMktPre;
   const capexObra = (p.capexNaoDet + capLinhas)*(1+p.contingencia/100);
-  const folha = tecnica + p.apoio + p.proLabore;
+  const folha = tecnica + apoio + p.proLabore;
   const outrosFixos = p.condIptu+p.taxasPrediais+p.garantia+folha+p.utilidades+p.marketing+p.software+p.contador+p.seguro+p.residuos+p.outros;
   const horasSala = horasSalas(p);
   const capArea = p.m2Aluno>0 ? Math.floor(p.areaUtilTerreo/p.m2Aluno) : 0; // alunos que cabem na área de treino (A9)
   const lotArea = aulasMes>0 ? Math.floor(horasOp*capArea/aulasMes*p.fatorOcup/100) : 0;
-  return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, mixDiv, ticketBruto, ticket, tecnica, folha, capexObra, outrosFixos, horasSala, capArea, lotArea, freqSem, aulasContratadas, aulasMes};
+  return {horasOp, capSim, areaNec, vagas, lotacao, mixSum, mixDiv, ticketBruto, ticket, tecnica, folha, apoio, custoProf, custoEstag, custoRecep, custoLimp, horasProf, capexObra, outrosFixos, horasSala, capArea, lotArea, freqSem, aulasContratadas, aulasMes};
 }
 // Horas por mês em que cada sala pode ser alugada (A10): horário próprio das salas × dias do studio
 function horasSalas(p){
@@ -555,7 +582,8 @@ function simplesEfetivo(rbt12, anexo = "III"){
   return (rbt12*f[1] - f[2]) / rbt12;
 }
 // Folha que conta no Fator R: salários e encargos de pessoas físicas + pró-labore (pagamentos a MEI/PJ não contam)
-function folhaFatorR(p, d){ return (p.vinculoInstr==="pj" ? 0 : d.tecnica) + p.apoio + p.proLabore; }
+// D14: bolsa de estágio e prestador de limpeza não são folha; por horas, "recepção e limpeza" conta inteira (como antes)
+function folhaFatorR(p, d){ return (p.vinculoInstr==="pj" ? 0 : d.tecnica - d.custoEstag) + d.custoRecep + p.proLabore; }
 // Taxas aplicadas: studio = Simples + cartão; salas = Simples (automático) ou % manual
 function taxas(p, rbt12, fatorR = Infinity){
   if(p.modoSimples==="manual") return {simp: p.tSimples/100, tT: (p.tSimples+p.tCartao)/100, tC: p.tCow/100, anexo: "manual", fatorR};
@@ -796,7 +824,7 @@ function scenario(p, sign){
   q.novosMes = Math.max(0, p.novosMes*(1+a));
   q.ocupCow = Math.min(100, Math.max(0, p.ocupCow*(1+o)));
   ["p2","p3","p45","precoHora","precoAvulsa","precoTurno","aluguelFixoSala","matricula"].forEach(k => q[k] = Math.max(0, p[k]*(1+pr)));
-  ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = Math.max(0, p[k]*(1+c)));
+  ["custoHoraInstr","apoio","profCusto","estagCusto","recepCusto","limpCusto","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = Math.max(0, p[k]*(1+c)));
   q.rampa = p.rampa>0 ? Math.max(1, Math.round(p.rampa*(1+r))) : 0;
   q.rampaCow = p.rampaCow>0 ? Math.max(1, Math.round(p.rampaCow*(1+r))) : 0;
   return q;
@@ -812,8 +840,9 @@ function sensitivity(p){
     ["Preço da hora das salas", (q,f)=>{q.precoHora*=f;q.precoAvulsa*=f;q.precoTurno*=f;}],
     ["Aluguel", (q,f)=>{q.aluguel*=f;}],
     ["Condomínio + IPTU", (q,f)=>{q.condIptu*=f;}],
-    ["Custo da hora do instrutor", (q,f)=>{q.custoHoraInstr*=f;}],
-    ["Recepção e limpeza", (q,f)=>{q.apoio*=f;}],
+    ...(p.modoEquipe==="pessoas"
+      ? [["Custo dos professores e estagiários", (q,f)=>{q.profCusto*=f;q.estagCusto*=f;}], ["Recepção e limpeza", (q,f)=>{q.recepCusto*=f;q.limpCusto*=f;}]]
+      : [["Custo da hora do instrutor", (q,f)=>{q.custoHoraInstr*=f;}], ["Recepção e limpeza", (q,f)=>{q.apoio*=f;}]]),
     ["Energia, água e internet", (q,f)=>{q.utilidades*=f;}],
     ["Divulgação mensal", (q,f)=>{q.marketing*=f;}],
     ...(p.modoSimples==="manual" ? [["Imposto (Simples)", (q,f)=>{q.tSimples*=f;}]] : []),
@@ -891,6 +920,18 @@ function equipFields(p){
     default: return ["seminovosValor","seminovosManut"];
   }
 }
+// Campos que não se aplicam às escolhas feitas (ficam escondidos no painel e fora do PDF)
+const EQ_HORAS = ["custoHoraInstr","instrBase","horasPico2","apoio"], EQ_PESSOAS = ["profQtd","profCusto","profHoras","estagQtd","estagCusto","recepQtd","recepCusto","limpQtd","limpCusto"];
+function foraDoModo(id, p){
+  const capt = p.modoCrescimento==="captacao";
+  if((id==="tSimples" || id==="tCow") && p.modoSimples!=="manual") return true;
+  if(id==="novosMes" && !capt) return true;
+  if((id==="alunosAlvo" || id==="rampa" || id==="metaPor" || id==="pctMaduro") && capt) return true;
+  if((id==="alunosAlvo" && p.metaPor!=="num") || (id==="pctMaduro" && p.metaPor==="num")) return true;
+  if(EQ_HORAS.includes(id) && p.modoEquipe==="pessoas") return true;
+  if(EQ_PESSOAS.includes(id) && p.modoEquipe!=="pessoas") return true;
+  return false;
+}
 function applyFilter(){
   const el = document.getElementById("inputs"), q = (document.getElementById("search").value||"").trim().toLowerCase();
   el.querySelectorAll(".seg button").forEach(b => { b.classList.toggle("on", b.dataset.modo===UI.modo); b.setAttribute("aria-pressed", b.dataset.modo===UI.modo ? "true" : "false"); });
@@ -901,11 +942,7 @@ function applyFilter(){
       const id = f.dataset.id, isEq = FIELDS[id].g==="equip" && id!=="modelo";
       // Aparelhos: só os campos da forma escolhida, sempre visíveis (são poucos)
       // Simples automático: os percentuais manuais ficam escondidos
-      const manualOnly = (id==="tSimples" || id==="tCow") && P.modoSimples!=="manual";
-      const capt = P.modoCrescimento==="captacao";
-      const growthHide = (id==="novosMes" && !capt) || ((id==="alunosAlvo" || id==="rampa" || id==="metaPor" || id==="pctMaduro") && capt)
-        || (id==="alunosAlvo" && P.metaPor!=="num") || (id==="pctMaduro" && P.metaPor==="num");
-      const vis = !manualOnly && !growthHide && (isEq
+      const vis = !foraDoModo(id, P) && (isEq
         ? eqList.includes(id) && (!q || f.dataset.label.includes(q))
         : (q ? f.dataset.label.includes(q) : true) && (q || UI.modo==="todas" || f.dataset.ess==="1" || f.classList.contains("changed")));
       f.classList.toggle("hidden", !vis); any = any || vis;
@@ -913,6 +950,11 @@ function applyFilter(){
     d.style.display = any ? "" : "none"; if(q && any) d.open = true;
   });
 }
+// D14: composição da equipe por pessoas, para títulos e frases
+const pessoasTxt = (q, um, varios) => { const n = Math.max(0, Math.round(q||0)); return `${n} ${n===1 ? um : varios}`; };
+const equipeTxt = p => [pessoasTxt(p.profQtd,"professor","professores"), pessoasTxt(p.estagQtd,"estagiário","estagiários"),
+  pessoasTxt(p.recepQtd,"recepcionista","recepcionistas"), pessoasTxt(p.limpQtd,"prestador de limpeza","prestadores de limpeza")].join(", ");
+const nomeTecnica = p => p.modoEquipe==="pessoas" ? "Professores e estagiários" : "Instrutores";
 function groupInfo(p, s){
   const d = s.d;
   const info = {
@@ -922,7 +964,7 @@ function groupInfo(p, s){
     capac:`${num(d.aulasMes,1)} treinos/aluno/mês (contratados ${num(d.aulasContratadas,1)}) · ${d.capSim} alunos ao mesmo tempo · precisam de ${num(d.areaNec)} m² · cabem até ${d.lotacao} alunos (nos ${num(p.areaUtilTerreo)} m² de treino: ${d.capArea} ao mesmo tempo)`,
     planos:`Mensalidade média: ${brl2(d.ticket)}`,
     cow:`${num(d.horasSala)} h/mês por sala · receita ${brl(s.c.rec)}/mês`,
-    equipe:`Folha: ${brl(d.folha)}/mês`,
+    equipe: p.modoEquipe==="pessoas" ? `${equipeTxt(p)} · ${brl(d.folha)}/mês` : `Folha: ${brl(d.folha)}/mês`,
     opex:`Custos fixos totais: ${brl(s.opex)}/mês`,
     impostos: p.modoSimples==="manual" ? `Simples manual: studio ${pct(d.tT)} com cartão · salas ${pct(d.tC)}` : `Anexo ${d.anexo} (Fator R ${pct(d.fatorR,0)}) · Simples ${pct(d.tSimp)} em regime · studio ${pct(d.tT)} com cartão`,
     equip:`${MODELS[p.modelo]} · ${brl(s.eq.capex)} agora + ${brl(s.eqOp)}/mês`,
@@ -972,7 +1014,7 @@ function alerts(p, s){
     ? `Com ${num(p.novosMes)} alunos novos por mês e ${num(p.churn,1)}% de cancelamento, a base se estabiliza em ${num(s.A)} alunos, abaixo dos ${s.be} necessários para empatar. Seriam precisos ~${num(Math.ceil(s.be*p.churn/100))} novos por mês.`
     : `Com ${num(p.novosMes)} alunos novos por mês e sem cancelamentos, a base chega a ${num(s.A)} alunos no fim do período, abaixo dos ${s.be} necessários para empatar.`]);
   if(p.modoSimples!=="manual"){
-    if(d.anexo==="V") a.push(["bad",`Fator R de ${pct(d.fatorR,0)}: a folha (${brl(d.folhaR)}/mês) fica abaixo de 28% do faturamento, e o Simples passa para o Anexo V (${pct(d.tSimp)} em vez de ~${pct(simplesEfetivo(12*s.receitaTotal,"III"))}). Instrutores como CLT/autônomo ou pró-labore aumentam a folha.`]);
+    if(d.anexo==="V") a.push(["bad",`Fator R de ${pct(d.fatorR,0)}: a folha (${brl(d.folhaR)}/mês) fica abaixo de 28% do faturamento, e o Simples passa para o Anexo V (${pct(d.tSimp)} em vez de ~${pct(simplesEfetivo(12*s.receitaTotal,"III"))}). Instrutores como CLT/autônomo ou pró-labore aumentam a folha.${s.receitaTotal>0 ? ` Para voltar ao Anexo III faltam ~${brl(Math.max(0, FATOR_R_MIN*s.receitaTotal - d.folhaR))}/mês de folha.` : ""}${p.modoEquipe==="pessoas" && (d.custoEstag>0 || d.custoLimp>0) ? " Bolsa de estágio e prestador de limpeza não contam como folha." : ""}`]);
     else if(d.fatorR < 0.32) a.push(["warn",`Fator R de ${pct(d.fatorR,0)}, perto do limite de 28%. Se o faturamento crescer sem aumentar a folha, o Simples passa para o Anexo V (bem mais caro).`]);
     if(s.mesesAnexoV>0 && d.anexo!=="V") a.push(["warn",`Em ${s.mesesAnexoV} mês(es) da simulação o Fator R ficou abaixo de 28% e o Simples foi pelo Anexo V.`]);
   }
@@ -983,7 +1025,11 @@ function alerts(p, s){
   if(capDisp(p)===0) a.push(["warn","O capital disponível dos sócios ainda não foi informado (grupo \"Dinheiro dos sócios\")."]);
   if(Math.max(0,p.fechaSemana-p.abreSemana)===0 && Math.max(0,p.fechaSab-p.abreSab)===0) a.push(["bad","O studio está sem horário de funcionamento."]);
   if([p.abreSemana,p.fechaSemana,p.abreSab,p.fechaSab,p.abreDom,p.fechaDom].some(v => v<0 || v>24)) a.push(["bad","Há horário de abertura ou fechamento fora do intervalo de 0 a 24 h."]);
-  if(p.horasPico2 > d.horasOp) a.push(["warn",`As horas com instrutor extra (${num(p.horasPico2)}) passam das horas abertas no mês (${num(d.horasOp)}).`]);
+  if(p.modoEquipe==="pessoas"){
+    if(Math.round(p.profQtd) < 1) a.push(["bad","Não há professor na equipe. O studio precisa de profissional com registro no CREF em todos os horários, e estagiário só pode atuar supervisionado."]);
+    else if(d.horasProf < d.horasOp) a.push(["warn",`${pessoasTxt(p.profQtd,"Um professor soma","professores somam")} ${num(d.horasProf)} h/mês de trabalho, menos que as ${num(d.horasOp)} h em que o studio fica aberto: haveria horários sem professor (estagiário não pode ficar sozinho).`]);
+  }
+  if(p.modoEquipe!=="pessoas" && p.horasPico2 > d.horasOp) a.push(["warn",`As horas com instrutor extra (${num(p.horasPico2)}) passam das horas abertas no mês (${num(d.horasOp)}).`]);
   if(d.horasSala > d.horasOp + 0.01) a.push(["warn",`As salas ficam disponíveis ${num(d.horasSala)} h/mês, mais que as ${num(d.horasOp)} h em que o studio fica aberto. Recepção e limpeza estão dimensionadas para o horário do studio.`]);
   if([p.abreSalaSemana,p.fechaSalaSemana,p.abreSalaSab,p.fechaSalaSab,p.abreSalaDom,p.fechaSalaDom].some(v => v<0 || v>24)) a.push(["bad","Há horário das salas fora do intervalo de 0 a 24 h."]);
   if(p.prazoContrato>0 && p.horizonte > p.prazoContrato) a.push(["warn",`A análise vai até o mês ${num(p.horizonte)}, mas o contrato de locação termina no mês ${num(p.prazoContrato)}. Depois disso, o aluguel e a permanência dependem da renovação.`]);
@@ -1048,7 +1094,7 @@ function bindChart(ch, s){
 function balanco(p, s){
   const d = s.d, areaTot = p.areaBrutaTerreo + p.areaBruta2;
   const share = areaTot>0 ? p.areaBruta2/areaTot : 0;
-  const comuns = p.aluguel+p.condIptu+p.taxasPrediais+p.garantia+p.apoio+p.proLabore+p.utilidades+p.software+p.contador+p.seguro+p.outros;
+  const comuns = p.aluguel+p.condIptu+p.taxasPrediais+p.garantia+d.apoio+p.proLabore+p.utilidades+p.software+p.contador+p.seguro+p.outros;
   const studioDir = s.impT + s.cvar + d.tecnica + s.eqOp + p.marketing;
   const cowDir = s.c.imp + s.c.vari + s.c.plat + p.residuos;
   const st = {nome:"Studio (ginásio)", ent:s.recT, sai:studioDir + comuns*(1-share)};
@@ -1098,6 +1144,7 @@ const PRESETS = {
   "mix-2x":          {grupo:"Mix de planos", label:"2x maioria 60/25/15", nome:"Mix com 2x maioria (60/25/15)", v:{m2:60, m3:25, m45:15}},
   "mix-qualivida":   {grupo:"Mix de planos", label:"Tipo Qualivida 35/30/35", nome:"Mix tipo Qualivida (35/30/35)", v:{m2:35, m3:30, m45:35}},
   "mix-50-35-15":    {grupo:"Mix de planos", label:"50/35/15", nome:"Mix 50/35/15", v:{m2:50, m3:35, m45:15}},
+  "eq-pessoas":      {grupo:"Equipe", label:"2 professores, 2 estagiários, recepção e limpeza", nome:"Equipe por pessoas (2 professores, 2 estagiários, 1 recepcionista, 1 prestador de limpeza)", v:{modoEquipe:"pessoas", profQtd:2, estagQtd:2, recepQtd:1, limpQtd:1}},
   "es-condominio":   {grupo:"E se…", label:"Condomínio volta a R$ 3.200", nome:"E se o condomínio + IPTU voltar a R$ 3.200", v:{condIptu:3200}},
   "es-salas20":      {grupo:"E se…", label:"Salas a 20%", nome:"E se as salas ficarem só 20% ocupadas", v:{ocupCow:20}},
   "es-horario":      {grupo:"E se…", label:"Horário 6h–22h", nome:"E se o studio e as salas abrirem das 6h às 22h", v:{abreSemana:6, fechaSemana:22, abreSalaSemana:6, fechaSalaSemana:22}},
@@ -1229,7 +1276,7 @@ function remuneracaoSocios(p){
 const PROB_N = {Baixa:1, "Média":2, Alta:3}, IMP_N = {Baixo:1, "Médio":2, Alto:3};
 function matrizRiscos(p, s){
   const d = s.d, precos = f => ({p2: p.p2*f, p3: p.p3*f, p45: p.p45*f}), custos = {};
-  ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => custos[k] = p[k]*1.1);
+  ["custoHoraInstr","apoio","profCusto","estagCusto","recepCusto","limpCusto","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => custos[k] = p[k]*1.1);
   const lista = [
     {nome:"Condomínio + IPTU não é zero (R$ 3.200/mês)", prob: p.condIptu>=3200 ? "Baixa" : "Média", mud:{condIptu: Math.max(p.condIptu, 3200)}, mitig:"Confirmar por escrito com o proprietário antes de assinar; negociar teto no contrato."},
     {nome: p.modoCrescimento==="captacao" ? "Metade dos alunos novos por mês" : "Alunos chegam no dobro do tempo", prob:"Média", mud: p.modoCrescimento==="captacao" ? {novosMes: p.novosMes/2} : {rampa: Math.max(1,p.rampa)*2, rampaCow: Math.max(1,p.rampaCow)*2}, mitig:"Pré-venda antes da inauguração; meta mínima de alunos para abrir."},
@@ -1283,7 +1330,7 @@ function monteCarlo(p, n = 500, seed = 20261115){
     const fa = f(p.varAlunos), fo = f(p.varOcup), fp = f(p.varPrecos), fc = f(p.varCustos), fr = f(p.varRampa);
     const q = {...p, alunosAlvo: Math.round(p.alunosAlvo*fa), pctMaduro: p.pctMaduro*fa, novosMes: p.novosMes*fa, ocupCow: Math.min(100, p.ocupCow*fo)};
     ["p2","p3","p45","precoHora","precoAvulsa","precoTurno","aluguelFixoSala","matricula"].forEach(k => q[k] = p[k]*fp);
-    ["custoHoraInstr","apoio","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = p[k]*fc);
+    ["custoHoraInstr","apoio","profCusto","estagCusto","recepCusto","limpCusto","utilidades","marketing","software","contador","seguro","residuos","outros","condIptu","taxasPrediais"].forEach(k => q[k] = p[k]*fc);
     q.rampa = p.rampa>0 ? Math.max(1, Math.round(p.rampa*fr)) : 0;
     q.rampaCow = p.rampaCow>0 ? Math.max(1, Math.round(p.rampaCow*fr)) : 0;
     if(p.modoCrescimento!=="captacao") q.alunosIniciais = Math.min(metaAlunos(q, deriv(q)), p.alunosIniciais); // na captação a meta não vale
@@ -1430,7 +1477,7 @@ function consultorHTML(p, s){
         <tr><td>Como cobra</td><td>Mensalidade por frequência: 2x ${brl(p.p2)}, 3x ${brl(p.p3)}, 4–5x ${brl(p.p45)}${p.matricula>0?`; matrícula ${brl(p.matricula)}`:""}. Ticket médio ${brl2(d.ticket)}</td><td>Por hora: pacote ${brl2(p.precoHora)}${p.pctAvulsa>0?`, avulsa ${brl2(p.precoAvulsa)}`:""}${p.pctTurno>0?`, turno ${brl2(p.precoTurno)}`:""}${p.salasFixas>0?`; mensal ${brl(p.aluguelFixoSala)}`:""}. Preço médio ${brl2(c.precoMed)}/h</td></tr>
         <tr><td>Como vende</td><td>Divulgação (${brl(p.marketing)}/mês), pré-venda antes de abrir e indicação <small class="ex">a confirmar</small></td><td>Contato direto com terapeutas${p.comissaoPlat>0?` e aplicativo de reservas (${num(p.comissaoPlat,1)}% por reserva)`:"; sem aplicativo de reservas na premissa"}</td></tr>
         <tr><td>Recursos principais</td><td>Térreo (${num(p.areaBrutaTerreo)} m²), aparelhos (${MODELS[p.modelo].toLowerCase()}), instrutores (${num(d.horasOp)} h abertas por mês)</td><td>2º andar (${num(p.areaBruta2)} m²), ${num(p.salas)} salas mobiliadas, recepção compartilhada</td></tr>
-        <tr><td>Custos que mais pesam</td><td>Instrutores (${brl(d.tecnica)}/mês), impostos e cartão, aparelhos e divulgação</td><td>Impostos${p.custoVarHora>0?", custo por hora alugada":""}${p.comissaoPlat>0?", taxa do aplicativo":""}; quase todo o custo é o espaço, dividido com o studio</td></tr>
+        <tr><td>Custos que mais pesam</td><td>${nomeTecnica(p)} (${brl(d.tecnica)}/mês), impostos e cartão, aparelhos e divulgação</td><td>Impostos${p.custoVarHora>0?", custo por hora alugada":""}${p.comissaoPlat>0?", taxa do aplicativo":""}; quase todo o custo é o espaço, dividido com o studio</td></tr>
         <tr><td>O que mais muda o resultado</td><td>Número de alunos e preço dos planos</td><td>Ocupação das salas e preço da hora</td></tr>
       </table></div></div>
     <div class="card"><h3>De onde vem a receita, por atividade</h3><p class="sub">Faturamento de um mês maduro (${maduroTxt(p, s)}; ${num(p.ocupCow)}% de ocupação das salas), antes de impostos. Cada linha mostra a conta que gera o valor.</p>
@@ -1692,7 +1739,7 @@ function renderResults(){
         ["Custo fixo por aluno", s.A>0?brl2(s.opex/s.A):"—"],
         ["Folha que conta no Fator R", brl(d.folhaR)+"/mês", `Fator R = ${pct(d.fatorR,1)} do faturamento (mínimo 28% para o Anexo III)`],
         ["Simples Nacional em regime", p.modoSimples==="manual" ? pct(d.tSimp)+" (manual)" : `${pct(d.tSimp)} (Anexo ${d.anexo})`, `Mais ${pct(p.tCartao/100)} de cartão no studio`],
-        ["Custo da equipe técnica", brl(d.tecnica)+"/mês", `${num(d.horasOp*p.instrBase+p.horasPico2)} horas de instrutor`],
+        ["Custo da equipe técnica", brl(d.tecnica)+"/mês", p.modoEquipe==="pessoas" ? `${pessoasTxt(p.profQtd,"professor","professores")} (${num(d.horasProf)} h/mês) e ${pessoasTxt(p.estagQtd,"estagiário","estagiários")}` : `${num(d.horasProf)} horas de instrutor`],
       ])}
       ${indBox("Alunos", [
         ["Horas abertas por mês", num(d.horasOp)],
@@ -1707,7 +1754,9 @@ function renderResults(){
 
   // ----- Aba Lucro do mês -----
   const custosAll = [["Impostos e taxas do studio",s.impT],["Impostos das salas",s.c.imp],["Aluguel",p.aluguel],["Condomínio + IPTU",p.condIptu],["Outras taxas do imóvel",p.taxasPrediais],["Garantia do aluguel",p.garantia],
-    ["Instrutores",d.tecnica],["Recepção e limpeza",p.apoio],["Retirada dos sócios",p.proLabore],["Energia, água, internet",p.utilidades],["Divulgação",p.marketing],["Sistema e fechaduras",p.software],
+    ...(p.modoEquipe==="pessoas"
+      ? [["Professores",d.custoProf + p.adicRT],["Estagiários",d.custoEstag],["Recepção",d.custoRecep],["Limpeza (prestador)",d.custoLimp]]
+      : [["Instrutores",d.tecnica],["Recepção e limpeza",d.apoio]]),["Retirada dos sócios",p.proLabore],["Energia, água, internet",p.utilidades],["Divulgação",p.marketing],["Sistema e fechaduras",p.software],
     ["Contador",p.contador],["Seguro",p.seguro],["Lixo hospitalar",p.residuos],["Outros",p.outros],["Aparelhos ("+s.eq.label+")",s.eqOp],["Custos variáveis das salas",s.c.vari+s.c.plat],["Custos por aluno",s.cvar]];
   const totCustos = custosAll.reduce((t,c)=>t+c[1],0);
   const custos = custosAll.filter(x=>x[1]>0.5).sort((a,b)=>b[1]-a[1]);
@@ -1920,7 +1969,8 @@ function renderResults(){
       <li>Fôlego de caixa: primeiro mês em que o caixa acumulado dos sócios fica abaixo de −(capital dos sócios).</li>
       <li>Simulação de risco: 500 sorteios uniformes e independentes dentro das faixas dos cenários (alunos, ocupação das salas, preços, custos, tempo para encher), com semente fixa.</li>
       <li>Mensalidade média = soma de (preço × % dos alunos) × (1 − % plano longo × desconto) × (1 − não pagas).</li>
-      <li>Instrutores = (horas abertas × instrutores + horas extras de pico) × custo da hora + adicional do RT.</li>
+      <li>Instrutores (equipe por horas) = (horas abertas × instrutores + horas extras de pico) × custo da hora + adicional do RT.</li>
+      <li>Equipe por pessoas = professores × custo de cada + estagiários × custo de cada + adicional do RT; recepção = recepcionistas × custo; limpeza = prestadores × custo. No Fator R entram professores (se CLT ou autônomos), recepção e pró-labore; bolsa de estágio e prestador de limpeza não entram.</li>
       <li>Horas das salas = (fecha − abre) × dias, com o horário próprio das salas e os mesmos dias do studio.</li>
       <li>Simples Nacional (modo automático): academia e sublocação de salas são "atividades do Fator R". Fator R = folha dos 12 meses (salários e encargos de pessoas físicas + pró-labore; MEI/PJ não contam) ÷ receita dos 12 meses. Se ≥ 28%, Anexo III; se menor, Anexo V. Alíquota efetiva = (receita dos 12 meses × alíquota da faixa − parcela a deduzir) ÷ receita dos 12 meses, sobre studio + salas. No início da atividade, usa a média dos meses já faturados × 12. A taxa de cartão é somada só no studio.</li>
       <li>Depreciação: obra dividida pelo prazo do contrato; aparelhos próprios pela vida útil (leasing não deprecia).</li>
@@ -2081,10 +2131,7 @@ function premissasCompactas(p, s){
   const eq = equipFields(p), d = s.d;
   const vale = id => {
     if(FIELDS[id].g==="equip" && id!=="modelo" && !eq.includes(id)) return false;
-    if((id==="tSimples" || id==="tCow") && p.modoSimples!=="manual") return false;
-    if(id==="novosMes" && p.modoCrescimento!=="captacao") return false;
-    if((id==="alunosAlvo" || id==="rampa" || id==="metaPor" || id==="pctMaduro") && p.modoCrescimento==="captacao") return false;
-    if((id==="alunosAlvo" && p.metaPor!=="num") || (id==="pctMaduro" && p.metaPor==="num")) return false;
+    if(foraDoModo(id, p)) return false;
     return FIELDS[id].e || p[id]!==DEFAULTS[id] || (typeof p[id]==="number" && p[id]!==0);
   };
   const boxes = GROUPS.map(g => {
@@ -2103,7 +2150,7 @@ function premissasCompactas(p, s){
 function premissasHTML(p){
   const eq = equipFields(p);
   return GROUPS.map(g => {
-    const rows = g.f.filter(([id]) => g.id!=="equip" || id==="modelo" || eq.includes(id)).map(([id,l,u]) => {
+    const rows = g.f.filter(([id]) => (g.id!=="equip" || id==="modelo" || eq.includes(id)) && !foraDoModo(id, p)).map(([id,l,u]) => {
       const ch = p[id]!==DEFAULTS[id];
       return `<tr${ch?' class="hl"':''}><td>${l}</td><td>${fmtVal(id,p[id])} ${u}</td><td>${ch?`alterado (padrão: ${fmtVal(id,DEFAULTS[id])})`:"padrão"}</td></tr>`;
     }).join("");
